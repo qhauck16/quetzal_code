@@ -39,7 +39,7 @@ panel_c <- panel_cached("c", local({
               "GC%",
               "distance to 1st downstream AG (nt)",
               "branchpoint score",
-              "branchpoint distance 3'ss")
+              "branchpoint distance to 3'ss")
   )
   c_rows$y <- rev(seq_len(nrow(c_rows)))   # first row at the TOP
 
