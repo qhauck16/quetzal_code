@@ -402,7 +402,7 @@ COHORT_COLORS <- c(LIHC = "#17BECFFF", SKCM = "#C49C94FF", LGG  = "#7F7F7FFF",
 
 # The brown from the same tab20 family as COHORT_COLORS above. Used
 # for TCGA-LUSC in BOTH places it appears in panel e (violin fill and
-# sashimi coverage) so the cohort reads as one colour across the panel.
+# sashimi coverage) and for TCGA-LAML in panel d (violin + CDFs).
 LUSC_BROWN <- "#C49C94FF"
 
 # k4-unique junctions -> arcs data frame (position + color per arc)
@@ -535,13 +535,13 @@ LDE$palet <- unname(sapply(as.character(seq_len(30)), factor_color))
 
 ezh2_gd <- gd_repath(readRDS("panel_d_e/output/EZH2_LAML/EZH2/gene_data.RDS"))
 
-# Violin: match TCGA-LAML fill color to the CDF LAML color (PAL$tcga_test)
+# Violin: TCGA-LAML uses LUSC_BROWN, the same as the CDFs and as TCGA-LUSC in panel e,
 # and expand the y-axis upward so ggpubr's p-value bracket doesn't clip.
 ezh2_violin_raw <- LDE$plot_loading_violins(ezh2_gd)
 ezh2_loading_max <- max(ezh2_gd$res$L[, ezh2_gd$fact_idx])
 ezh2_violin <- ezh2_violin_raw +
   scale_fill_manual(values = setNames(
-    c(PAL$tcga_test, PAL$tcga_other),
+    c(LUSC_BROWN, PAL$tcga_other),
     c("TCGA-LAML", "Other\nCohorts"))) +
   # Keep the visible axis range close to the data; clip="off" lets ggpubr's stat_compare_means draw its bracket + p-value ABOVE
   # the top axis without expanding the y-scale.
@@ -686,7 +686,7 @@ build_two_cohort_cdfs <- function(gd, title_prefix = "Junction ") {
     p <- ggplot(df, aes(x = psi, color = cohort_id)) +
       stat_ecdf(geom = "step", linewidth = 0.9) +
       scale_color_manual(values = setNames(
-        c(PAL$gtex, PAL$tcga_test),
+        c(PAL$gtex, LUSC_BROWN),
         c(gd$gtex_study, gd$cancer_type)),
         labels = setNames(c(paste0("GTEx-", gd$gtex_study), gd$cancer_type),
                           c(gd$gtex_study, gd$cancer_type)),

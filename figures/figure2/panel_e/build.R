@@ -33,7 +33,7 @@ e_dist <- fact10 %>%
 # Measured in panel fractions the peak occupies x 0.42-0.52, so the
 # band above ~0.25 of panel height is free on BOTH sides of it. That
 # is why the pie and the legend are two SEPARATE inset_elements
-# straddling the peak (the reference figure does the same) rather than
+# straddling the peak (legend to the right of it) rather than
 # one plot with a right-hand legend: a single inset wide enough to hold
 # pie + legend side by side necessarily runs through the peak.
 #
@@ -41,7 +41,7 @@ e_dist <- fact10 %>%
 # neither is letterboxed by the other's aspect ratio.
 # ------------------------------------------------------------------
 E_PIE_BOX <- c(left = 0.025, bottom = 0.52, right = 0.290, top = 1.05)
-E_LEG_BOX <- c(left = 0.300, bottom = 0.56, right = 0.640, top = 1.03)
+E_LEG_BOX <- c(left = 0.560, bottom = 0.56, right = 0.960, top = 1.03)
 
 # Pie drawn in CARTESIAN coords (geom_polygon wedges + coord_equal)
 # rather than coord_polar: polar coords give no control over where an
