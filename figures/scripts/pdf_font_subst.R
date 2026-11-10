@@ -30,7 +30,6 @@
 # the substituted PDF at a higher dpi (see the `dpi` argument at the
 # call sites) so the hairline stays sub-pixel relative to the drawn
 # size.
-.libPaths('/scratch/midway2/qhauck/conda_env/rstudio-server/lib/R/library/')
 
 # Returns the path of the substituted PDF, regenerating it only when
 # the source is newer (or `force`). Output lands beside the source as

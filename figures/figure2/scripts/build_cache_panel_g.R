@@ -1,4 +1,3 @@
-.libPaths('/scratch/midway2/qhauck/conda_env/rstudio-server/lib/R/library/')
 
 # Cache builder for Figure 2 panel g ("Mutation enrichment discovers
 # additional mutation-GSP relationships").

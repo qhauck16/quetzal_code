@@ -10,14 +10,13 @@
 #
 # Writes small artifacts to figure4/cache/ that panel_g/build.R reads.
 # Re-run only when the upstream data changes:
-#   /scratch/midway2/qhauck/conda_env/rstudio-server/bin/Rscript --vanilla \
+#   Rscript --vanilla \
 #       scripts/build_cache_panel_g.R
 #
 # Transcribed from diff_splicing/combined_expression_analysis.Rmd
 # (build_set_pair / stratified_random / bootstrap_random_cdfs /
 #  plot_single_panel_cdf), pub_specs entry 5.
 # ------------------------------------------------------------------
-.libPaths('/scratch/midway2/qhauck/conda_env/rstudio-server/lib/R/library/')
 
 if (!exists("QROOT")) QROOT <- local({ d <- normalizePath(getwd())   # quetzal_code root
   while (!file.exists(file.path(d, ".quetzal_root"))) { if (dirname(d) == d) stop("run from inside quetzal_code/"); d <- dirname(d) }

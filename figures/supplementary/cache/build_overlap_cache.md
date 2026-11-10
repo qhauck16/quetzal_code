@@ -20,7 +20,7 @@ published panels: GSP #10 alt 3'ss n = 168, #13 = 203, #30 alt 3'/5'ss = 188.
 - Light enough to run on a login node (no RDS).
 
 ## User preferences
-Absolute paths; `.libPaths()` at top.
+Absolute paths
 
 ## Input/output
 In: `hg38_granges.RDS`, `fact_{10,13,30}_top_junctions.tsv`,

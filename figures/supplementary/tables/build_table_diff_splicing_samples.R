@@ -1,4 +1,3 @@
-.libPaths('/scratch/midway2/qhauck/conda_env/rstudio-server/lib/R/library/')
 # Supplementary table: every TCGA sample used in the nine GSP differential-
 # splicing comparisons (SF3B1 / NKAP / YLPM1 x 10v30, 20v60, 30v90), test and
 # control, with the GDC file used. Built from the LeafCutter sample sheets that

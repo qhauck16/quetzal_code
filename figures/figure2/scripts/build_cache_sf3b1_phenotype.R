@@ -3,7 +3,7 @@
 # diff_splicing/sf3b1/top500_alt3_fc_vs_loading.Rmd). Loadings from the
 # quetzal_code variant table SF3B1_full_info (vt_path). Writes cache/sf3b1_top500_alt3_fc5_psi.tsv
 # and cache/sf3b1_phenotype_axis_scores.tsv. Run from figure2/:
-#   /scratch/midway2/qhauck/conda_env/rstudio-server/bin/Rscript --vanilla scripts/build_cache_sf3b1_phenotype.R [results_root]
+#   Rscript --vanilla scripts/build_cache_sf3b1_phenotype.R [results_root]
 source("../scripts/phenotype_axis.R")
 source("../scripts/vt_paths.R")
 args <- commandArgs(TRUE)

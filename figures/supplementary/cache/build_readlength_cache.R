@@ -4,7 +4,6 @@
 # VERBATIM, run from that Rmd's directory (its paths are relative). Its
 # ggsave calls are disabled; only the per-cohort mean-PSI tables are
 # written here. Needs the 3.7 GB flashier RDS -> build partition.
-.libPaths('/scratch/midway2/qhauck/conda_env/rstudio-server/lib/R/library/')
 if (!exists("QROOT")) QROOT <- local({ d <- normalizePath(getwd())   # quetzal_code root
   while (!file.exists(file.path(d, ".quetzal_root"))) { if (dirname(d) == d) stop("run from inside quetzal_code/"); d <- dirname(d) }
   d })

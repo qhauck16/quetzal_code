@@ -3,9 +3,9 @@
 Paused 2026-09-22 ~17:10 at a session limit. Resume from here.
 
     cd quetzal_code/figures/<figureN>
-    /scratch/midway2/qhauck/conda_env/rstudio-server/bin/Rscript --vanilla compose.R          # all cached panels
-    /scratch/midway2/qhauck/conda_env/rstudio-server/bin/Rscript --vanilla compose.R c d      # rebuild only c and d
-    /scratch/midway2/qhauck/conda_env/rstudio-server/bin/Rscript --vanilla compose.R --all
+    Rscript --vanilla compose.R          # all cached panels
+    Rscript --vanilla compose.R c d      # rebuild only c and d
+    Rscript --vanilla compose.R --all
 
 ## Where each figure stands
 

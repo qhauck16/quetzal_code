@@ -284,7 +284,7 @@ stream.
 
 ```
 cd /project2/yangili1/qhauck/spliceNMF/quetzal_code/figures/figure3
-/scratch/midway2/qhauck/conda_env/rstudio-server/bin/Rscript --vanilla compose.R b
+Rscript --vanilla compose.R b
 cp out/figure3.pdf /tmp/mine.pdf
 # whole cell, incl. title + tag
 pdftoppm -r 400 -png -singlefile -x 1770 -y 0   -W 1630 -H 1190 /tmp/mine.pdf /tmp/b

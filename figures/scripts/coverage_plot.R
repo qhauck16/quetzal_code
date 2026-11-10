@@ -2,7 +2,6 @@
 # rtracklayer) and MeanPSI .links files. Purpose: bypass pygenometracks
 # entirely so we control every pixel of the figure and don't depend on
 # raster crops + patchwork/cowplot placement games.
-.libPaths('/scratch/midway2/qhauck/conda_env/rstudio-server/lib/R/library/')
 
 suppressPackageStartupMessages({
   library(rtracklayer)

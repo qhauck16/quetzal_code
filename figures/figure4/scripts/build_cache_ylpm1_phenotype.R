@@ -5,7 +5,7 @@
 # diff_splicing/ylpm1/top500_alt3_fc_vs_loading.Rmd). Loadings from the
 # quetzal_code variant table YLPM1_full_info (vt_path). Writes cache/ylpm1_top500_alt3_5_fc5_psi.tsv
 # and cache/ylpm1_phenotype_axis_scores.tsv. Run from figure4/:
-#   /scratch/midway2/qhauck/conda_env/rstudio-server/bin/Rscript --vanilla scripts/build_cache_ylpm1_phenotype.R [results_root]
+#   Rscript --vanilla scripts/build_cache_ylpm1_phenotype.R [results_root]
 source("../scripts/phenotype_axis.R")
 source("../scripts/vt_paths.R")
 args <- commandArgs(TRUE)

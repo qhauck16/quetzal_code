@@ -5,7 +5,6 @@
 # Sourced by each figure's compose.R as `source("../scripts/raster_utils.R")`.
 # The raster cache is resolved relative to the CALLING figure's working
 # directory, so each figure keeps its own raster_cache/.
-.libPaths('/scratch/midway2/qhauck/conda_env/rstudio-server/lib/R/library/')
 
 suppressPackageStartupMessages({
   library(ggplot2)

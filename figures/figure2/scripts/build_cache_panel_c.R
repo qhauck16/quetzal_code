@@ -1,4 +1,3 @@
-.libPaths('/scratch/midway2/qhauck/conda_env/rstudio-server/lib/R/library/')
 
 # Cache builder for Figure 2 panel c (GSP x covariate correlation heatmap).
 #

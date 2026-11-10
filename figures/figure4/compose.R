@@ -14,13 +14,12 @@
 # (pie-with-leaders, sashimi quadrants, expression ECDF) -- start from
 # those rather than from the Rmds.
 #
-#   /scratch/midway2/qhauck/conda_env/rstudio-server/bin/Rscript compose.R
+#   Rscript compose.R
 #
 # Same conventions as ../figure2/compose.R -- read ../figure2/compose.md
 # before changing layout, it documents the traps (absolute-inch ROW_H,
 # scale limits vs coord, title alignment by measurement).
 
-.libPaths('/scratch/midway2/qhauck/conda_env/rstudio-server/lib/R/library/')
 
 # ------------------------------------------------------------------
 # 0. Setup

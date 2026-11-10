@@ -1,4 +1,3 @@
-.libPaths('/scratch/midway2/qhauck/conda_env/rstudio-server/lib/R/library/')
 # Does the within-cohort mutant splicing signature carry over to mutants in
 # OTHER cohorts? Signature = the comparison's LeafCutter junctions (cluster
 # p.adjust < 0.05, |dPSI| > 0.05, mutant - control): score per tumour =

@@ -18,7 +18,7 @@
 # that is what the leafcutter results were computed from.
 #
 # Run from diff_splicing/:
-#   /scratch/midway2/qhauck/conda_env/rstudio-server/bin/Rscript --vanilla scripts/build_used_bam_manifest.R
+#   Rscript --vanilla scripts/build_used_bam_manifest.R
 suppressPackageStartupMessages({
   library(tidyverse)
   library(jsonlite)

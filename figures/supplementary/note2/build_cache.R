@@ -1,4 +1,3 @@
-.libPaths('/scratch/midway2/qhauck/conda_env/rstudio-server/lib/R/library/')
 # Cache for Supplementary Note 2, Figure 1 (was Supplementary Fig. S8): TCGA tumours carrying the NKAP
 # neurodevelopmental-syndrome substitutions (p.R330C, p.R330H) vs their cohorts.
 # Ported from tcga/genome_wide/flashier/diff_splicing/nkap_rare_disease.Rmd

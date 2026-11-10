@@ -280,7 +280,7 @@ MANE.GRCh38.v1.4.summary.txt ──┘                                   │
 ## Running it
 
 ```
-/scratch/midway2/qhauck/conda_env/rstudio-server/bin/Rscript --vanilla compose.R c
+Rscript --vanilla compose.R c
 cp out/figure3.pdf /tmp/mine.pdf        # out/ is shared; crop a COPY
 pdftoppm -r 400 -png -singlefile -x 0 -y 1180 -W 3400 -H 1360 /tmp/mine.pdf /tmp/c
 ```

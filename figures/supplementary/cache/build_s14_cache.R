@@ -1,4 +1,3 @@
-.libPaths('/scratch/midway2/qhauck/conda_env/rstudio-server/lib/R/library/')
 
 # Cache for Supplementary Figure 15 (NKAP extended sashimi plots).
 # Sections 1-5 of tcga/genome_wide/flashier/NKAP_detailed/custom_plot.R,

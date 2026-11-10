@@ -1,4 +1,3 @@
-.libPaths('/scratch/midway2/qhauck/conda_env/rstudio-server/lib/R/library/')
 # Within-cohort NULL comparisons for the IDH1 / SPOP note: wild-type vs
 # wild-type LeafCutter runs in TCGA-LGG (IDH1 wild-type) and TCGA-PRAD (SPOP
 # wild-type), 20 v 60, so the mutant runs' differential-splicing counts can be

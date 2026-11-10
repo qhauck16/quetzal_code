@@ -3,7 +3,6 @@
 # change fonts, colours, sizes or panel-label styling once and have it
 # propagate across every figure -- that single source is what keeps
 # typography consistent between figures.
-.libPaths('/scratch/midway2/qhauck/conda_env/rstudio-server/lib/R/library/')
 
 if (!exists("QROOT")) QROOT <- local({ d <- normalizePath(getwd())   # quetzal_code root
   while (!file.exists(file.path(d, ".quetzal_root"))) { if (dirname(d) == d) stop("run from inside quetzal_code/"); d <- dirname(d) }

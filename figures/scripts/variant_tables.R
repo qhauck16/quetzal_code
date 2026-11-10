@@ -15,7 +15,6 @@
 # Inputs: ../paths.yaml keys tcga_metadata, mutation_am_merged,
 # alphamissense_refs_dir, unified_calls_dir, plus
 # figures/shared_cache/gsp_loadings.tsv (scripts/build_gsp_loadings.R).
-.libPaths('/scratch/midway2/qhauck/conda_env/rstudio-server/lib/R/library/')
 if (!exists("QROOT")) QROOT <- local({ d <- normalizePath(getwd())   # quetzal_code root
   while (!file.exists(file.path(d, ".quetzal_root"))) { if (dirname(d) == d) stop("run from inside quetzal_code/"); d <- dirname(d) }
   d })

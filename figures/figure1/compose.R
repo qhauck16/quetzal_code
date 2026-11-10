@@ -6,11 +6,10 @@
 # Edit theme.R (font, palette, sizes, arrowhead style, panel-label size)
 # and re-run this script -- no other file needs touching.
 #
-#   /scratch/midway2/qhauck/conda_env/rstudio-server/bin/Rscript compose.R
+#   Rscript compose.R
 #
 # ~30-60 s cold, <10 s on repeat (external PDF rasters cached to raster_cache/).
 
-.libPaths('/scratch/midway2/qhauck/conda_env/rstudio-server/lib/R/library/')
 
 # ------------------------------------------------------------------
 # 0. Setup: paths + theme.

@@ -1,11 +1,10 @@
-.libPaths('/scratch/midway2/qhauck/conda_env/rstudio-server/lib/R/library/')
 # Cache the GSP loadings every variant table keys off: flashier::ldf(out,
 # type = "i")$L of the current flashier fit -- exactly `norm_L` in
 # tcga/genome_wide/flashier/flash_fact_char.Rmd ("loading re-used files").
 # NOT out$L_pm (diff_splicing/flashier_loadings.tsv): ldf rescales.
 # Heavy (3.7 GB RDS) -- run on SLURM from quetzal_code/figures/:
 #   sbatch -p caslake --account=pi-yangili1 --mem=48G -t 1:00:00 --wrap \
-#     "/scratch/midway2/qhauck/conda_env/rstudio-server/bin/Rscript --vanilla scripts/build_gsp_loadings.R"
+#     "Rscript --vanilla scripts/build_gsp_loadings.R"
 if (!exists("QROOT")) QROOT <- local({ d <- normalizePath(getwd())   # quetzal_code root
   while (!file.exists(file.path(d, ".quetzal_root"))) { if (dirname(d) == d) stop("run from inside quetzal_code/"); d <- dirname(d) }
   d })

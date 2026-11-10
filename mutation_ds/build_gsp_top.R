@@ -1,4 +1,3 @@
-.libPaths('/scratch/midway2/qhauck/conda_env/rstudio-server/lib/R/library/')
 # Top-250 driving unannotated junctions per GSP, with splice types. A verbatim
 # port of spec_flash_fact.Rmd chunk "top 250 GSPs 10 13 30 unannotated
 # junctions + splice types" (build_gsp_top + assign_types), parameterised by

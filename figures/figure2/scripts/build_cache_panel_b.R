@@ -1,4 +1,3 @@
-.libPaths('/scratch/midway2/qhauck/conda_env/rstudio-server/lib/R/library/')
 
 # Cache builder for figure 2, panel b (neuronal GSP ECDF).
 #

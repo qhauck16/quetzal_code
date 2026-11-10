@@ -2,13 +2,12 @@
 # figS<N>/build.R, sources this file, and writes out/figS<N>.pdf.
 #
 #   cd quetzal_code/figures/supplementary
-#   /scratch/midway2/qhauck/conda_env/rstudio-server/bin/Rscript --vanilla figS7/build.R
+#   Rscript --vanilla figS7/build.R
 #   ./build_all.sh            # every figure
 #
 # Same conventions as the main figures (../figure2/compose.md): FONT_FAMILY
 # and SIZE_* tokens from ../theme.R, gene symbols italic via gene_md() /
 # gene_pm(), x tick labels angled 45 deg, page sizes in absolute inches.
-.libPaths('/scratch/midway2/qhauck/conda_env/rstudio-server/lib/R/library/')
 
 if (!exists("QROOT")) QROOT <- local({ d <- normalizePath(getwd())   # quetzal_code root
   while (!file.exists(file.path(d, ".quetzal_root"))) { if (dirname(d) == d) stop("run from inside quetzal_code/"); d <- dirname(d) }

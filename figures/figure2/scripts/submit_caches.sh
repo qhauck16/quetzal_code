@@ -22,7 +22,7 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 FIG2="$PWD"
-RSCRIPT=/scratch/midway2/qhauck/conda_env/rstudio-server/bin/Rscript
+RSCRIPT=Rscript
 mkdir -p "$FIG2/logs"
 
 PANELS="${*:-c g b}"   # c first: it is the one panel-c needs soonest

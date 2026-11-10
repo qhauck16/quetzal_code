@@ -17,7 +17,7 @@ Verbatim copy (not a re-implementation) so the counts equal the Rmd's.
 - Log: "50 or more warnings" (inherited); output tibble 540 rows.
 
 ## User preferences
-Absolute output path; `.libPaths()` at top.
+Absolute output path
 
 ## Input/output
 In: LeafCutter `leafcutter_ds_effect_sizes.txt` / `leafcutter_ds_cluster_significance.txt`

@@ -103,7 +103,7 @@ unified_results/ylpm1/20v60/dpsi0.01_fc2.5/df_final.tsv (2460 rows)
 
 ```
 cd quetzal_code/figures/figure4
-/scratch/midway2/qhauck/conda_env/rstudio-server/bin/Rscript --vanilla compose.R d
+Rscript --vanilla compose.R d
 cp out/figure4.pdf /tmp/mine4.pdf     # out/ is shared; crop a COPY
 pdftoppm -r 400 -png -singlefile -x 1700 -y 1000 -W 1700 -H 830 /tmp/mine4.pdf /tmp/d4
 ```

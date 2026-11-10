@@ -1,4 +1,3 @@
-.libPaths('/scratch/midway2/qhauck/conda_env/rstudio-server/lib/R/library/')
 # Cache for the Note 1 PSI CDFs: per-junction mean PSI of the GSP #1 and
 # GSP #12 driving junctions (mutation_ds/gsp_top/fact_{1,12}_top_junctions.tsv,
 # all splice types) in four sample groups each, to separate a tissue

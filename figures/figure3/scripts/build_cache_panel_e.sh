@@ -16,14 +16,13 @@ set -euo pipefail
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$HERE"
-RSCRIPT=/scratch/midway2/qhauck/conda_env/rstudio-server/bin/Rscript
+RSCRIPT=Rscript
 EXPR="$HERE/../../expression"   # quetzal_code/expression/
 mkdir -p cache
 
 # 1. Top-20 rail_ids by k13, derived -- never hardcoded, because the
 #    factor key has been stale before (memory: factor-keys-per-rds).
 $RSCRIPT --vanilla -e '
-.libPaths("/scratch/midway2/qhauck/conda_env/rstudio-server/lib/R/library/")
 suppressPackageStartupMessages(library(data.table))
 source("../scripts/vt_paths.R")
 f <- vt_path("NKAP_full_plus_variants")   # built in quetzal_code (2026-10-05)

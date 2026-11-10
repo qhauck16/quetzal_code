@@ -25,7 +25,6 @@
 #   Rscript ../scripts/figure_qa.R out/figure2.pdf \
 #       1.00,2.33,1.26,1.75 "1;0.95,1.55;1.15,1;1,1"
 
-.libPaths('/scratch/midway2/qhauck/conda_env/rstudio-server/lib/R/library/')
 suppressPackageStartupMessages(library(png))
 
 args <- commandArgs(trailingOnly = TRUE)

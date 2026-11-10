@@ -8,7 +8,6 @@
 # from the 3.7 GB flashier RDS and 250 per-gene fits. Counts check out
 # against the published panels (GSP #10 alt 3'ss n = 168, GSP #13 203,
 # GSP #30 alt 3'/5'ss 188).
-.libPaths('/scratch/midway2/qhauck/conda_env/rstudio-server/lib/R/library/')
 if (!exists("QROOT")) QROOT <- local({ d <- normalizePath(getwd())   # quetzal_code root
   while (!file.exists(file.path(d, ".quetzal_root"))) { if (dirname(d) == d) stop("run from inside quetzal_code/"); d <- dirname(d) }
   d })

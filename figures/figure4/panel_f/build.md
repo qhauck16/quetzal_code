@@ -155,7 +155,7 @@ paired_tumor_normal/HRS*/ ─┘                                                
 
 ```
 cd quetzal_code/figures/figure4
-/scratch/midway2/qhauck/conda_env/rstudio-server/bin/Rscript --vanilla compose.R f
+Rscript --vanilla compose.R f
 pdftoppm -r 400 -png -singlefile -x 0 -y 3300 -W 1800 -H 1200 out/figure4.pdf /tmp/crop
 ```
 

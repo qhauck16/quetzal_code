@@ -307,7 +307,7 @@ diff_splicing/unified_results/  │                        │
 
 ```
 cd quetzal_code/figures/figure3
-/scratch/midway2/qhauck/conda_env/rstudio-server/bin/Rscript --vanilla compose.R e
+Rscript --vanilla compose.R e
 cp out/figure3.pdf /tmp/mine.pdf        # out/ is shared; crop a COPY
 pdftoppm -r 400 -png -singlefile -x 1190 -y 2520 -W 1300 -H 1220 /tmp/mine.pdf /tmp/e
 ```

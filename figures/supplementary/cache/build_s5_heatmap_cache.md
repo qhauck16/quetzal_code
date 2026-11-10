@@ -18,7 +18,7 @@ Upstream chain is verbatim, quirks included -- do not "clean it up".
   (33 tissue / 9 technical / 4 summary), 54 rows labelled.
 
 ## User preferences
-Absolute paths; `.libPaths()` at top.
+Absolute paths
 
 ## Input/output
 In: `softimpute_flash_300_qc_filtered.RDS`, `tcga_v2_samples.tsv`,

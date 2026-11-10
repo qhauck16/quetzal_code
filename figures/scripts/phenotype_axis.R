@@ -18,7 +18,6 @@
 #   figure2/scripts/build_cache_sf3b1_phenotype.R  (30v90, alt 3'ss, k10)
 #   figure3/scripts/build_cache_nkap_phenotype.R   (20v60, alt 3'ss, k13)
 #   figure4/scripts/build_cache_ylpm1_phenotype.R  (10v30, alt 3'ss + 5'ss, k30)
-.libPaths('/scratch/midway2/qhauck/conda_env/rstudio-server/lib/R/library/')
 if (!exists("QROOT")) QROOT <- local({ d <- normalizePath(getwd())   # quetzal_code root
   while (!file.exists(file.path(d, ".quetzal_root"))) { if (dirname(d) == d) stop("run from inside quetzal_code/"); d <- dirname(d) }
   d })

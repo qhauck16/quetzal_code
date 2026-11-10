@@ -3,7 +3,7 @@
 # diff_splicing/nkap/top500_alt3_fc_vs_loading.Rmd). Loadings from the
 # quetzal_code variant table NKAP_full_plus_variants (vt_path). Writes cache/nkap_top500_alt3_fc5_psi.tsv
 # and cache/nkap_phenotype_axis_scores.tsv. Run from figure3/:
-#   /scratch/midway2/qhauck/conda_env/rstudio-server/bin/Rscript --vanilla scripts/build_cache_nkap_phenotype.R [results_root]
+#   Rscript --vanilla scripts/build_cache_nkap_phenotype.R [results_root]
 source("../scripts/phenotype_axis.R")
 source("../scripts/vt_paths.R")
 args <- commandArgs(TRUE)

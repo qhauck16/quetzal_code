@@ -30,7 +30,7 @@
 # Also read directly (not cached here): figure1/panel_b/recovery_cache (S2),
 # figure3/cache/panel_e_scaled.tsv (S14), and tcga/ tables (S7, S11, S13, S18, S20).
 #   figS16 (YLPM1 splice variant): run figS16/fetch.sh first (GDC slicing; needs the token path).
-RSCRIPT=/scratch/midway2/qhauck/conda_env/rstudio-server/bin/Rscript
+RSCRIPT=Rscript
 cd "$(dirname "$(readlink -f "$0")")" || exit 1
 mkdir -p out/logs
 

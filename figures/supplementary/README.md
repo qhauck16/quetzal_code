@@ -3,7 +3,7 @@
 Each figure is `figS<N>/build.R` (companion `build.md`), sourcing `common.R`, writing
 `out/figS<N>.pdf`. Run from this directory:
 
-    /scratch/midway2/qhauck/conda_env/rstudio-server/bin/Rscript --vanilla figS5/build.R
+    Rscript --vanilla figS5/build.R
     ./build_all.sh          # all, numeric order, pass/fail summary, logs in out/logs/
 
 Caches in `cache/` must exist first; see the header of `build_all.sh` for each

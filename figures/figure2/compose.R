@@ -14,9 +14,8 @@
 # which are expensive (each loads a 3.5 G flashier RDS). Run those once;
 # this script then rebuilds the figure in seconds.
 #
-#   /scratch/midway2/qhauck/conda_env/rstudio-server/bin/Rscript compose.R
+#   Rscript compose.R
 
-.libPaths('/scratch/midway2/qhauck/conda_env/rstudio-server/lib/R/library/')
 
 # ------------------------------------------------------------------
 # 0. Setup

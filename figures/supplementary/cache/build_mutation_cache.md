@@ -20,14 +20,14 @@ Loadings taken from `SF3B1_full_plus_variants.tsv` (k10) and
 - Header's sbatch line uses bare `Rscript`; use the conda env's absolute path.
 
 ## User preferences
-Absolute paths; `.libPaths()` at top.
+Absolute paths
 
 ## Input/output
 In: `tcga/tcga_v2_samples.tsv`, `flashier/just_for_fun/mutation_merge/merged_grch38_with_am.tsv`
 (536 M), `{SF3B1,NKAP}_full_plus_variants.tsv`. Out: `s9_cmh_sf3b1_excluded.tsv`,
 `s9_top100_gsp10.tsv`, `s12_cmh_nkap_excluded.tsv`, `s12_cooccurrence.tsv`.
 
-Run (any cwd): `sbatch -p build --account=pi-yangili1 --mem=24G --wrap "/scratch/midway2/qhauck/conda_env/rstudio-server/bin/Rscript --vanilla cache/build_mutation_cache.R"`
+Run (any cwd): `sbatch -p build --account=pi-yangili1 --mem=24G --wrap "Rscript --vanilla cache/build_mutation_cache.R"`
 
 ## File flow schematic
 ```

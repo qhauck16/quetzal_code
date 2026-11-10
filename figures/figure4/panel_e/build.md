@@ -209,7 +209,7 @@ MANE summary.txt ──┴─► cache/panel_e_exons.rds ──► transcript_zo
 
 ```
 cd /project2/yangili1/qhauck/spliceNMF/quetzal_code/figures/figure4
-/scratch/midway2/qhauck/conda_env/rstudio-server/bin/Rscript --vanilla compose.R e
+Rscript --vanilla compose.R e
 pdftoppm -r 400 -png -singlefile -x 0 -y 1800 -W 3400 -H 1400 out/figure4.pdf /tmp/crop
 ```
 

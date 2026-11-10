@@ -1,4 +1,3 @@
-.libPaths("/scratch/midway2/qhauck/conda_env/rstudio-server/lib/R/library/")
 suppressPackageStartupMessages(library(png))
 a <- commandArgs(trailingOnly = TRUE)
 f <- a[1]; xs <- as.numeric(strsplit(a[2], ",")[[1]])   # cell x-splits in px

@@ -3,7 +3,6 @@
 # load_leaf_sigs / counts chunks, VERBATIM (extracted by
 # figures/supplementary build notes), run from the Rmd's own directory so
 # its relative paths resolve. Writes cache/s8_counts.tsv.
-.libPaths('/scratch/midway2/qhauck/conda_env/rstudio-server/lib/R/library/')
 if (!exists("QROOT")) QROOT <- local({ d <- normalizePath(getwd())   # quetzal_code root
   while (!file.exists(file.path(d, ".quetzal_root"))) { if (dirname(d) == d) stop("run from inside quetzal_code/"); d <- dirname(d) }
   d })

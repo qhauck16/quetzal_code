@@ -1,4 +1,3 @@
-.libPaths('/scratch/midway2/qhauck/conda_env/rstudio-server/lib/R/library/')
 # Overlap of each mutation comparison's LeafCutter DS junctions with its GSP's
 # top-250 driving junctions -- the S7 test (figures/supplementary/cache/
 # build_overlap_cache.R), unchanged: GSP alt-ss junctions vs a background of

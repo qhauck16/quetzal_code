@@ -1,6 +1,5 @@
 # Copy of ../figure2/scripts/build_cache_panel_c.R with N_TOP = 150 and
 # the outputs redirected to cache/s5_*.tsv (supplementary figure S5).
-.libPaths('/scratch/midway2/qhauck/conda_env/rstudio-server/lib/R/library/')
 
 # Cache builder for Figure 2 panel c (GSP x covariate correlation heatmap).
 #

@@ -19,7 +19,7 @@ and only the per-cohort mean-PSI tables are written.
   both buckets: COAD (354/192), UCEC (209/380), READ (105/72).
 
 ## User preferences
-`.libPaths()` at top; absolute output dir.
+; absolute output dir.
 
 ## Input/output
 In: `softimpute_flash_300_qc_filtered.RDS`, `tcga_v2_samples.tsv`,

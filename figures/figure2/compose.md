@@ -292,7 +292,7 @@ WDR11 bigwigs + .links ───────────────────
 
 ```
 bash scripts/submit_caches.sh     # once, on SLURM; writes cache/
-/scratch/midway2/qhauck/conda_env/rstudio-server/bin/Rscript compose.R
+Rscript compose.R
 ```
 
 `compose.R` renders placeholder boxes for any panel whose cache is

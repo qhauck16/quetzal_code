@@ -23,7 +23,7 @@ path constants (`TCGA`, `FLASHIER`, `REF_SUPP` = published supplementary PDFs,
 
 ## User preferences
 Gene symbols italic via `gene_md()`/`gene_pm()`; x tick labels 45 deg
-(`angled_x_labels()`); page sizes in absolute inches; `.libPaths()` set at top.
+(`angled_x_labels()`); page sizes in absolute inches
 
 ## Input/output
 In: `../theme.R`, `../scripts/{coverage_plot,pie_chart}.R`. Out: nothing itself;

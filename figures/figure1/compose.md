@@ -10,7 +10,7 @@ preserving raster grobs via `pdftocairo` and png::readPNG with auto-crop.
 ## Regenerate
 
 ```
-/scratch/midway2/qhauck/conda_env/rstudio-server/bin/Rscript compose.R
+Rscript compose.R
 ```
 
 Cold: ~30 s (pdftocairo renders + tsne on the structure_plot). Warm:

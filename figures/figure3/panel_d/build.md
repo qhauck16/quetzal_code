@@ -145,7 +145,7 @@ unified_results/nkap/20v60/dpsi0.01_fc2.5/df_final.tsv (2806 rows)
 
 ```
 cd quetzal_code/figures/figure3
-/scratch/midway2/qhauck/conda_env/rstudio-server/bin/Rscript --vanilla compose.R d
+Rscript --vanilla compose.R d
 cp out/figure3.pdf /tmp/mine3.pdf     # out/ is shared; crop a COPY
 pdftoppm -r 400 -png -singlefile -x 0 -y 2480 -W 1190 -H 1250 /tmp/mine3.pdf /tmp/d3
 ```

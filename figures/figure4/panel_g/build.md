@@ -84,7 +84,7 @@ Re-run the cache builder only when the upstream data changes:
 
 ```
 cd quetzal_code/figures/figure4
-/scratch/midway2/qhauck/conda_env/rstudio-server/bin/Rscript --vanilla scripts/build_cache_panel_g.R
+Rscript --vanilla scripts/build_cache_panel_g.R
 ```
 
 It short-circuits the awk pass if `cache/panel_g_expr.tsv` already

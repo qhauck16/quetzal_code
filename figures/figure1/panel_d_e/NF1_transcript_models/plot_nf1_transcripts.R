@@ -3,7 +3,6 @@
 # GRanges that powers the plotting_genes pipeline. Run interactively in
 # RStudio with cwd = plotting_genes/NF1_transcript_models/.
 
-.libPaths('/scratch/midway2/qhauck/conda_env/rstudio-server/lib/R/library/')
 
 if (!exists("QROOT")) QROOT <- local({ d <- normalizePath(getwd())   # quetzal_code root
   while (!file.exists(file.path(d, ".quetzal_root"))) { if (dirname(d) == d) stop("run from inside quetzal_code/"); d <- dirname(d) }

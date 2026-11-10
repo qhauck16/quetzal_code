@@ -1,4 +1,3 @@
-.libPaths('/scratch/midway2/qhauck/conda_env/rstudio-server/lib/R/library/')
 # Supplementary Note 1 (IDH1 / SPOP): mutation-defined differential-splicing
 # comparisons within a single TCGA cohort, to test whether each gene's own
 # splicing effect matches the GSP it associates with (IDH1 -> GSP #1 in LGG,

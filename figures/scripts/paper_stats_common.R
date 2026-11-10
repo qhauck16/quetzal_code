@@ -7,7 +7,6 @@
 #   "pre_rerun"  -- the backed-up inputs from before the 2026-10 re-runs
 #                   (diff-splicing df_final, Rmd-era phenotype scores), used
 #                   to check that the code reproduces the text's numbers.
-.libPaths('/scratch/midway2/qhauck/conda_env/rstudio-server/lib/R/library/')
 if (!exists("QROOT")) QROOT <- local({ d <- normalizePath(getwd())   # quetzal_code root
   while (!file.exists(file.path(d, ".quetzal_root"))) { if (dirname(d) == d) stop("run from inside quetzal_code/"); d <- dirname(d) }
   d })
