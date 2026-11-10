@@ -47,10 +47,15 @@ def bam_for(rail_id):
                     _INV[int(f[ix_id])] = f[ix_path]
     return _INV.get(int(rail_id))
 
+EXTRA_RUNS = [f"{gene}_{c['n_test']}v{c['n_test'] * c['control_ratio']}"
+              for gene, comps in (config.get("extra_comparisons") or {}).items()
+              for c in comps]
+
 rule all:
     input:
         expand("{rdir}/{run}/leafcutter_ds_cluster_significance.txt",
-               rdir=RESULTS_DIRS, run=RUNS)
+               rdir=RESULTS_DIRS, run=RUNS),
+        expand("results/{run}/leafcutter_ds_cluster_significance.txt", run=EXTRA_RUNS)
 
 # ---------------------------------------------------------------------------
 # 1. Select test/control samples for a given (gene, comparison) and write

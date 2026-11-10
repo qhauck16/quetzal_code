@@ -29,3 +29,11 @@ comparisons:
     control_ratio: 3
   - n_test: 30
     control_ratio: 3
+
+# Extra comparisons for one gene only (results/ only, no control run).
+# ylpm1 6v18: cases are the 6 samples with scaled GSP #30 >= 0.1 that have junction files;
+# used only to choose the YLPM1 SVM junctions.
+extra_comparisons:
+  ylpm1:
+    - n_test: 6
+      control_ratio: 3

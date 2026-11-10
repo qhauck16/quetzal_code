@@ -21,7 +21,7 @@ Inputs come from `../inputs/`, the GSP loadings from the Quetzal v0.1.1 run
 
 Step 5 notes:
 - Clustering uses `leafcutter_cluster_regtools.py -m 5` (changed from 10 on 2026-10-28; see the Snakefile comment).
-- `scripts/run_ylpm1_6v18.sbatch` adds `results/ylpm1_6v18`, used only to choose the YLPM1 SVM junctions. Its cases are the 6 samples with scaled GSP #30 ≥ 0.1 that have junction files (`scripts/run_ylpm1_6v18.md`).
+- `config.yaml` `extra_comparisons` adds `results/ylpm1_6v18`, used only to choose the YLPM1 SVM junctions. Its cases are the 6 samples with scaled GSP #30 ≥ 0.1 that have junction files.
 - `download/bam_inventory.tsv` is the final BAM inventory (sample-mislabel fix already applied); re-running sample selection on it reproduces the current runs exactly (checked for nkap_20v60, sf3b1_30v90, ylpm1_20v60). The other `download/` tables record which GDC files were used and are read by the supplementary sample table.
 
 Software: leafcutter (github.com/davidaknowles/leafcutter) and leafcutter2
