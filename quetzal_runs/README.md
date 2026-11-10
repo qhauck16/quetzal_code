@@ -19,7 +19,8 @@ cd scripts/gene_level  && snakemake --use-conda --jobs N        # -> output/gene
 cd ../genome_wide      && bash setting_up_snakemake.sh          # -> output/genome_wide/<chr>/FastTopics_output/
 Rscript fasttopics_to_flashier.R                                 # -> output/genome_wide/softimpute_features.tsv,
                                                                  #    softimpute_flash_300_qc_filtered.RDS
-# then: cp -r ../../output/{gene_level,genome_wide} <this directory>/
+# then, from this directory (quetzal_runs/; genome_wide/ is not in the repo, so create it):
+#   mkdir -p genome_wide && cp -r <Quetzal>/output/genome_wide/* genome_wide/
 ```
 
 | Path | What |
