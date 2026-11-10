@@ -3,7 +3,7 @@
 # as the small tables the figures need. Loadings come from the
 # *_full_plus_variants.tsv tables (k10 / k13 columns = norm_L), so the
 # 3.7 GB flashier RDS is never loaded.
-#   sbatch -p build --mem=24G --wrap "Rscript --vanilla cache/build_mutation_cache.R"
+#   sbatch --mem=24G --wrap "Rscript --vanilla cache/build_mutation_cache.R"
 if (!exists("QROOT")) QROOT <- local({ d <- normalizePath(getwd())   # quetzal_code root
   while (!file.exists(file.path(d, ".quetzal_root"))) { if (dirname(d) == d) stop("run from inside quetzal_code/"); d <- dirname(d) }
   d })

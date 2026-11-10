@@ -31,5 +31,4 @@ Rscript fasttopics_to_flashier.R                                 # -> output/gen
 | `genome_wide/softimpute_flash_300_qc_filtered.RDS` | the flashier object; GSP #k = factor k |
 
 The NMF fits are multi-threaded, so a re-run reproduces the inputs and settings but not
-bit-identical factors; the figures use the manuscript's objects. On midway,
-`bash make_links.sh` links them.
+bit-identical factors; the figures use the manuscript's objects.

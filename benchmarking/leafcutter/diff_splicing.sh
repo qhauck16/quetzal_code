@@ -1,7 +1,6 @@
 #!/bin/bash
 
 ######################################################################
-# @author      : qhauck (qhauck@midway2-login2.rcc.local)
 # @file        : diff_splicing
 # @created     : Wednesday Jan 07, 2026 11:49:12 CST
 #

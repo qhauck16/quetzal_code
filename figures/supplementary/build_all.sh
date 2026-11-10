@@ -9,8 +9,8 @@
 #
 # PREREQUISITE: the caches in cache/ must exist first. The figure scripts
 # only read them. Builders, with their working-directory requirement
-# (heavy ones on SLURM, midway3 build partition, 6 h cap):
-#   sbatch -p build --account=pi-yangili1 --mem=<N>G --wrap "<command>"
+# (heavy ones as SLURM jobs):
+#   sbatch --mem=<N>G --wrap "<command>"
 #
 #   cache/build_mutation_cache.R     S10, S12   any cwd (absolute paths); --mem=24G
 #   cache/build_overlap_cache.R      S6, S9    any cwd (absolute paths)

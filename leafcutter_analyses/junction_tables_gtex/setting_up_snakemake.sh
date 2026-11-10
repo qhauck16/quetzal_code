@@ -1,7 +1,6 @@
 #!/usr/bin/env sh
 
 ######################################################################
-# @author      : qhauck (qhauck@midway2-login2.rcc.local)
 # @file        : setting_up_snakemake
 # @created     : Thursday Jan 23, 2025 14:47:54 CST
 #

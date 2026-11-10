@@ -15,4 +15,4 @@ No differential-splicing test is run within GIST. Fig. 4f scores each GIST sampl
 the junctions found in the TCGA YLPM1 run (`../figures/figure4/scripts/build_cache_panel_f_tcga.R`:
 `leafcutter_analyses/diff_splicing/unified_results/ylpm1/20v60`, alt 3'ss + alt 5'ss) and
 clusters them (`../figures/figure4/panel_f/build.R`), reading `ylpm1_perind_numers.counts.gz`,
-`YLPM1_mutant_status.txt` and `accession_to_experiment.txt`. On midway, `bash make_links.sh` links every processed file.
+`YLPM1_mutant_status.txt` and `accession_to_experiment.txt`.

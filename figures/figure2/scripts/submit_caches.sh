@@ -1,17 +1,8 @@
 #!/bin/bash
 # Build figure 2's three expensive caches as a SLURM job.
 #
-# Why SLURM: each cache loads a 3.5 G flashier RDS and then spikes
-# further (panel c peaked ~7.4 G at the TMB rowSums). The midway3
-# LOGIN node SIGKILLs them partway through - observed repeatedly,
-# including with nothing else running. So they must go to a compute
-# node.
-#
-# Why the `build` partition: pi-yangili1's SU balance on midway3 is
-# NEGATIVE (-6405), so caslake and the other shared partitions reject
-# the job ("No sufficient SU allocations"). `build` accepts it without
-# charging SUs. It is a SINGLE shared node, so this runs the three
-# caches SEQUENTIALLY in one job rather than taking three slots.
+# Each cache loads the 3.5 GB flashier object and peaks around 7.5 GB, so it runs
+# as one SLURM job (the three caches in sequence). Add -A/-p for your cluster.
 #
 #   bash scripts/submit_caches.sh          # all three: b, c, g
 #   bash scripts/submit_caches.sh c        # just one
@@ -30,8 +21,6 @@ PANELS="${*:-c g b}"   # c first: it is the one panel-c needs soonest
 sbatch <<EOF
 #!/bin/bash
 #SBATCH --job-name=fig2caches
-#SBATCH --account=pi-yangili1
-#SBATCH --partition=build
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=4

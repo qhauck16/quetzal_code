@@ -6,8 +6,6 @@
 #   bash fetch_inputs.sh                 # all single-file inputs
 #   bash fetch_inputs.sh --only <step>   # one of: metadata quetzal_data gencode mane alphamissense
 #                                        #   gdc_reference vep_cache star_index alsafadi cola_seq pancanatlas
-#   bash fetch_inputs.sh --midway        # midway only: symlink the copies already on disk
-#                                        #   (also links the Snaptron tables, bigwigs and mutation downloads)
 #
 # Separate scripts here: fetch_snaptron.sh (per-gene Snaptron junction tables) and
 # fetch_bigwigs.sh (recount3 coverage bigwigs). The cBioPortal mutation download is the
@@ -22,10 +20,9 @@ set -euo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")"
 IN=$PWD
 
-MIDWAY=0; ONLY=""
+ONLY=""
 while [ $# -gt 0 ]; do
   case $1 in
-    --midway)  MIDWAY=1 ;;
     --only)    ONLY=$2; shift ;;
     *) echo "unknown option: $1" >&2; exit 1 ;;
   esac; shift
@@ -37,44 +34,6 @@ getgz(){ [ -s "$2" ] && { echo "  have $2"; return; }; get "$1" "$2.gz"; gunzip 
 
 QUETZAL_RAW=https://raw.githubusercontent.com/qhauck16/Quetzal/v0.1.1/data
 GENCODE=https://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_46
-
-# ---------------------------------------------------------------------------
-if [ $MIDWAY = 1 ]; then
-  S=${SPLICENMF:-/project2/yangili1/qhauck/spliceNMF}; T=$S/tcga
-  lnk() { [ -e "$1" ] || { echo "MISSING $1" >&2; return 1; }
-          if [ -e "$2" ] && [ ! -L "$2" ]; then echo "SKIP (real file) $2" >&2; return 0; fi
-          mkdir -p "$(dirname "$2")"; ln -sfn "$1" "$2"; }
-  lnk $T/tcga_v2_samples.tsv                                  tcga_v2_samples.tsv
-  lnk $S/gtexv2_metadata.tsv                                   gtexv2_metadata.tsv
-  for d in $T/all_genes/chr*/;   do lnk "${d%/}" snaptron/tcga/$(basename "$d"); done
-  for d in $S/gtex/all_genes/chr*/; do lnk "${d%/}" snaptron/gtex/$(basename "$d"); done
-  lnk $T/leafcutter/leafcutter2/gencode.v46.annotation.gtf     gencode.v46.annotation.gtf
-  lnk $T/leafcutter/leafcutter2/genome.fa                      GRCh38.primary_assembly.genome.fa
-  lnk $T/leafcutter/leafcutter2/genome.fa.fai                  GRCh38.primary_assembly.genome.fa.fai
-  W=$T/genome_wide/flashier/wxs_mut_calling
-  lnk $W/GRCh38.d1.vd1.fa                                      GRCh38.d1.vd1.fa
-  lnk $W/GRCh38.d1.vd1.fa.fai                                  GRCh38.d1.vd1.fa.fai
-  lnk $W/GRCh38.d1.vd1.dict                                    GRCh38.d1.vd1.dict
-  lnk /project2/yangili1/qhauck/conda/.vep                     vep_cache
-  lnk $T/reference_genome/STAR_index/star-2.7.5c_GRCh38.d1.vd1_gencode.v36 star_index/star-2.7.5c_GRCh38.d1.vd1_gencode.v36
-  lnk "$T/genome_wide/flashier/41467_2016_BFncomms10615_MOESM961_ESM (1).xlsx" Alsafadi2016_supp1.xlsx
-  lnk $T/hg38_granges.RDS                                      gencode_v46_granges.RDS
-  lnk $T/all_genes/hugo_all_pc_genes.tsv                       hugo_all_pc_genes.tsv
-  lnk $T/gene_level_poisson/analyte.tsv                        analyte.tsv
-  for f in $T/genome_wide/flashier/just_for_fun/nmd_investigation/chr*_productive_unproductive.tsv; do
-    lnk "$f" productive_unproductive/$(basename "$f"); done
-  lnk $T/genome_wide/flashier/diff_splicing/MANE.GRCh38.v1.4.summary.txt MANE.GRCh38.v1.4.summary.txt
-  lnk $T/genome_wide/flashier/cola_seq_branchpoints.csv        cola_seq_branchpoints.csv
-  lnk $T/gene_level_poisson/cosmic_tier_1_11_3_2025.tsv        cosmic_tier_1.tsv
-  M=$T/genome_wide/flashier/just_for_fun/mutation_merge/refs
-  lnk $M/AlphaMissense_hg38.tsv.gz                             alphamissense/AlphaMissense_hg38.tsv.gz
-  lnk $M/hg19ToHg38.over.chain.gz                              alphamissense/hg19ToHg38.over.chain.gz
-  for f in TCGA_mastercalls.abs_segtabs.fixed.txt TCGA_mastercalls.abs_tables_JSedit.fixed.txt; do
-    lnk $T/pancanatlas/$f pancanatlas/$f; done
-  lnk $T/recount3_bigwigs/tcga_bws                             bigwigs/tcga
-  lnk $T/recount3_bigwigs/gtex_bws                             bigwigs/gtex
-  echo "inputs linked (midway)"; exit 0
-fi
 
 # ---------------------------------------------------------------------------
 if want metadata; then echo "== Snaptron sample metadata"

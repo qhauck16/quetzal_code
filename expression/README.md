@@ -8,4 +8,3 @@ TCGA gene expression used for Fig. 4g and the YLPM1 neighbouring-gene check.
    Writes `combined_rpm.tsv` and `combined_scaled_rpm.tsv` (genes x samples, rail_id columns).
 
 Reads `../inputs/gencode_v46_granges.RDS` and `../inputs/tcga_v2_samples.tsv`.
-On midway, `bash make_links.sh` links the manuscript's matrices.

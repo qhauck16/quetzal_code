@@ -320,7 +320,7 @@ build_sf3b1_tables <- function(I, k = 10) {
   region <- function(d) (d$SYMBOL == "SF3B1" & d$Protein_position > 500 &
                            d$Protein_position < 800) | d$SYMBOL == "SUGP1"
   args <- list(I = I, transcripts = c("NM_012433", "NM_172231"), region = region)
-  vd <- file.path(file.path(QROOT, "variant_recalling/unified"), "sf3b1", "vep")
+  vd <- file.path(file.path(QROOT, "mutation_recalling/unified"), "sf3b1", "vep")
   wxs <- do.call(extract_called_variants, c(args, list(vcf_dir = file.path(vd, "wxs"),
                  source_label = "wxs", apply_filter_pass = TRUE)))
   rna <- do.call(extract_called_variants, c(args, list(vcf_dir = file.path(vd, "rna"),
@@ -363,7 +363,7 @@ build_nkap_tables <- function(I, k = 13) {
     d$SYMBOL == "FAM50A" | d$SYMBOL == "SLU7"
   args <- list(I = I, transcripts = c("NM_024528", "NM_004699", "NM_006445", "NM_006425"),
                region = region)
-  vd <- file.path(file.path(QROOT, "variant_recalling/unified"), "nkap", "vep")
+  vd <- file.path(file.path(QROOT, "mutation_recalling/unified"), "nkap", "vep")
   wxs <- do.call(extract_called_variants, c(args, list(vcf_dir = file.path(vd, "wxs"),
                  source_label = "wxs", apply_filter_pass = TRUE)))
   rna <- do.call(extract_called_variants, c(args, list(vcf_dir = file.path(vd, "rna"),
@@ -393,7 +393,7 @@ build_ylpm1_tables <- function(I, k = 30) {
                mode = "ptc", ptc_symbol = "YLPM1",
                ptc_consequences = c("stop_gained", "frameshift_variant",
                                     "splice_acceptor_variant", "splice_donor_variant"))
-  vd <- file.path(file.path(QROOT, "variant_recalling/unified"), "ylpm1", "vep")
+  vd <- file.path(file.path(QROOT, "mutation_recalling/unified"), "ylpm1", "vep")
   wxs <- do.call(extract_called_variants, c(args, list(vcf_dir = file.path(vd, "wxs"),
                  source_label = "wxs", apply_filter_pass = TRUE)))
   rna <- do.call(extract_called_variants, c(args, list(vcf_dir = file.path(vd, "rna"),

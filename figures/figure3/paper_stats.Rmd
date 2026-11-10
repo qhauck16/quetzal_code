@@ -177,14 +177,14 @@ claim("GSP13", "highest-loading sample's mutation", "SLU7:R290I", v$gene_mutatio
 
 ## Re-calling in matched controls
 
-The unified calling (`variant_recalling/unified/nkap`) ran the identical pipeline on 65 cases (GSP #13 > 0.01)
+The unified calling (`mutation_recalling/unified/nkap`) ran the identical pipeline on 65 cases (GSP #13 > 0.01)
 and 65 cohort-matched controls (GSP #13 < 1e-4; `samples.tsv` role). Every control's calls pass through the
 same `extract_called_variants()` filter as the cases (PASS/multiallelic WXS, MODERATE/HIGH, AF > 0.1,
 depth > 10, NKAP > 300 / PRPF8 1570-1900 / FAM50A / SLU7, AlphaMissense > 0.9) and land in the variant
 table's `wxs_mutation` / `rnaseq_mutation` columns, so a control "with a mutation" is a non-blank call there.
 
 ```{r recall controls}
-UNI <- file.path(QROOT, "variant_recalling/unified")
+UNI <- file.path(QROOT, "mutation_recalling/unified")
 roles <- fread(file.path(UNI, "nkap", "samples.tsv"), data.table = FALSE)
 ctrl  <- roles$rail_id[roles$role == "control"]
 has_vep <- function(r, s) file.exists(file.path(UNI, "nkap", "vep", s, paste0(r, ".vep.vcf")))

@@ -5,7 +5,7 @@
 # LoF mutants with GSP #30 < 1e-4 (lof_low_gsp30/samples.tsv). Sample = tumour barcode's first 15 chars.
 # Out: ylpm1_absolute_cn.tsv
 suppressPackageStartupMessages(library(data.table))
-PA <- "../../inputs/pancanatlas"   # run from variant_recalling/ylpm1_biallelic/
+PA <- "../../inputs/pancanatlas"   # run from mutation_recalling/ylpm1_biallelic/
 seg <- fread(file.path(PA, "TCGA_mastercalls.abs_segtabs.fixed.txt"))[Chromosome == 14 & Start <= 75278000 & End >= 75278000]
 pur <- fread(file.path(PA, "TCGA_mastercalls.abs_tables_JSedit.fixed.txt"))
 top <- fread("top13_recall/samples.tsv")[, grp := fifelse(rail_id %in% c(461535, 866724), "double", "likely_single")]

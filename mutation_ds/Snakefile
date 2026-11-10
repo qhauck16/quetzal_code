@@ -4,18 +4,15 @@
 # (../leafcutter_analyses/diff_splicing/Snakefile):
 #   regtools -a 8 -m 50 -M 500000 -s XS -> leafcutter_cluster_regtools.py
 #   -m 10 -l 500000 -p 0.0001 -> leafcutter_ds.R --num_threads 4.
-# Runs on midway2 (leafcutter_ds conda env and ~/software/leafcutter live there).
-# Conda envs are the ones already built for the GSP comparisons, called by
-# absolute path, so nothing is rebuilt. Run from this directory:
-#   snakemake --executor slurm --default-resources slurm_partition=broadwl slurm_account=pi-yangili1 --jobs 90
+# Needs LEAFCUTTER_DIR (a clone of github.com/davidaknowles/leafcutter) and a conda env
+# named leafcutter_ds with leafcutter's R package. Run from this directory:
+#   snakemake --use-conda --jobs N   (add your cluster executor)
 import csv, glob, os
 
 BASE_DIR = os.path.abspath(".")
-DS_DIR   = "/project2/yangili1/qhauck/spliceNMF/tcga/genome_wide/flashier/diff_splicing"
+DS_DIR   = "../leafcutter_analyses/diff_splicing"
 OLD_JUNC = os.path.join(DS_DIR, "junc_files")          # .junc kept from the GSP runs
-ENV_RNA  = os.path.join(DS_DIR, ".snakemake/conda/8959f668a328615b7157df5baf2aa57e_/bin")  # regtools, samtools
-ENV_PY2  = os.path.join(DS_DIR, ".snakemake/conda/0adddc1f015610e6320bf053d3796950_/bin")  # python2.7
-LEAFCUTTER_DIR = os.path.expanduser("~/software/leafcutter")
+LEAFCUTTER_DIR = os.environ.get("LEAFCUTTER_DIR", os.path.expanduser("~/software/leafcutter"))
 
 COMPS = sorted(os.path.basename(p)[:-4] for p in glob.glob("samples/*.tsv")
                if not os.path.basename(p).startswith("download_list"))
@@ -62,16 +59,16 @@ rule junc:
     resources:
         mem_mb=8000,
         runtime=60,
-        cpu=4,
-        slurm_extra="'--exclude=midway2-0318'"
+        cpu=4
+    conda: "../leafcutter_analyses/diff_splicing/envs/rna-seq.yml"
     shell:
         """
         mkdir -p junc_files
         if [ -z "{input.bam}" ]; then
             ln -s {params.old} {output.junc}
         else
-            [ -s {input.bam}.bai ] || {ENV_RNA}/samtools index -@ 4 {input.bam}
-            {ENV_RNA}/regtools junctions extract -a 8 -m 50 -M 500000 \
+            [ -s {input.bam}.bai ] || samtools index -@ 4 {input.bam}
+            regtools junctions extract -a 8 -m 50 -M 500000 \
                 {input.bam} -o {output.junc} -s XS
         fi
         """
@@ -88,12 +85,12 @@ rule leafcutter_cluster:
         abs_junc_dir=os.path.join(BASE_DIR, "junc_files")
     resources:
         mem_mb=16000,
-        runtime=120,
-        slurm_extra="'--exclude=midway2-0318'"
+        runtime=120
+    conda: "../leafcutter_analyses/diff_splicing/envs/python2.7.yml"
     shell:
         """
         cd {params.abs_out}
-        {ENV_PY2}/python {LEAFCUTTER_DIR}/clustering/leafcutter_cluster_regtools.py \
+        python {LEAFCUTTER_DIR}/clustering/leafcutter_cluster_regtools.py \
             -j {params.abs_out}/juncfiles.txt \
             -m 10 -o {wildcards.comp} -l 500000 -p 0.0001
 
@@ -117,8 +114,7 @@ rule leafcutter_ds:
     resources:
         mem_mb=16000,
         runtime=240,
-        cpu=4,
-        slurm_extra="'--exclude=midway2-0318'"
+        cpu=4
     shell:
         """
         set +u

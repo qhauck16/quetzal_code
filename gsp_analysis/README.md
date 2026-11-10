@@ -11,5 +11,4 @@ paths updated; each was re-run and its output is byte-identical to the manuscrip
 | `alsafadi_to_hg38.R` | `Alsafadi2016_supp1_hg38.tsv` (Alsafadi et al. 2016 SF3B1 junctions, lifted to hg38) | `spec_flash_fact.Rmd` |
 | `cmh_enrichment.R` | `cmh_mutation_enrichment_am0_9.tsv` (GSP x mutated gene, CMH by cohort; Fig. 2d) | `flash_fact_char.Rmd` |
 
-Each takes an optional output directory (default: here). On midway,
-`bash make_links.sh` links the manuscript's outputs.
+Each takes an optional output directory (default: here).

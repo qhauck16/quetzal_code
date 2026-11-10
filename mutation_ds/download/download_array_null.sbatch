@@ -1,7 +1,5 @@
 #!/bin/bash
 #SBATCH --job-name=gdc_dl
-#SBATCH --partition=caslake
-#SBATCH --account=pi-yangili1
 #SBATCH --cpus-per-task=4
 #SBATCH --mem=8G
 #SBATCH --time=24:00:00
@@ -10,7 +8,7 @@
 # Re-submittable: files already present at full size are skipped, and
 # gdc-client resumes partial downloads.
 set -uo pipefail
-GDC=/project2/yangili1/qhauck/software/gdc-client/venv/bin/gdc-client
+GDC=${GDC_CLIENT:-gdc-client}   # GDC Data Transfer Tool
 S=${SHARD_DIR:-shards}/shard_${SLURM_ARRAY_TASK_ID}.tsv
 [ -s "$S" ] || { echo "no shard $S"; exit 0; }
 [ -r "$TOKEN" ] || { echo "token not readable: $TOKEN"; exit 1; }

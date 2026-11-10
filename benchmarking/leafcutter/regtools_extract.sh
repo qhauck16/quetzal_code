@@ -2,8 +2,6 @@
 #SBATCH --job-name=regtools_junc_extract
 #SBATCH --output=regtools_junc_extract.%j.out
 #SBATCH --error=regtools_junc_extract.%j.err
-#SBATCH --account=pi-yangili1
-#SBATCH --partition=broadwl
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=24
@@ -11,7 +9,6 @@
 #SBATCH --time=24:00:00
 
 ######################################################################
-# @author      : qhauck (qhauck@midway2-login1.rcc.local)
 # @file        : regtools_extract
 # @created     : Tuesday Jan 06, 2026 21:30:30 CST
 #

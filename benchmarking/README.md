@@ -12,4 +12,3 @@ Quetzal vs LeafCutter on three TCGA cohorts (Fig. 1b, Supplementary Fig. 2).
 
 Set `LEAFCUTTER_DIR` to a clone of github.com/davidaknowles/leafcutter. The Quetzal
 side of the comparison uses the main gene-level run (`../quetzal_runs/gene_level/`).
-On midway, `bash make_links.sh` links the manuscript's LeafCutter outputs.

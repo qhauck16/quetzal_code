@@ -29,4 +29,3 @@ the manuscript's copies: both sample tables, the Quetzal v0.1.1 data files, MANE
 and both PanCanAtlas files; the derived gene-to-chromosome split matches the
 original exactly.
 
-On midway, `bash fetch_inputs.sh --midway` symlinks the copies already on disk instead.

@@ -1,5 +1,5 @@
 # Whitelist: code, configs, docs, final figures, and the small tables the code needs.
-# All data, caches and the midway symlinks to outputs are excluded.
+# All data, caches and symlinks to outputs are excluded.
 *
 !*/
 !*.R
@@ -26,7 +26,7 @@
 !benchmarking/*.txt
 !leafcutter_analyses/leaf2_clustering/junc_files.txt
 !coverage_tracks/pygenome/regions.tsv
-!variant_recalling/ylpm1_biallelic/*/samples.tsv
+!mutation_recalling/ylpm1_biallelic/*/samples.tsv
 
 # final figures
 !figures/figure*/out/figure*.pdf
@@ -41,3 +41,4 @@ data/
 figures/logs/
 **/.snakemake/
 **/.Rproj.user/
+make_links.sh

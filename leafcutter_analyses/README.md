@@ -26,9 +26,3 @@ Step 5 notes:
 
 Software: leafcutter (github.com/davidaknowles/leafcutter) and leafcutter2
 (github.com/cfbuenabadn/leafcutter2, commit 62cccc6). Conda envs are in each step's `envs/`.
-
-## On midway
-
-`bash make_links.sh` points every output path at the existing result under
-`spliceNMF/tcga/` (symlinks; nothing is copied or recomputed). It never
-overwrites a real file.

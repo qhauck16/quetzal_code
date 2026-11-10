@@ -78,8 +78,7 @@ checkpoint select_and_match:
         ratio=lambda wc: int(wc.n_ctrl) // int(wc.n_test)
     resources:
         mem_mb=8000,
-        runtime=30,
-        slurm_extra="'--exclude=midway2-0318'"
+        runtime=30
     conda: "envs/rscript.yml"
     shell:
         """
@@ -112,8 +111,7 @@ rule regtools_extract:
     resources:
         mem_mb=8000,
         runtime=60,
-        cpu=4,
-        slurm_extra="'--exclude=midway2-0318'"
+        cpu=4
     conda: "envs/rna-seq.yml"
     shell:
         """
@@ -164,8 +162,7 @@ rule leafcutter_cluster:
         abs_junc_dir=JUNC_DIR
     resources:
         mem_mb=16000,
-        runtime=120,
-        slurm_extra="'--exclude=midway2-0318'"
+        runtime=120
     conda: "envs/python2.7.yml"
     shell:
         """
@@ -196,8 +193,7 @@ rule leafcutter_ds:
     resources:
         mem_mb=16000,
         runtime=240,
-        cpu=4,
-        slurm_extra="'--exclude=midway2-0318'"
+        cpu=4
     shell:
         """
         set +u

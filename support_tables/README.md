@@ -8,4 +8,3 @@
 
 Run from this directory, after `../leafcutter_analyses/` steps 1-3. The two
 aggregated tables feed `../leafcutter_analyses/diff_splicing/unified_results/`.
-On midway, `bash make_links.sh` links the manuscript's copies instead.

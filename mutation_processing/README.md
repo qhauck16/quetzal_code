@@ -14,5 +14,4 @@ Inputs: `../inputs/alphamissense/` (AlphaMissense hg38, hg19->hg38 chain).
 
 The manuscript's download is from 2025-09-17. cBioPortal's GDC studies are updated
 over time, so a fresh step 1 can differ. Steps 1 (compilation), 3 and their outputs
-were re-run and are byte-identical to the manuscript's files. On midway,
-`bash make_links.sh` links the manuscript's copies.
+were re-run and are byte-identical to the manuscript's files.

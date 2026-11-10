@@ -1,7 +1,6 @@
 #!/usr/bin/env sh
 
 ######################################################################
-# @author      : qhauck (qhauck@midway2-login2.rcc.local)
 # @file        : clustering
 # @created     : Wednesday Jan 07, 2026 10:41:23 CST
 #
