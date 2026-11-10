@@ -31,8 +31,7 @@ panel_c <- panel_cached("c", local({
     variable = c("upstream_AG_distance", "score_5ss", "score_3ss",
                  "length", "gc_content", "downstream_AG_distance",
                  "Branchpoint_score", "bp_distance_to_3ss"),
-    # Prose row labels. NB the model uses scale(length) on raw bp, not
-    # log(length); refitting on log(length) would change that row's beta.
+    # Prose row labels. The model fits scale(log(length)), matching the label.
     label = c("distance to 1st upstream AG (nt)",
               "5'ss MaxEnt score",
               "3'ss MaxEnt score",
@@ -58,7 +57,7 @@ panel_c <- panel_cached("c", local({
       group_by(subclass) %>% filter(n() == 2) %>% ungroup()
     d2$condition <- factor(d2$condition, levels = c("background", "test"))
 
-    fit <- glm(condition ~ scale(gc_content) + scale(length) +
+    fit <- glm(condition ~ scale(gc_content) + scale(log(length)) +
                  scale(score_3ss) + scale(score_5ss) +
                  scale(downstream_AG_distance) + scale(upstream_AG_distance) +
                  scale(Branchpoint_score) + scale(bp_distance_to_3ss),
@@ -69,6 +68,7 @@ panel_c <- panel_cached("c", local({
       dplyr::rename(estimate = Estimate, p_value = `Pr(>|z|)`) %>%
       filter(variable != "(Intercept)") %>%
       mutate(variable = gsub("scale\\((.*)\\)", "\\1", variable),
+             variable = sub("^log\\((.*)\\)$", "\\1", variable),
              sig = case_when(p_value < 0.001 ~ "***",
                              p_value < 0.01  ~ "**",
                              p_value < 0.05  ~ "*",
