@@ -10,5 +10,13 @@ Quetzal vs LeafCutter on three TCGA cohorts (Fig. 1b, Supplementary Fig. 2).
 | 4. Clustering | `leafcutter/clustering.sh` (`leafcutter_cluster_regtools.py -m 50`, Python 2.7 env) | `leafcutter/all_samples_perind_numers.counts.gz` |
 | 5. Differential splicing | `leafcutter/diff_splicing.sh` (`leafcutter_ds`, env `leafcutter_ds`) | `leafcutter/<A>_vs_<B>_ds_{cluster_significance,effect_sizes}.txt` |
 
-Set `LEAFCUTTER_DIR` to a clone of github.com/davidaknowles/leafcutter. The Quetzal
+Set `LEAFCUTTER_DIR` to a clone of github.com/davidaknowles/leafcutter. The scripts activate
+three named conda envs; create them from the files in `../leafcutter_analyses/diff_splicing/envs/`:
+
+```bash
+E=../leafcutter_analyses/diff_splicing/envs
+conda env create -n rna-seq      -f $E/rna-seq.yml        # regtools, samtools
+conda env create -n python2.7    -f $E/python2.7.yml      # leafcutter_cluster_regtools.py
+conda env create -n leafcutter_ds -f $E/leafcutter_ds.yml && conda run -n leafcutter_ds bash $E/leafcutter_ds.post-deploy.sh
+``` The Quetzal
 side of the comparison uses the main gene-level run (`../quetzal_runs/gene_level/`).

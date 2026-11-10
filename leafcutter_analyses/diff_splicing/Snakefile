@@ -194,12 +194,9 @@ rule leafcutter_ds:
         mem_mb=16000,
         runtime=240,
         cpu=4
+    conda: "envs/leafcutter_ds.yml"
     shell:
         """
-        set +u
-        source $HOME/.bashrc
-        conda activate leafcutter_ds
-        set -u
         cd {params.abs_out}
         Rscript {LEAFCUTTER_DIR}/scripts/leafcutter_ds.R \
             --num_threads 4 \

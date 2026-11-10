@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# Run inside the leafcutter2 conda env (../leaf2_clustering/envs/leafcutter2_env.yml).
 set -euo pipefail
 
 ######################################################################
@@ -93,9 +94,6 @@ rm -f "$tmpfile" "${tmpfile}.sorted"
 ###############################################
 echo "Running ForwardSpliceJunctionClassifier.py ..."
 mkdir -p "${RUNDIR}/clustering"
-
-conda deactivate
-conda activate base
 
 python3 "${SCRIPT_DIR}/ForwardSpliceJunctionClassifier.py" \
     -c "$OUTFILE" \
