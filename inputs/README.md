@@ -22,7 +22,7 @@ paths the analysis folders and figure code expect:
 | `pancanatlas/` | PanCanAtlas ABSOLUTE purity/ploidy and allelic segments (GDC, hg19) |
 | `bigwigs/{tcga,gtex}/` | recount3 coverage bigwigs, URLs in `lists/` (`fetch_bigwigs.sh`) |
 | `cosmic_tier_1.tsv` | COSMIC Cancer Gene Census Tier 1 (account required; place by hand) |
-| `cola_seq_branchpoints.csv` | CoLa-seq human branchpoints (place by hand) |
+| `cola_seq_branchpoints.csv` | CoLa-seq human branchpoints, Zeng et al. 2022 Mol. Cell, Table S2 (title row removed) |
 
 Checked byte-identical to
 the manuscript's copies: both sample tables, the Quetzal v0.1.1 data files, MANE

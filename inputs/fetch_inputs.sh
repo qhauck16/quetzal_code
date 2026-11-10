@@ -5,7 +5,7 @@
 #
 #   bash fetch_inputs.sh                 # all single-file inputs
 #   bash fetch_inputs.sh --only <step>   # one of: metadata quetzal_data gencode mane alphamissense
-#                                        #   gdc_reference vep_cache star_index alsafadi pancanatlas
+#                                        #   gdc_reference vep_cache star_index alsafadi cola_seq pancanatlas
 #   bash fetch_inputs.sh --midway        # midway only: symlink the copies already on disk
 #                                        #   (also links the Snaptron tables, bigwigs and mutation downloads)
 #
@@ -13,11 +13,9 @@
 # fetch_bigwigs.sh (recount3 coverage bigwigs). The cBioPortal mutation download is the
 # first step of ../mutation_processing/.
 #
-# Two inputs cannot be downloaded by script and are placed by hand:
+# One input cannot be downloaded by script and is placed by hand:
 #   cosmic_tier_1.tsv          COSMIC Cancer Gene Census, Tier 1 (export of 2025-11-03; needs a
 #                              COSMIC account: https://cancer.sanger.ac.uk/census)
-#   cola_seq_branchpoints.csv  CoLa-seq human branchpoints (Zeng et al., bioRxiv
-#                              10.1101/2021.10.18.464728)
 #
 # Needs: curl, gzip.
 set -euo pipefail
@@ -128,12 +126,20 @@ if want alsafadi; then echo "== Alsafadi et al. 2016 (Nat. Commun. 10.1038/ncomm
   get 'https://static-content.springer.com/esm/art%3A10.1038%2Fncomms10615/MediaObjects/41467_2016_BFncomms10615_MOESM961_ESM.xlsx' Alsafadi2016_supp1.xlsx
 fi
 
+if want cola_seq; then echo "== CoLa-seq human branchpoints (Zeng et al. 2022, Mol. Cell, Table S2)"
+  # The supplement's first line is a title row; the manuscript's copy drops it.
+  if [ ! -s cola_seq_branchpoints.csv ]; then
+    curl -fsSL --retry 3 -A "Mozilla/5.0" https://ars.els-cdn.com/content/image/1-s2.0-S1097276522010668-mmc3.csv \
+      | tail -n +2 > cola_seq_branchpoints.csv
+  fi
+fi
+
 if want pancanatlas; then echo "== PanCanAtlas ABSOLUTE (GDC open access; hg19)"
   get https://api.gdc.cancer.gov/data/0f4f5701-7b61-41ae-bda9-2805d1ca9781 pancanatlas/TCGA_mastercalls.abs_segtabs.fixed.txt
   get https://api.gdc.cancer.gov/data/4f277128-f793-4354-a13d-30cc7fe9f6b5 pancanatlas/TCGA_mastercalls.abs_tables_JSedit.fixed.txt
 fi
 
-for f in cosmic_tier_1.tsv cola_seq_branchpoints.csv; do
+for f in cosmic_tier_1.tsv; do
   [ -e "$f" ] || echo "NOTE: place $f by hand (see the header of this script)"
 done
 echo "done"
