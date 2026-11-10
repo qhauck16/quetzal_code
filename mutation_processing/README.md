@@ -9,7 +9,6 @@ AlphaMissense. Run from this directory, in order:
 | 2. Lift to GRCh38 + merge | `liftover_and_merge.R` (UCSC `liftOver`; set `LIFTOVER` if it is not on PATH) | `merged_grch38.tsv` |
 | 3. AlphaMissense subsets | `make_am_tables.sh` | `missense_keys.tsv`, `am_hits.tsv`, `am_refs/<GENE>_alphamissense.tsv` |
 | 4. Join AlphaMissense | `join_alphamissense.R` | `merged_grch38_with_am.tsv` |
-| (check) | `validate_merge.R` | stdout only |
 
 Inputs: `../inputs/alphamissense/` (AlphaMissense hg38, hg19->hg38 chain).
 
