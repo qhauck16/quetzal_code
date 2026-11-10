@@ -1,18 +1,8 @@
-# How gencode_v46_introns.tsv was built.
-#
-# Source recipe was originally written and then commented out at the top
-# of deprecated/nmd_prevalence.R; this script reproduces it as a
-# documentation/regeneration artifact.
-#
-# Inputs:
-#   ../../hg38_granges.RDS         # GENCODE v46 GTF read in as a GRanges
-#                                    (see flashier/just_for_fun/... for the
-#                                    builder; importable via rtracklayer)
-# Outputs:
-#   gencode_v46_introns.tsv        # 1-based inclusive intron coordinates,
-#                                    one row per (transcript, intron),
-#                                    annotated with transcript_id, gene_id,
-#                                    gene_name.
+# Builds gencode_v46_introns.tsv: every intron of every GENCODE v46 transcript, 1-based
+# inclusive coordinates, one row per (transcript, intron), with transcript_id, gene_id and
+# gene_name. Used to classify junctions against MANE introns (unified_results).
+#   Rscript build_gencode_v46_introns.R      (run from leafcutter_analyses/diff_splicing/)
+# Input:  ../../inputs/gencode_v46_granges.RDS (GENCODE v46 annotation as GRanges)
 
 
 suppressPackageStartupMessages({
