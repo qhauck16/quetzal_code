@@ -2,7 +2,7 @@
 # Samples ranked 40-100 on GSP #10, coloured by SF3B1 / SUGP1 status;
 # SUGP1 carriers labelled with their protein change. p_adj is the
 # cohort-stratified CMH for SUGP1 among the top-100 non-SF3B1 samples,
-# Bonferroni over every gene (flash_fact_char.Rmd, "SUGP1 along GSP 10").
+# Bonferroni over every gene.
 # Inputs are built by cache/build_mutation_cache.R.
 source("common.R")
 
@@ -32,8 +32,8 @@ p <- ggplot(pd, aes(rank, k10, fill = category)) +
   geom_col(width = 0.9) +
   geom_text_repel(aes(label = lab), colour = COL[["SUGP1 carrier"]],
                   size = SIZE_BASE * 0.85 / .pt, family = FONT_FAMILY,
-                  # "both" (was "y"): adjacent carriers at ranks 94/95
-                  # stacked vertically and 94's leader ran through 95's label.
+                  # "both": adjacent carriers at ranks 94/95
+                  # would otherwise stack and cross leaders.
                   nudge_y = 0.05, direction = "both", min.segment.length = 0,
                   segment.size = 0.3, segment.colour = COL[["SUGP1 carrier"]],
                   box.padding = 0.2, na.rm = TRUE, seed = 1) +

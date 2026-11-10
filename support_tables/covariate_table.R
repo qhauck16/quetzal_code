@@ -1,5 +1,5 @@
 # Standardized per-sample TCGA covariate table for downstream pipelines
-# (cancer_specific_factors.R, flash_fact_char.Rmd).
+# (cancer_specific_factors.R, gsp_analysis/, figure caches).
 #
 # Numeric covariates are z-scored across the full TCGA population using
 # means and SDs computed on observed values only; NAs are left as NA --
@@ -7,8 +7,7 @@
 # complete.cases() (or to exclude columns they can't carry, as
 # cancer_specific_factors.R does with RIN).
 #
-# Run interactively in RStudio with the project's working directory set
-# to .../spliceNMF/tcga/. Edit the paths below if anything moves.
+# Run from support_tables/:  Rscript covariate_table.R
 
 
 suppressPackageStartupMessages({

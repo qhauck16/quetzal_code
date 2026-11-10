@@ -76,8 +76,7 @@ round_down_to_thousand <- function(value) floor(value   / 1000) * 1000
 round_up_to_thousand   <- function(value) ceiling(value / 1000) * 1000
 
 # ---- Core data loader -----------------------------------------------------
-# Loads everything load_gene_data() in updated_single_gene_figures.Rmd loads,
-# but driven by an explicit `paths` list (read from config.yaml).
+# Driven by an explicit `paths` list (read from config.yaml).
 
 load_gene_data <- function(gene_name, chr, fact, cancer_type,
                            paths, thresholds) {
@@ -163,11 +162,9 @@ load_gene_data <- function(gene_name, chr, fact, cancer_type,
       next
     }
 
-    # Beta-binomial GLM, the SAME model as the genome-wide search
-    # (tcga/gene_level_poisson/cancer_specific_factors.R fit_bb): reads for
+    # Beta-binomial GLM, the same model as the genome-wide search: reads for
     # the junction vs total reads in its cluster ~ study, one shared
-    # overdispersion (aod::betabin, random = ~ 1). Replaced a quasibinomial
-    # GLM on 2026-10-08 so the paper uses a single junction-level test.
+    # overdispersion (aod::betabin, random = ~ 1).
     cluster_test$study <- factor(cluster_test$study, levels = c("GTEx", "TCGA"))
     co <- tryCatch({
       fit <- suppressWarnings(aod::betabin(
@@ -430,10 +427,8 @@ plot_loading_violins <- function(gd, cancer_types = NULL) {
   n_labels <- loadings %>%
     group_by(group) %>%
     summarize(N = n(), .groups = "drop")
-  # Place the "N=" annotations a fixed FRACTION below zero rather than
-  # a hard -0.08: genes whose loadings span a much larger range (e.g.
-  # NF1, max ~1.0 vs EZH2 ~0.4) otherwise get the labels crammed onto
-  # the axis line.
+  # Place the "N=" annotations a fixed fraction of the loading range below
+  # zero, so they clear the axis line for genes with large loadings (NF1).
   n_label_y <- -0.15 * max(loadings$loading, na.rm = TRUE)
 
   comparisons <- lapply(cancer_types, function(ct) c("Other\nCohorts", ct))
@@ -476,8 +471,7 @@ plot_loading_violins <- function(gd, cancer_types = NULL) {
 }
 
 # ---- MANE gene body plot (static PDF) -------------------------------------
-# Mirrors the NKAP MANE gene model block in pygenome_from_GSPs.Rmd: a thin
-# ggbio::geom_alignment of the MANE transcript exons, optionally with a
+# A thin ggbio::geom_alignment of the MANE transcript exons, optionally with a
 # translucent red rect highlighting `region` (a "chr:start-end" string).
 
 plot_mane_gene_model_static <- function(gd, region = NULL) {

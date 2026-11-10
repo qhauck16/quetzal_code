@@ -37,7 +37,7 @@ rasterize_pdf <- function(pdf_path, dpi = 300) {
 }
 
 # Trim rows/columns that are ~all near-white so the composed layout
-# is dense (see NF1 coverage whitespace issue).
+# is dense.
 autocrop_png <- function(png_path, tol = 0.02, pad = 4) {
   img <- png::readPNG(png_path)
   gray <- if (length(dim(img)) == 3) 0.2989*img[,,1] + 0.587*img[,,2] + 0.114*img[,,3] else img

@@ -29,11 +29,9 @@ def transform(lines):
     #   [2] TCGA sashimi mock_for_axes   (~7.6)  <-- SASHIMI y-scale
     #   [3] GTEx sashimi mock_for_axes   (~3.3)  <-- SASHIMI y-scale
     #
-    # The reference sashimi_tracks.ini at
-    # tcga/gene_level_poisson/pygenome/NF1/sashimi_tracks.ini takes
-    # max(indices [2:]) * 1.1 and applies it to both surviving bigwig
-    # tracks (indices [0] and [1]). That's what gives the "compressed"
-    # sashimi view with visible detail down low.
+    # Take max(indices [2:]) * 1.1 and apply it to both surviving bigwig
+    # tracks (indices [0] and [1]), giving a "compressed" sashimi view
+    # with visible detail down low.
     max_idx = [i for i, l in enumerate(lines)
                if re.match(r'^max_value\s*=\s*[0-9]', l)]
     if len(max_idx) >= 4:

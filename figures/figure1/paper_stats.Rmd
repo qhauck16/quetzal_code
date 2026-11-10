@@ -6,9 +6,8 @@ params:
 ---
 
 Gene-level numbers: genes processed, the cancer-type-specific junction-group
-search and its COSMIC enrichment, and the EZH2 / NF1 examples. Ported from
-`tcga/gene_level_poisson/plotting_genes/gene_cancer_type_hits.Rmd`
-(same aggregation, same tests). The last chunk prints text vs recomputed.
+search and its COSMIC enrichment, and the EZH2 / NF1 examples. The last
+chunk prints text vs recomputed.
 
 ```{r setup, include = FALSE}
 if (!exists("QROOT")) QROOT <- local({ d <- normalizePath(getwd())   # quetzal_code root
@@ -23,15 +22,14 @@ source(file.path(QROOT, "figures/scripts/paper_stats_common.R"))
 Walks `chr*/{gene}/{junction_results,n_bb_tests}.tsv` and `res.RDS` under
 `gene_level_poisson_root` (slow), cached in `cache/paper_stats_glp_<inputs>.rds`;
 delete it to force a re-walk. `pre_rerun` swaps in the per-gene backups of the
-2,114 genes rerun on 2026-10-06 (see `pre_rerun` note in the chunk).
+2,114 rerun genes (see `pre_rerun` note in the chunk).
 
 ```{r aggregate}
 dir.create("cache", showWarnings = FALSE)
 CF   <- sprintf("cache/paper_stats_glp_%s.rds", ps_inputs())
 ROOT <- file.path(QROOT, "quetzal_runs/gene_level")
-# pre_rerun: the per-gene outputs as they were before the 2026-10-06 rerun =
-# today's tree with the 2,114 rerun genes (chr10/11/18 + ANKIB1) swapped for
-# their backups in pre_chr18fix_2026-10-06/ (every other gene is untouched).
+# pre_rerun: the current tree with the 2,114 rerun genes (chr10/11/18 +
+# ANKIB1) swapped for their backups in BK (every other gene is untouched).
 BK <- file.path(ROOT, "pre_chr18fix_2026-10-06")
 pick <- function(files) {
   rel <- substring(files, nchar(ROOT) + 2)

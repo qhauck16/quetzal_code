@@ -9,11 +9,6 @@
 #   * contiguous all-blank row bands inside a cell, i.e. dead whitespace
 #   * whether any ink reaches a cell's edge (clipping risk)
 #
-# Both figure 1 bugs that were hardest to find showed up here first: a
-# ~200 bp coverage/junction drift, and panel a sitting ~68 px low
-# because patchwork reserves tag space differently for a bare ggplot
-# than for a wrap_elements().
-#
 # Usage:
 #   Rscript figure_qa.R <figure.pdf> <row_heights> <col_widths_per_row>
 #

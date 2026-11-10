@@ -1,12 +1,12 @@
-# Supplementary Figure 19: loss of heterozygosity around YLPM1 (2026-11-09; the SVM phenotype-axis figure
-# moved to S20). Per 100 kb bin across YLPM1 +/- 50 Mb (hg19, clipped to chr14), the % of samples whose
+# Supplementary Figure 19: loss of heterozygosity around YLPM1. Per 100 kb bin
+# across YLPM1 +/- 50 Mb (hg19, clipped to chr14), the % of samples whose
 # PanCanAtlas ABSOLUTE allelic segment keeps both homologues (minor HSCN > 0), for:
 #   - the 11 single-LoF samples among the top 13 on GSP #30 (the other 2 carry two LoF mutations);
 #   - the 25 intermediates closest to the decision boundary (score <= 0, highest scores);
 #   - background: every other TCGA tumour with ABSOLUTE calls (incl. the other phenotype-positive samples;
-#     that group was shown separately until 2026-11-09: 5/16 LOH, not enriched).
+#     5/16 LOH, not enriched).
 # P = one-sided Fisher's exact test (greater) of LOH exactly at the YLPM1 locus (segment covering the YLPM1
-# midpoint), each group vs background. Inputs: tcga/pancanatlas/TCGA_mastercalls.abs_segtabs.fixed.txt,
+# midpoint), each group vs background. Inputs: PanCanAtlas TCGA_mastercalls.abs_segtabs.fixed.txt,
 # figure4/cache/ylpm1_phenotype_axis_scores.tsv, tcga_v2_samples.tsv (rail_id -> barcode).
 if (!exists("QROOT")) QROOT <- local({ d <- normalizePath(getwd())   # quetzal_code root
   while (!file.exists(file.path(d, ".quetzal_root"))) { if (dirname(d) == d) stop("run from inside quetzal_code/"); d <- dirname(d) }
@@ -44,8 +44,8 @@ prof <- rbindlist(lapply(names(G), function(g) {
   o[, .(het = mean(het)), by = .(pos = i.Start)][, grp := LAB[[g]]]
 }))
 prof[, grp := factor(grp, LAB)]
-# p-values written just above each tested line (Quinn: "p = ...", nothing else). x per line: the single-LoF
-# label sits over the flat stretch past 87 Mb; at MID + 3 Mb it ran into the step at ~84 Mb.
+# p-values written just above each tested line. x per line: the single-LoF
+# label sits over the flat stretch past 87 Mb, clear of the step at ~84 Mb.
 PX <- c(single = 88e6, near = MID + 3e6)
 pl <- data.table(grp = factor(LAB[c("single", "near")], LAB), x = PX,
                  y = mapply(function(l, x) prof[grp == l][which.min(abs(pos - x))]$het, LAB[c("single", "near")], PX) + 0.035,

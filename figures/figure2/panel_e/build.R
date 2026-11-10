@@ -40,7 +40,6 @@ e_dist <- fact10 %>%
 # Two insets also decouple the legend from the pie's coord_equal, so
 # neither is letterboxed by the other's aspect ratio.
 # ------------------------------------------------------------------
-# 2026-11-09 (Quinn): pie shrunk, % labels enlarged, legend pulled left toward the pie.
 E_PIE_BOX <- c(left = 0.025, bottom = 0.52, right = 0.290, top = 1.05)
 E_LEG_BOX <- c(left = 0.300, bottom = 0.56, right = 0.640, top = 1.03)
 
@@ -132,8 +131,7 @@ E_PIE_YLIM <- c(-1.04, 1.50)
 
 E_LAB_SIZE <- SIZE_BASE * 0.85          # pie % labels and legend text
 
-# The pie now uses the SHARED helper, in the style Quinn asked every pie
-# to match (Figure3-NKAP_improved.pdf panel d): big wedges plain text,
+# The pie uses the shared helper, in the paper-wide pie style: big wedges plain text,
 # small wedges in a rounded chip filled with their own colour, sitting on
 # the pie. The hand-tuned outside-label geometry above (e_in / e_out /
 # E_PIE_XLIM) is no longer drawn. Wedge order is unchanged: the helper
@@ -143,7 +141,7 @@ E_LAB_SIZE <- SIZE_BASE * 0.85          # pie % labels and legend text
 # to a fixed point -- see ../scripts/pie_chart.R.
 source("../scripts/pie_chart.R")
 E_PIE_LAB_SIZE <- SIZE_BASE * 1.0      # % labels on the wedges (were 0.85x)
-E_PIE_R_IN <- 0.477   # re-measured 2026-11-09 after the shrink
+E_PIE_R_IN <- 0.477
 panel_e_pie <- pie_labels_on_wedges(
   e_types, "type", PAL$splice_type,
   levels_order = as.character(e_types$type),

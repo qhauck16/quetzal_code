@@ -20,12 +20,12 @@ RSCRIPT=Rscript
 EXPR="$HERE/../../expression"   # quetzal_code/expression/
 mkdir -p cache
 
-# 1. Top-20 rail_ids by k13, derived -- never hardcoded, because the
-#    factor key has been stale before (memory: factor-keys-per-rds).
+# 1. Top-20 rail_ids by k13, derived from the variant table rather than
+#    hardcoded.
 $RSCRIPT --vanilla -e '
 suppressPackageStartupMessages(library(data.table))
 source("../scripts/vt_paths.R")
-f <- vt_path("NKAP_full_plus_variants")   # built in quetzal_code (2026-10-05)
+f <- vt_path("NKAP_full_plus_variants")
 d <- fread(f, data.table = FALSE)
 stopifnot("k13" %in% names(d))
 d <- d[order(-d$k13), ]

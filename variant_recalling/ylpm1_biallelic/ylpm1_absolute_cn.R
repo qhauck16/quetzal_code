@@ -1,5 +1,5 @@
-# Allele-specific copy number at YLPM1 from PanCanAtlas ABSOLUTE (tcga/pancanatlas/, downloaded 2026-10-30
-# from GDC PanCanAtlas: TCGA_mastercalls.abs_segtabs.fixed.txt + abs_tables purity/ploidy). Segments are
+# Allele-specific copy number at YLPM1 from PanCanAtlas ABSOLUTE (../../inputs/pancanatlas/, from GDC
+# PanCanAtlas: TCGA_mastercalls.abs_segtabs.fixed.txt + abs_tables purity/ploidy). Segments are
 # hg19: YLPM1 = chr14:75,230,069-75,326,186 (hg19), midpoint used for the overlap.
 # Groups: strong double mutants (461535, 866724), likely single mutants (other 11 of top 13 on GSP #30),
 # LoF mutants with GSP #30 < 1e-4 (lof_low_gsp30/samples.tsv). Sample = tumour barcode's first 15 chars.

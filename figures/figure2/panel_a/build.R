@@ -8,14 +8,11 @@
 # a. Workflow schematic (vector art; title re-set here so its
 #    typography matches the R-drawn panels)
 # ------------------------------------------------------------------
-# preserve_aspect = TRUE: the art is 5.83:1 and filling a 4.90:1 cell
-# stretched its text ~19% horizontally. ROW_H[1] below is tuned so the
-# cell aspect matches the art instead, so nothing is distorted.
+# preserve_aspect = TRUE; ROW_H[1] in compose.R is tuned so the cell
+# aspect matches the art's 5.83:1.
 #
-# The art's labels are Arial; every other panel draws in FONT_FAMILY
-# (Helvetica -> Nimbus Sans here). `pdf_subst_font()` re-sets the
-# schematic's text in that face -- see ../scripts/pdf_font_subst.R for
-# why this is the only workable route and why the dpi is raised.
+# pdf_subst_font() re-sets the schematic's Arial text in FONT_FAMILY
+# (see ../scripts/pdf_font_subst.R).
 panel_a <- panel_cached("a", wrap_elements(full =
   (gg_from_pdf(pdf_subst_font("panel_a/genome_wide_workflow.pdf"),
                dpi = 600, preserve_aspect = TRUE) +

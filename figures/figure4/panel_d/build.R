@@ -6,12 +6,9 @@
 #    A single pie of splice-event types over every differential
 #    junction, percentages ON the wedges.
 #
-# Instance: ylpm1 / 20v60 / dpsi0.01_fc2.5. Confirmed by its row count
-# (2460 = the published "N = 2460") and by its type breakdown
-# reproducing the published percentages to the decimal:
+# Instance: ylpm1 / 20v60 / dpsi0.01_fc2.5 (N = 2460 junctions):
 #   alt 3'ss 30.3, alt 5'ss 50.1, canonical 1.1, other 12.8, skipped 5.7
-# NB Quinn's recollection was dPSI > 0.05; the data says 0.01. Same
-# threshold family as figure 3 panel d.
+# Same threshold family as figure 3 panel d.
 
 if (!exists("QROOT")) QROOT <- local({ d <- normalizePath(getwd())   # quetzal_code root
   while (!file.exists(file.path(d, ".quetzal_root"))) { if (dirname(d) == d) stop("run from inside quetzal_code/"); d <- dirname(d) }
@@ -30,18 +27,10 @@ panel_d <- panel_cached("d", local({
   d_lvl <- sort(unique(d_pie$type))
   d_pal <- setNames(RColorBrewer::brewer.pal(5, "Set2"), d_lvl)
 
-  # Drawn radius, MEASURED off the render. coord_equal makes the pie
-  # HEIGHT-limited, and the panel's drawn height is only settled by
-  # patchwork at layout time, so this cannot be computed from the box
-  # width -- doing that in figure 3 gave a 2x error and collapsed the
-  # label fan. Re-measure if ROW_H or the box below changes.
-  # Re-measured after the labels moved onto the wedges: the plot's
-  # limits are now computed from where the labels land, so the drawn
-  # radius moved with them (0.62 -> 0.645 in). Measuring is a fixed
-  # point -- a bigger constant makes the label boxes smaller in pie
-  # radii, which shrinks the limits and grows the drawn pie -- so
-  # re-render and re-measure until the number stops moving. It took
-  # two passes here (0.685 -> 0.646 -> 0.645).
+  # Drawn pie radius in inches. coord_equal makes the pie HEIGHT-limited
+  # and patchwork settles the drawn height only at layout time, so this
+  # is measured from the render rather than computed from the box width.
+  # Update it if ROW_H or the inset box below changes.
   D_PIE_R_IN <- 0.580
 
   # Percentages sit ON the wedges; the two slivers (5.7 / 1.1%) get a
@@ -77,9 +66,8 @@ panel_d <- panel_cached("d", local({
 
   wrap_elements(full =
     frame +
-      # Centred under the pie (whose inset spans x 0.02-0.66), not in
-      # the cell's bottom-left corner, where it read as belonging to
-      # panel c's colourbar (QA review).
+      # Centred under the pie (whose inset spans x 0.02-0.66) so it is
+      # not read as belonging to the neighbouring colourbar.
       annotate("text", x = 0.34, y = 0.0, hjust = 0.5, vjust = 0,
                label = paste0("N = ", nrow(df)),
                size = SIZE_BASE * 0.85 / .pt, family = FONT_FAMILY,

@@ -4,8 +4,7 @@
 #
 # A 2x2 grid of loci (TP53BP1 / PBRM1 on top, MSH6 / ASXL1 below).
 # Every quadrant is a vertical patchwork stack drawn ENTIRELY from raw
-# bigwigs + MeanPSI .links with ../scripts/coverage_plot.R -- no
-# pygenometracks, no ggbio, no re-used *_MANE_gene_model.pdf:
+# bigwigs + MeanPSI .links with ../scripts/coverage_plot.R:
 #
 #   High GSP #30 coverage + arcs      sashimi_track_gg() + own arc layer
 #   Matched Controls coverage + arcs  sashimi_track_gg() + own arc layer
@@ -13,14 +12,9 @@
 #   full MANE gene model              transcript_zoom_gg()
 #   genomic coordinate labels         bespoke row (same x scale)
 #
-# No zoom callouts here (figure 3 panel c's top row has them; this
-# panel's reference does not).
-#
-# The arc/label machinery is deliberately a COPY of panel_b/build.R's
-# rather than a shared helper: ../scripts/coverage_plot.R is shared
-# with figures 1-3 and must not be edited for one panel's benefit, and
-# the two panels are meant to be editable independently. Keep them in
-# step by hand; see panel_e/build.md.
+# The arc/label machinery is a COPY of panel_b/build.R's rather than a
+# shared helper, so the two panels stay independently editable. Keep
+# them in step by hand.
 
 if (!exists("QROOT")) QROOT <- local({ d <- normalizePath(getwd())   # quetzal_code root
   while (!file.exists(file.path(d, ".quetzal_root"))) { if (dirname(d) == d) stop("run from inside quetzal_code/"); d <- dirname(d) }
@@ -29,20 +23,17 @@ panel_e <- panel_cached("e", local({
 
 PY <- file.path(QROOT, "coverage_tracks/pygenome/YLPM1")
 
-RED  <- "#C0392B"        # sampled off the reference render
+RED  <- "#C0392B"
 GREY <- "#969696"
 LAV  <- "#ccccff"        # same taper colour as figure 3 panel c
 
-# The published track labels read "High GSP #13 (15)". The #13 is
-# stale -- this is the YLPM1 / GSP #30 figure and every ini here says
-# "High_k30 (15)". The sample counts (15 / 150) ARE right for this
-# pygenome run. Corrected to #30.
+# Track labels: 15 top GSP #30 samples vs 150 matched controls.
 HIGH_LAB <- "High GSP"
 CTRL_LAB <- "Matched"
 HIGH_N   <- "#30 (15)"
 CTRL_N   <- "Controls\n(150)"
 
-BW_HIGH <- "High_k30-3-..bw"            # High_k65-* is a stale factor key
+BW_HIGH <- "High_k30-3-..bw"
 BW_CTRL <- "Matched_Controls-3-..bw"
 LK_HIGH <- "MeanPSI.High_k30-3-..links"
 LK_CTRL <- "MeanPSI.Matched_Controls-3-..links"
@@ -68,14 +59,13 @@ LOCI <- list(
 )
 # NB: the italic gene name's side is NOT a property of the locus and is
 # not listed here -- it is solved in make_gene_rows() from where the
-# zoom window falls on the transcript. Hand-setting it per gene is what
-# put ASXL1's label on top of its own lavender taper.
+# zoom window falls on the transcript, so it never lands on the taper.
 region_dir <- function(L)
   file.path(PY, L$gene, sprintf("%s_%d-%d", L$chrom, L$wide[1], L$wide[2]))
 
 # ------------------------------------------------------------------
 # Row heights. patchwork heights are RELATIVE, so only the ratios here
-# are stable -- see ../figure2/compose.md.
+# are stable.
 # ------------------------------------------------------------------
 H_TRK  <- 0.36     # one coverage/sashimi track
 H_TRAP <- 0.09     # lavender taper
@@ -83,29 +73,23 @@ H_GENE <- 0.15     # MANE gene model
 H_AXIS <- 0.12     # genomic coordinate labels
 STACK_H <- 2 * H_TRK + H_TRAP + H_GENE + H_AXIS
 
-# MEASURED off the render, not guessed. patchwork heights are relative
-# so this changes nothing about the layout -- its only job is to make
-# TRACK_H_IN the track's true drawn height, which is what the PSI
-# solver converts point sizes through.
-# At 400 dpi panel e's cell runs y = 1805..3186 px and the first track's
-# top edge is at 1900, so the content band is 3.215 in and
-#   TRACK_H_IN = H_TRK / (2*STACK_H) * 3.215 = 0.536 in.
+# Title band height, in inches. It does not change the layout (heights
+# are relative); it makes TRACK_H_IN the track's true drawn height,
+# which is what the PSI solver converts point sizes through.
 E_TITLE_H  <- 0.29
-# The high track's "0" is centred on its baseline (Quinn's axis rule),
-# so it hangs half a text height into the control track below, where
-# the control track's y_max number sits -- they printed on top of each
-# other. AX_BOT_PT buys each high/control boundary a gutter (two per
-# column: one per locus). It is taken off the content FIRST and handed
-# back as extra row height, so every track keeps the same drawn
-# coverage height -- the two cohorts of a locus share a y_max and are
-# read against each other. Same fix as panel b.
+# The high track's "0" is centred on its baseline, so it hangs half a
+# text height into the control track below, where that track's y_max
+# number sits. AX_BOT_PT gives each high/control boundary a gutter,
+# taken off the content first and handed back as extra row height, so
+# every track keeps the same drawn coverage height (the two cohorts of
+# a locus share a y_max). Same as panel b.
 AX_BOT_PT  <- 4.5
 E_SCALE    <- (ROW_H[["e"]] - E_TITLE_H - 2 * AX_BOT_PT / 72) / (2 * STACK_H)
 H_AXGAP    <- (AX_BOT_PT / 72) / E_SCALE        # the gutter, in row units
 TRACK_H_IN <- H_TRK * E_SCALE
 
 # Gutters, in pt. Only the RIGHT column carries the cohort captions
-# (as in the reference), so the two columns need different margins to
+#, so the two columns need different margins to
 # end up with comparable track widths.
 MARG <- list(left  = c(30, 40),      # c(left, right) in pt
              right = c(22, 62))
@@ -133,7 +117,7 @@ read_links <- function(path, start, end, min_psi = 1) {
   lk[lk$s1 >= start & lk$e2 <= end & lk$psi >= min_psi, , drop = FALSE]
 }
 
-# PSI exactly as the reference prints it: the .links value at its own
+# PSI as printed: the .links value at its own
 # precision, but never bare-integer ("74" -> "74.0", "99" -> "99.0").
 psi_fmt <- function(p) {
   s <- vapply(p, function(x) sprintf("%g", x), character(1))
@@ -164,36 +148,25 @@ if (!file.exists(EXON_RDS)) {
 EXONS <- readRDS(EXON_RDS)
 
 # ------------------------------------------------------------------
-# Arc geometry.  (Ported verbatim from panel_b/build.R, 2026-09-23;
-# see panel_e/build.md "Arcs" and panel_b/build.md for the full story.)
+# Arc geometry (same as panel_b/build.R).
 #
 # EACH FOOT SITS ON THE COVERAGE AT ITS OWN JUNCTION COORDINATE. The
-# old code drew y = apex * sin(pi t)^p, which is ZERO at t = 0 and
-# t = 1, so every foot landed on the track BASELINE no matter how tall
-# the coverage was there -- Quinn's requirement #1, and the root of the
-# "arcs dangle off the bottom of the figure" complaint. It was most
-# obvious at MSH6, whose 85.4 leaves a donor sitting at 0.42 of y_max
-# and used to come down 0.42 * 27.3 below the red fill. The curve is
-# now the same parametric form sashimi_track_gg() and figure 3 panel c
-# use, and that panel b now uses:
+# curve is the same parametric form sashimi_track_gg() uses:
 #
 #     y(t) = (1 - t) y1 + t y2 + sin(t pi)^ARC_P * amp
 #
-# with y1 / y2 the coverage AT s1 and AT e2. X is untouched: every foot
-# is still drawn at the raw .links coordinate.
+# with y1 / y2 the coverage AT s1 and AT e2. Every foot is drawn at the
+# raw .links coordinate.
 #
 # ANCHOR_BP = 0: the foot takes the coverage of the BIN the junction
 # coordinate falls in, which is a bin that IS drawn, so the foot sits
-# ON the coverage silhouette and never floats above it. A 10 bp window
-# already walks up into the exon plateau (MSH6's bins are 1 bp, so ten
-# of them reach 0.55 of y_max where the junction itself is at 0.42) and
-# the foot would then hang over the fill.
+# ON the coverage silhouette. A wider window would walk up into the
+# exon plateau and the foot would hang over the fill.
 #
 # Heights are solved in PEAK space (the drawn maximum of the curve),
 # never as an absolute fraction of y_max: with the feet at coverage
-# height an absolute apex is routinely BELOW its own feet, the sine
-# bump goes negative and the arc is drawn drooping to the baseline and
-# back -- Quinn's "flip completely".
+# height an absolute apex can be BELOW its own feet and the arc would
+# droop instead of bulge.
 #
 # The heights are SOLVED, arc by arc, bottom-up in the CONTAINMENT
 # order (Kahn's algorithm, tie-broken on endpoint height then span).
@@ -202,7 +175,7 @@ EXONS <- readRDS(EXON_RDS)
 #   * peak_i >= peak_j + ARC_SEP                  for every already
 #     placed j that CONTAINS i or is contained by it
 #   * min over their shared x of (y_i - y_j) >= ARC_GAP, same j
-#     (dominance: i never passes under j, requirement #2)
+#     (dominance: i never passes under j)
 # Each is monotone in the amplitude, so the binding one is found by
 # bisection, and the amplitude for a chosen drawn peak is back-solved
 # with uniroot (with a steep chord the maximum sits a long way from
@@ -213,37 +186,16 @@ EXONS <- readRDS(EXON_RDS)
 # ceiling -- parking an arc on the ceiling makes everything above it
 # cross.
 #
-# ---- Parameter values, re-derived for THIS panel -------------------
-# ARC_RISE / ARC_SEP / ARC_GAP are VISUAL quantities: how much bulge
-# reads as an arc, how far apart two tiers read as two, how much white
-# reads as clearance. They are therefore fixed in DRAWN INCHES and
-# converted through this panel's own track height, rather than copying
-# panel b's fractions of y_max. Panel e's tracks are 0.535 in tall
-# against panel b's 0.331 in, so an unconverted copy would have drawn
-# every separation 62% bigger here than there and the two sashimi
-# panels of one figure would not have matched.
+# ---- Parameter values ------------------------------------------------
+# ARC_RISE / ARC_SEP / ARC_GAP are VISUAL quantities (bulge, tier
+# separation, clearance), so they are fixed in DRAWN INCHES -- the same
+# inches as panel b -- and converted through this panel's track height,
+# so both sashimi panels of the figure match.
 #
-# The inch values ARE panel b's settled numbers at panel b's own track
-# height (0.08 / 0.085 / 0.03 of y_max x 0.3305 in). Panel e's four
-# loci were then swept over ARC_RISE 0.04-0.08, ARC_SEP 0.06-0.10,
-# ARC_GAP 0.02-0.03 and ARC_TRIM 0.10-0.30 (240 combinations x 8
-# tracks); the converted values clear all eight tracks with zero
-# avoidable crossings. Panel b's RAW fractions do not: at ARC_RISE
-# 0.08 of y_max, TP53BP1's 12.9 -- which shares 69.3's donor at 0.55 of
-# y_max and dives to the baseline 650 bp later -- is pushed to a peak
-# of 0.63 only 160 bp from the shared foot, and no amplitude under the
-# ceiling lets 69.3 stay above it (69.3 would need a peak of 0.99).
-# That is the one pair in this panel where the transfer actually bites.
-#
-# ARC_TRIM and ARC_P are DIMENSIONLESS and carry over unchanged. 0.10
-# of the shared span is still the right trim: seven of this panel's
-# eight tracks have every arc sharing an endpoint with another (ASXL1's
-# four all land on the same acceptor, 32,366,383), and at a shared foot
-# the gap is 0 by construction, so a smaller trim makes every dominance
-# test unsatisfiable. It was swept up to 0.30 and 0.10 is the value
-# that leaves the smallest residual dip INSIDE the trimmed zone
-# (TP53BP1 high, 11 bp wide and 0.0012 in deep -- a fifth of the
-# thinner arc's own stroke; at 0.15 it is 39 bp and 0.0042 in).
+# ARC_TRIM and ARC_P are dimensionless. Most arcs here share an endpoint
+# with another (ASXL1's four all land on one acceptor), and at a shared
+# foot the gap is 0 by construction, so the trim keeps the dominance
+# tests satisfiable; 0.10 leaves the smallest residual dip.
 # ------------------------------------------------------------------
 ANCHOR_BP <- 0
 ARC_P     <- 0.50     # bump shape, sin(t pi)^ARC_P (~ a half-ellipse)
@@ -306,7 +258,7 @@ nests <- function(a1, a2, b1, b2)
 # Signed vertical gap, in fractions of y_max, between every pair of
 # arcs that is NOT a forced crossing: (upper) - (lower) over the x they
 # share. Negative anywhere means an arc passes UNDER one it is tiered
-# above -- exactly the defect Quinn rejected. Printed on every build.
+# above. Printed on every build.
 arc_min_gap <- function(arcs) {
   n <- nrow(arcs)
   out <- list(gap = Inf, worst = "", forced = character(0))
@@ -412,19 +364,10 @@ arc_frame <- function(lk, d, y_max) {
 
 # ------------------------------------------------------------------
 # PSI labels: CONTOUR-STYLE, i.e. the number sits in a break in the arc
-# it names, exactly the way a contour map labels an isoline. Ported
-# from panel_b/build.R so the two sashimi panels of figure 4 label
-# their arcs the same way.
-#
-# The old solver here STACKED the numbers above the arcs. That idiom
-# survives only while the arcs are shallow: once the feet are at
-# coverage height, ASXL1's four arcs leave one acceptor together and
-# run within 0.05 of y_max of each other for their whole right-hand
-# half, so every number would have to sit above the whole bundle and
-# none of them would say which arc it names. The gap between two tiers
-# here is ARC_SEP = 0.053 of y_max = 0.028 in, and the digits are
-# 0.064 in tall -- a number needs a gap more than twice as wide as any
-# that exists.
+# it names, exactly the way a contour map labels an isoline. Same as
+# panel_b/build.R. Stacking numbers above the arcs cannot work here:
+# tiers are much closer together than a digit is tall, so a stacked
+# number would not say which arc it names.
 #
 # So the arcs are CUT instead. Every label gets a box; each arc's curve
 # is split wherever it enters one, and only the surviving runs are
@@ -449,8 +392,7 @@ CUT_W     <- 1.5
 FOOT_KEEP <- 5.0   # pt of arc that must survive leading into every foot
 
 # Helvetica advance widths: digits are 0.556 em, the period 0.278 em.
-# nchar() * one fudged average over-estimates "11.5" by ~25%, and the
-# width is what sizes the cut in the arc, so it is worth being exact.
+# The width sizes the cut in the arc, so it is computed exactly.
 str_w_em <- function(s)
   vapply(strsplit(s, "", fixed = TRUE),
          function(cs) sum(ifelse(cs == ".", 0.278, 0.556)), numeric(1))
@@ -469,10 +411,7 @@ place_psi <- function(arcs, d, y_max, trk_h_in, trk_w_in, s, e) {
   # touches is cut as tightly as "no line may touch a glyph" allows
   # (bw2/bh2) -- a hairline notch that the eye reads straight through.
   # That is the contour-map convention: only the labelled isoline
-  # breaks. Cutting every arc the same width is what makes a bundle
-  # like ASXL1's unreadable -- two lines stop on the left of each
-  # number and two start on the right, and nothing says which one the
-  # number belongs to.
+  # breaks, so in a bundle the number still says which arc it names.
   bw      <- hw + 1.7 * x_pt
   bh      <- hh + 0.9 * y_pt
   bw2     <- hw + 0.5 * x_pt
@@ -503,8 +442,7 @@ place_psi <- function(arcs, d, y_max, trk_h_in, trk_w_in, s, e) {
   lead_x <- lead_y <- rep(NA_real_, n)
   # Most-constrained first: increasing (arc span / label width). The
   # number that barely fits on its own arc chooses before the ones with
-  # a whole track to slide along -- MSH6's "11.5" is a 0.24 kb label on
-  # a 0.148 kb arc whose right splice site is also 85.4's.
+  # a whole track to slide along.
   for (i in order((arcs$x2 - arcs$x1) / (2 * bw))) {
     a     <- arcs[i, ]
     done  <- which(!is.na(py))
@@ -521,15 +459,11 @@ place_psi <- function(arcs, d, y_max, trk_h_in, trk_w_in, s, e) {
         if (length(done) &&
             any(abs(px[done] - lx) < (bw[done] + bw[i] + air_x) &
                 abs(py[done] - ly) < (bh + bh + air_y))) next
-        # The break must never eat an arc's LANDING. This panel is ABOUT
-        # where the junctions come down, and a number can be wider than
-        # a short arc: "11.5" spans 240 bp of MSH6's window against its
-        # own arc's 148, so centred on that arc the box would eat the
-        # arc whole and then sit over the last few points of 85.4,
-        # which shares its right splice site -- and 85.4 would stop in
-        # mid-air short of the exon. That is requirement 1 breaking
-        # through the label solver. So the last FOOT_KEEP points of
-        # every arc, at BOTH ends, are off limits to every box.
+        # The break must never eat an arc's LANDING: a number can be
+        # wider than a short arc and would otherwise cut a neighbour
+        # that shares its splice site short of the exon. So the last
+        # FOOT_KEEP points of every arc, at BOTH ends, are off limits
+        # to every box.
         if (any(vapply(seq_len(n), function(j) {
               hwj <- if (j == i) bw[i] else bw2[i]
               hhj <- if (j == i) bh   else bh2
@@ -553,13 +487,9 @@ place_psi <- function(arcs, d, y_max, trk_h_in, trk_w_in, s, e) {
     }
     if (is.null(best)) {
       # No slot ON the arc. This happens when an arc is both SHORT and
-      # LOW and shares a foot with a tall neighbour: MSH6's 11.5 is
-      # 148 bp with a peak 0.049 of y_max above its own higher foot,
-      # against a label half-height of ~0.11, and its right splice site
-      # is also 85.4's -- so there is nowhere on or just above it that
-      # is not inside 85.4. The old fallback ignored every other arc
-      # and dropped the number at the midpoint, which is exactly where
-      # 85.4's descending limb is.
+      # LOW and shares a foot with a tall neighbour (MSH6's 11.5), so
+      # there is nowhere on or just above it that is not inside the
+      # neighbour.
       #
       # Put it BESIDE the arc instead, level with its apex, on whichever
       # flank has room, and run a short leader back to the apex. Scan
@@ -568,15 +498,11 @@ place_psi <- function(arcs, d, y_max, trk_h_in, trk_w_in, s, e) {
       apex_y <- arc_y_at(a, apex_x)
       step   <- 0.35 * bw[i]
       cand   <- NULL
-      # Also try heights ABOVE the apex (Quinn: 11.5 was "way off"). At
-      # apex height the intron coverage beside MSH6's short arc blocked
-      # every nearby slot, so the scan ran ~0.8 in left before it found
-      # room. Stepping up lets it sit right next to its own arc.
+      # Also try heights ABOVE the apex, so a label blocked by intron
+      # coverage at apex height can still sit right next to its arc.
       for (k in 1:40) for (dir in c(-1, 1)) for (dy in c(0, 1, 2, 3, 4)) {
-        # R's `break` only leaves the INNERMOST loop, so without this the
-        # scan carried on outward and kept overwriting `cand` -- the label
-        # ended at the LAST (farthest) clear slot, not the nearest. That,
-        # not a lack of room, is why MSH6's 11.5 sat ~0.8 in from its arc.
+        # R's `break` only leaves the INNERMOST loop; this stops the
+        # scan at the nearest clear slot.
         if (!is.null(cand)) break
         lx <- if (dir < 0) a$x1 - k * step - bw[i] else a$x2 + k * step + bw[i]
         if (lx - bw[i] < s || lx + bw[i] > e) next
@@ -585,7 +511,7 @@ place_psi <- function(arcs, d, y_max, trk_h_in, trk_w_in, s, e) {
         inw  <- d$bin_center >= lx - bw[i] & d$bin_center <= lx + bw[i]
         covb <- if (any(inw)) max(d$coverage[inw]) else 0
         if (ly - bh < covb + 0.6 * y_pt) next
-        # clear of EVERY arc (that was the bug), including its own
+        # clear of EVERY arc, including its own
         probe <- seq(lx - bw[i], lx + bw[i], length.out = 11)
         if (any(vapply(seq_len(n), function(j) {
               yj <- arc_y_at(arcs[j, ], probe)
@@ -613,8 +539,7 @@ place_psi <- function(arcs, d, y_max, trk_h_in, trk_w_in, s, e) {
   }
   # Every column travels as DATA, never as an aes() reference to a
   # scalar in this environment -- a panel restored from
-  # panel_cached()'s saveRDS renders blank otherwise
-  # (../figure2/compose.md).
+  # panel_cached()'s saveRDS renders blank otherwise.
   data.frame(x = px, y = py, lab = arcs$lab,
              arc = seq_len(n), bw = bw, bh = bh, bw2 = bw2, bh2 = bh2,
              lead_x = lead_x, lead_y = lead_y,
@@ -659,12 +584,10 @@ arc_layer <- function(a, boxes, color, linewidth, x_pt, y_pt, min_pt = 3,
 # ------------------------------------------------------------------
 # One coverage / sashimi track.
 #
-# sashimi_track_gg draws the coverage (and owns the theming, so these
-# tracks look identical to figure 3 panel c's); its own arc engine is
-# switched OFF with min_psi = Inf because it interpolates a two-element
-# apex_range over its own short->long ordering, which cannot express
-# per-arc solved peaks (figure 3 panel c documents the same limit).
-# The FORM of the curve is identical to the helper's -- see arc_frame.
+# sashimi_track_gg draws the coverage (and owns the theming); its own
+# arc engine is switched OFF with min_psi = Inf because it cannot
+# express per-arc solved peaks. The FORM of the curve is identical to
+# the helper's -- see arc_frame.
 #
 # The arcs are built HERE, not by the caller, because their feet are
 # sampled from this track's own coverage.
@@ -748,20 +671,14 @@ make_track <- function(L, cohort, col, side, lk_df,
   }
 
   # y-axis extremes, hard against the left edge (clip = "off" puts them
-  # in the left gutter). One decimal, as the reference prints.
+  # in the left gutter). One decimal.
   #
   # Both labels are pushed INWARD by AX_IN lines, so the gap between
-  # this track's "0" and the next track's "27.3" is 2 * AX_IN lines --
-  # the rows butt flush (the gutters carry no top/bottom margin), so
-  # nothing else separates them. At 0.15 that gap was 0.027 in and the
-  # two numbers read as one stacked pair; 0.40 gives 0.074 in, still
-  # only 7% of the track's drawn height.
+  # this track's "0" and the next track's "27.3" is 2 * AX_IN lines
+  # (the rows butt flush), enough that they do not read as one pair.
   #
-  # Quinn, for every sashimi plot: "the numerical axis should have a
-  # line indicating it is an axis with two ticks for the numbers ...
-  # the 0 ... should sit beneath/even with" the track bottom. So: a
-  # rule over 0..y_max, a tick at each end, and each number hung off its
-  # tick -- the same chrome as panel b and as sashimi_track_gg's own
+  # Axis chrome: a rule over 0..y_max, a tick at each end, and each
+  # number hung off its tick -- the same as panel b and as sashimi_track_gg's own
   # axis in figures 1-3 (grey15, 0.3 pt rule, 2.5 pt ticks, 1.5 pt air).
   # The 0 is CENTRED on the baseline; the top number hangs just inside
   # its tick. Every value is a DATA COLUMN (panel_cached's saveRDS).

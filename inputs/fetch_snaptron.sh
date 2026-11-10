@@ -19,7 +19,7 @@ cd "$(dirname "${BASH_SOURCE[0]}")"
 : "${QS:?set QS to the snaptron-experiments qs client (see header)}"
 [ -s hugo_all_pc_genes.tsv ] || { echo "run fetch_inputs.sh --only quetzal_data first" >&2; exit 1; }
 
-# gene -> chromosome from the HGNC cytoband, as tcga/all_genes/hugo_genes_by_chr.R
+# gene -> chromosome from the HGNC cytoband (chr1-22, X)
 awk -F'\t' 'NR>1 { c=$2; sub(/[pq].*/, "", c); if (c == "X" || (c ~ /^[0-9]+$/ && c+0 >= 1 && c+0 <= 22)) print "chr" c "\t" $1 }' \
     hugo_all_pc_genes.tsv > snaptron_genes.tsv
 

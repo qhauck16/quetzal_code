@@ -7,8 +7,7 @@
 #   b: S9-style overlap tiles: GSP driving alt 3'/5'ss junctions (from the top 250
 #      unannotated, mutation_ds/gsp_top) against the LeafCutter up / down junctions
 #      (cluster adj. P < 0.05, no effect-size floor); exact binomial test of up vs
-#      down among the hits (p0 = 0.5) in each title. The PSI/RPM-matched background
-#      row and its Fisher test were dropped 2026-11-10, as in S9. IDH1 R132 vs GSP #1 and
+#      down among the hits (p0 = 0.5) in each title. IDH1 R132 vs GSP #1 and
 #      each SPOP residue vs GSP #12 (mutation_ds/out/overlap_cells.tsv).
 # Run from supplementary/:  Rscript --vanilla note1/fig3.R
 source("common.R")

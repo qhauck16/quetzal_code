@@ -1,7 +1,5 @@
 # Cache the GSP loadings every variant table keys off: flashier::ldf(out,
-# type = "i")$L of the current flashier fit -- exactly `norm_L` in
-# tcga/genome_wide/flashier/flash_fact_char.Rmd ("loading re-used files").
-# NOT out$L_pm (diff_splicing/flashier_loadings.tsv): ldf rescales.
+# type = "i")$L of the flashier fit (not out$L_pm: ldf rescales).
 # Heavy (3.7 GB RDS) -- run on SLURM from quetzal_code/figures/:
 #   sbatch -p caslake --account=pi-yangili1 --mem=48G -t 1:00:00 --wrap \
 #     "Rscript --vanilla scripts/build_gsp_loadings.R"

@@ -3,17 +3,18 @@
 # their environment should update these too -- the pipeline reads its
 # own config, not paths.yaml).
 paths:
-  gencode_granges:     "/project2/yangili1/qhauck/spliceNMF/tcga/hg38_granges.RDS"
-  tcga_metadata:       "/project2/yangili1/qhauck/spliceNMF/tcga/tcga_v2_samples.tsv"
-  mane_transcripts:    "/project2/yangili1/qhauck/spliceNMF/tcga/genome_wide/flashier/diff_splicing/MANE.GRCh38.v1.4.summary.txt"
+  gencode_granges:     "../../../inputs/gencode_v46_granges.RDS"
+  tcga_metadata:       "../../../inputs/tcga_v2_samples.tsv"
+  mane_transcripts:    "../../../inputs/MANE.GRCh38.v1.4.summary.txt"
   # holds chr*/{gene}/{res,de_res,results,dat}
-  tcga_chr_dir:        "/project2/yangili1/qhauck/spliceNMF/tcga/gene_level_poisson"
-  tcga_bw_dir:         "/project2/yangili1/qhauck/spliceNMF/tcga/recount3_bigwigs/tcga_bws"
-  leaf2_class:         "/project2/yangili1/qhauck/spliceNMF/tcga/leafcutter/leafcutter2/clustering/Leaf2_junction_classifications.txt"
+  tcga_chr_dir:        "../../../quetzal_runs/gene_level"
+  tcga_bw_dir:         "../../../inputs/bigwigs/tcga"
+  leaf2_class:         "../../../leafcutter_analyses/leaf2_classification/clustering/Leaf2_junction_classifications.txt"
+  # GenometracksByGenotype clone (github.com/bfairkun/GenometracksByGenotype); edit to your clone
   pygenome_aggregator: "~/software/GenometracksByGenotype/AggregateBigwigsForPlotting.py"
   pygenome_bed12:      "~/software/GenometracksByGenotype/PremadeTracks/gencode.v26.FromGTEx.genes.bed12.gz"
 
-# DE-junction filters (matches updated_single_gene_figures.Rmd defaults)
+# DE-junction filters
 thresholds:
   lfc_thresh:  2
   abs_thresh:  0.01

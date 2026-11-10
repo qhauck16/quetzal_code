@@ -2,17 +2,15 @@
 #
 # Rebuild just this panel:   Rscript compose.R f
 #
-# f. Mutations spatially cluster in the C* spliceosome -- full-width bottom row (Quinn,
-# 2026-10-05: new artwork panel_f/Improved_structure.pdf, "can span the
-# entire bottom of that figure"). Three structure renders (overview +
-# orange / blue zooms) with a small vector legend in Arial.
+# f. Mutations spatially cluster in the C* spliceosome -- full-width row.
+# Artwork panel_f/Improved_structure.pdf: three structure renders
+# (overview + orange / blue zooms) with a small vector legend in Arial.
 #
 # Rasterised with GHOSTSCRIPT at 600 dpi (login nodes may lack poppler's
 # pdftoppm/pdftocairo), then cropped to the ink bounding box so the art
-# fills the cell. The legend's Arial is EMBEDDED, so it can't be re-set in
-# Nimbus Sans the way figure 1a's un-embedded art is; at legend size the
-# two are nearly indistinguishable. Title re-set in R like every panel.
-# The previous crop-of-the-reference build is in .build.R.pre_2026-10-05.
+# fills the cell. The legend's Arial is EMBEDDED, so it cannot be re-set
+# in Nimbus Sans; at legend size the two are nearly indistinguishable.
+# Title re-set in R like every panel.
 
 F_PDF <- file.path("panel_f", "Improved_structure.pdf")
 F_ART <- file.path("raster_cache", "panel_f_improved.png")

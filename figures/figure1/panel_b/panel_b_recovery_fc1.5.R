@@ -3,9 +3,7 @@
 # comparisons (KICH vs LUAD, KICH vs TGCT, TGCT vs LUAD), FC >= 1.5
 # threshold only.
 #
-# Extracted verbatim from tcga/model_eval/quetzal_benchmarking.Rmd
-# (setup + `run_comparison` + FC helper + the three "FC 1.5" chunks).
-# Reads inputs through ../../../paths.yaml so it is portable.
+# Reads inputs through ../../../paths.yaml.
 #
 # Output: out/{KICH_vs_LUAD,KICH_vs_TGCT,TGCT_vs_LUAD}_recovery_fc1.5.pdf
 
@@ -111,7 +109,6 @@ load_leafcutter <- function(comparison, deltapsi_thresh = 0.1) {
 
 # ------------------------------------------------------------------
 # factor_loading_summary + run_comparison + run_recovery{,_fc}
-# -- lifted verbatim from quetzal_benchmarking.Rmd.
 # ------------------------------------------------------------------
 factor_loading_summary <- function(leaf_sig_df, chr, cohorts) {
   chr_hits <- leaf_sig_df %>%

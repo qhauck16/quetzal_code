@@ -2,9 +2,7 @@
 # SVM-derived phenotype-axis scores vs GSP loading for GSPs #10, #13 and
 # #30. Labelled positives / negatives trained the decision boundary
 # (dotted blue, score = 0); intermediates were scored by it.
-# (Panel b, the C* mutation rate near the boundary, was dropped 2026-10-26;
-# that test lives in figure3/paper_stats.Rmd only.)
-# Source: diff_splicing/svm_plots.Rmd; data: quetzal_code phenotype-axis
+# Data: quetzal_code phenotype-axis
 # caches + NKAP variant table (vt_path).
 if (!exists("QROOT")) QROOT <- local({ d <- normalizePath(getwd())   # quetzal_code root
   while (!file.exists(file.path(d, ".quetzal_root"))) { if (dirname(d) == d) stop("run from inside quetzal_code/"); d <- dirname(d) }

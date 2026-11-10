@@ -25,8 +25,8 @@ load_gd <- function(dir) {
   gd
 }
 
-# One colour per TCGA cohort, as in the original figure (LGG blue, GBM teal,
-# COAD orange, LAML pink); the cohort's violin and its CDF curve share it.
+# One colour per TCGA cohort (LGG blue, GBM teal, COAD orange, LAML pink);
+# the cohort's violin and its CDF curve share it.
 COHORT_COL <- c("TCGA-LGG" = "#2E6FB7", "TCGA-GBM" = "#6FB3C3",
                 "TCGA-COAD" = "#F28E2B", "TCGA-LAML" = "#E377C2")
 cohort_col <- function(gd) unname(COHORT_COL[gd$cancer_type] %||% PAL$tcga_test)
@@ -46,9 +46,9 @@ fmt_p <- function(p) {
 violin <- function(gd) {
   mx <- max(gd$res$L[, gd$fact_idx])
   v <- LDE$plot_loading_violins(gd)
-  # Drop ggpubr's bracket (its "p < 2.22e-16" is a floor and was drawn at
-  # ~10 pt, larger than every other label): redraw it with the exact
-  # Wilcoxon p in the same format/size as the CDF p-values.
+  # Drop ggpubr's bracket (its "p < 2.22e-16" is a floor, drawn larger
+  # than every other label): redraw it with the exact Wilcoxon p in the
+  # same format/size as the CDF p-values.
   v$layers <- Filter(function(l) !inherits(l$geom, "GeomSignif"), v$layers)
   lv <- levels(v$data$group)
   pw <- wilcox.test(v$data$loading[v$data$group == lv[1]],
@@ -70,7 +70,7 @@ violin <- function(gd) {
           axis.text.x = element_text(angle = 0, hjust = 0.5, size = SIZE_BASE * 0.9))
 }
 
-# -- CDFs with the four cohort pools (lib's plot_psi_cdfs_full_static) ----
+# -- CDFs with the four cohort pools ---------------------------------------
 cdf_data <- function(gd) {
   tm <- fread(gd$paths$tcga_metadata, data.table = FALSE)
   gm <- fread(gd$paths$gtex_metadata, data.table = FALSE)
@@ -114,7 +114,7 @@ cdf_plots <- function(gd, legend = TRUE) {
   })
 }
 
-# -- gene model + numbered arcs + non-coding stars (fig 1d EZH2 code) ----
+# -- gene model + numbered arcs + non-coding stars (as fig 1d) -----------
 gene_arcs <- function(gd, arc_col = "#1F77B4FF") {
   js <- gd$junctions_to_compare
   arcs <- do.call(rbind, lapply(seq_along(js), function(i) {
@@ -157,12 +157,12 @@ gene_arcs <- function(gd, arc_col = "#1F77B4FF") {
 }
 
 # Fixed panel widths (inches) between two flexible spacers, so each
-# violin + CDF row is centred over its full-width gene track (Quinn: no
-# dead white band on the right). CDFs use aspect.ratio = 1.
+# violin + CDF row is centred over its full-width gene track with no
+# dead band on the right. CDFs use aspect.ratio = 1.
 VIOLIN_W <- 1.35; CDF_W <- 1.45
 # Panel c's CDFs are a 2 x 2 block (~2.9 in tall); its violin is made
-# roughly square (VIOLIN_C_W wide, vertically centred) instead of a tall
-# 1.35 in sliver stretched to the block height.
+# roughly square (VIOLIN_C_W wide, vertically centred) rather than a
+# tall sliver stretched to the block height.
 VIOLIN_C_W <- 2.1
 row_of <- function(gd, cdf_ncol = NULL, legend = TRUE) {
   cp <- cdf_plots(gd, legend)
@@ -199,7 +199,7 @@ key <- ggplot() +
 p <- pa / pb / pc / wrap_elements(key, ignore_tag = TRUE) +
   plot_layout(heights = c(2.4, 1.4, 2.6, 0.12)) +
   plot_annotation_publication() &
-  # theme.R's annotation theme does not reach the tags of nested plots
-  # (they rendered regular weight); set the bold tag on every plot
+  # theme.R's annotation theme does not reach the tags of nested plots;
+  # set the bold tag on every plot
   theme(plot.tag = element_text(size = SIZE_PANEL_LABEL, face = "bold", family = FONT_FAMILY))
 save_supp(p, "figS3", 8.5, 11)

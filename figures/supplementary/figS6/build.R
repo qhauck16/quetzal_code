@@ -1,10 +1,9 @@
 # Supplementary figure: GSP #10 comparison to Alsafadi et al. (2016).
 #   a  exact-coordinate overlap of the GSP #10 alt 3'ss driving junctions with
 #      Alsafadi's SF3B1-MUT vs WT uveal-melanoma junctions, up vs down; exact
-#      binomial test of up vs down among the hits (p0 = 0.5). The RPM/PSI-matched
-#      MANE-intron row (and its Fisher test) was dropped 2026-11-10, as in S9.
+#      binomial test of up vs down among the hits (p0 = 0.5).
 #   b  Venn: Alsafadi significant upregulated alt 3'ss vs the same set
-# Source: spec_flash_fact.Rmd; inputs from cache/build_overlap_cache.R.
+# Inputs from cache/build_overlap_cache.R.
 source("common.R")
 cells <- fread(file.path("cache", "s6_alsafadi_cells.tsv"), data.table = FALSE) %>%
   filter(set == "gsp")
@@ -16,9 +15,9 @@ vn    <- fread(file.path("cache", "s6_venn.tsv"), data.table = FALSE)
 
 p_a <- overlap_heatmap(cells, "GSP #10 alt 3'ss in top 250\ndriving unannotated junctions",
                        xlab = "Alsafadi et al. (2016) direction", pct_digits = 1) +
-  # p-value as a second line of the x title (centred under the tiles; the
-  # common caption drifted out under the legend). No coord_fixed: square
-  # tiles were too narrow for "upregulated"/"downregulated" at this height.
+  # p-value as a second line of the x title, centred under the tiles. No
+  # coord_fixed: square tiles are too narrow for "upregulated" /
+  # "downregulated" at this height.
   labs(caption = NULL,
        x = sprintf("Alsafadi et al. (2016) direction\nBinomial test, up vs down: p = %.1e",
                    binom_p)) +
@@ -31,7 +30,7 @@ circ <- data.frame(x0 = c(-sep / 2, sep / 2), y0 = 0, r = r, set = c("a", "b"))
 nums <- data.frame(x = c(-sep / 2 - 0.55 * r, 0, sep / 2 + 0.55 * r), y = 0,
                    lab = c(vn$only_alsafadi, vn$shared, vn$only_gsp))
 # Three-line titles anchored at the OUTER edges of the pair (hjust 0 / 1):
-# two-line versions are each wider than half the pair and collided.
+# two-line versions are each wider than half the pair and collide.
 tops <- data.frame(x = c(-sep / 2 - r, sep / 2 + r), y = r + 0.12,
                    lab = c("Alsafadi et al.\nupregulated\nalt 3'ss",
                            "GSP #10 alt 3'ss\nin top 250 driving\nunannotated junctions"))
@@ -51,6 +50,6 @@ p_b <- ggplot() +
   theme(plot.margin = margin(34, 10, 4, 10))
 
 fig <- (p_a | p_b) + plot_layout(widths = c(1.1, 1)) + plot_annotation_publication() &
-  # theme.R's annotation theme does not reach per-plot tags (regular weight)
+  # theme.R's annotation theme does not reach per-plot tags
   theme(plot.tag = element_text(size = SIZE_PANEL_LABEL, face = "bold", family = FONT_FAMILY))
 save_supp(fig, "figS6", 8.5, 3.0)

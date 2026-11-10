@@ -102,9 +102,8 @@ checkpoint select_and_match:
 # ---------------------------------------------------------------------------
 rule regtools_extract:
     input:
-        # No BAM needed once the .junc exists: TCGA BAMs are deleted after
-        # extraction (dbGaP, 2026-09-25), and requiring them made every
-        # existing .junc a missing-input error.
+        # No BAM needed once the .junc exists (TCGA BAMs are deleted after
+        # junction extraction under the dbGaP terms).
         bam=lambda wc: [] if os.path.exists(f"junc_files/{wc.rail}.junc") else (
             bam_for(wc.rail) or (_ for _ in ()).throw(
             ValueError(f"rail_id {wc.rail} not in bam_inventory.tsv")))

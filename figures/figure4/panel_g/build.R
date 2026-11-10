@@ -9,7 +9,6 @@
 #
 # All of the arithmetic lives in ../scripts/build_cache_panel_g.R; this
 # file only reads cache/panel_g_*.{tsv,rds} and lays the panel out.
-# See panel_g/build.md for the analysis and the layout reasoning.
 #
 # Sourced by ../compose.R, which supplies theme.R's tokens, the
 # tidyverse, ggrepel, CACHE and panel_cached().
@@ -19,16 +18,14 @@ panel_g <- panel_cached("g", local({
 
   # ---------------- constants -------------------------------------
   G_XLIM <- c(-1.30, 1.30)      # view only -- NEVER a scale limit
-  # 1.10 -> 1.16: the three-line legend in the top-left came down to the
-  # 1.00 plateau, "with GSP #30 < 1e-4" nearly touching the ribbon (QA).
+  # Headroom above the 1.00 plateau for the top-left legend.
   G_YLIM <- c(-0.04, 1.16)
   G_LW   <- 0.70
   G_SEED <- 20260922L
 
-  # Panel geometry, MEASURED off the composed render at 400 dpi (row 4
-  # right cell): 1.174 in per x-unit, 1.723 in per y-unit. Everything
-  # positional below is derived from these, so re-measure if compose.R's
-  # ROW_H / COL_W change.
+  # Panel geometry in inches per data unit, measured from the composed
+  # render. Everything positional below is derived from these, so update
+  # them if compose.R's ROW_H / COL_W change.
   G_IN_PER_X <- 1.125
   G_IN_PER_Y <- 1.610
   G_EXPAND   <- 0.05            # ggplot's default continuous mult
@@ -40,8 +37,7 @@ panel_g <- panel_cached("g", local({
   # wrapped to two lines: unwrapped it is 2.4 in wide and there is no
   # 2.4 in x 0.3 in empty pocket anywhere in this panel.
   G_TOP  <- "Top 20 Samples on GSP #30"
-  # Was "...from samples with GSP #30 < 1e-4": the bootstrap never applies that filter (it draws cohort-matched
-  # samples from all of TCGA), so the label just names the curve (Quinn, 2026-11-09).
+  # The bootstrap draws cohort-matched samples from all of TCGA (no GSP #30 filter).
   G_BOOT <- "Mean bootstrapped CDF"
   G_PAL  <- c("#B22222", "grey30");  names(G_PAL) <- c(G_TOP, G_BOOT)
   G_LTY  <- c("solid", "dashed");    names(G_LTY) <- c(G_TOP, G_BOOT)
@@ -98,8 +94,8 @@ panel_g <- panel_cached("g", local({
     dplyr::transmute(gene_name = "", x, ecdf_y))
 
   # ---------------- label bands -----------------------------------
-  # One column of names hugging the LEFT flank of the red curve, as in
-  # the reference. The curve's lower tail runs out to x = -1.49, so the
+  # One column of names hugging the LEFT flank of the red curve. The
+  # curve's lower tail runs out to x = -1.49, so the
   # free corridor is widest in the middle of the panel and closes up
   # near the bottom -- PBRM1 (y = 0.02) therefore gets its own band down
   # in the corner rather than competing for the corridor.

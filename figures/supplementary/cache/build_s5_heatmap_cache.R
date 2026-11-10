@@ -8,14 +8,8 @@
 # 536 M. This script runs that expensive chain ONCE and persists only
 # what the plot needs, so compose.R never touches the big files.
 #
-# Source of truth: tcga/genome_wide/flashier/flash_fact_char.Rmd, chunks
-#   "loading re-used files", "correlating flashier factors with mutation
-#   status", "setting up covariates", "pearson correlation heatmap - all
-#   covariates", "correlation heatmap", and "correlation heatmap top 50
-#   tissue-ordered".
-# The upstream chain is reproduced VERBATIM, quirks included (see the
-# max_expl note below). Do not "clean it up" -- the goal is output
-# identical to the Rmd.
+# The upstream chain is reproduced as-is, quirks included (see the
+# max_expl note below).
 #
 #   Rscript --vanilla build_cache_panel_c.R
 #

@@ -9,8 +9,7 @@
 # Data: cache/s14/<GENE>.rds, built by cache/build_s14_cache.R from
 #   unified_results nkap 20v60 df_final + recount3 bigwigs (events.tsv, recount3
 #   bigwigs, leafcutter PSI tables, MANE v1.4). Redraw of that dir's
-#   custom_plot.R + assemble_metaplot.R; published reference:
-#   paper_figures/all_supplementary_figures/nkap_extended_sashimi_plots_supp.pdf
+#   custom_plot.R + assemble_metaplot.R.
 source("common.R")
 
 CACHE <- file.path(FIG_ROOT, "supplementary", "cache", "s14")

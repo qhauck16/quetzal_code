@@ -1,12 +1,11 @@
 
 # Cache for Supplementary Figure 15 (NKAP extended sashimi plots).
-# Sections 1-5 of tcga/genome_wide/flashier/NKAP_detailed/custom_plot.R,
+# Sections 1-5 of the NKAP_detailed custom_plot.R,
 # looped over the top-15 events; the plotting half is redrawn in
 # supplementary/figS15/build.R. One RDS per gene in cache/s14/, plus
 # cache/s14/events.tsv (event order read by figS15/build.R).
 #
-# Self-contained since 2026-10-06 -- the two inputs that used to be static
-# files in NKAP_detailed/ are rebuilt here:
+# Self-contained: the two inputs are rebuilt here:
 #   events   <- NKAP_detailed/pick_events.R (config: alt 3'ss, cryptic
 #               acceptor -12..-3 nt, rank by p.adjust then |dPSI|, gene must
 #               have a PSI table; MANE-Select CDS/UTR class of the cryptic site)

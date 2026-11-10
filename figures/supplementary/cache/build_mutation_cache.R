@@ -1,10 +1,6 @@
-# One-off cache for supplementary figures S9 and S12. Reproduces the
-# AlphaMissense (>0.9 or NA) mutation matrix and the cohort-stratified,
-# one-sided CMH tests from tcga/genome_wide/flashier/flash_fact_char.Rmd
-# (chunks "AlphaMissense-filtered mutation status ...", the SF3B1-axis
-# CMH, "SUGP1 along GSP 10", "NKAP finding other mutants along the same
-# axis" and the co-occurrence heatmap), verbatim in logic, and writes
-# the small tables the figures need. Loadings come from the
+# Cache for supplementary figures S10 and S12: the AlphaMissense (>0.9 or
+# NA) mutation matrix and cohort-stratified, one-sided CMH tests, written
+# as the small tables the figures need. Loadings come from the
 # *_full_plus_variants.tsv tables (k10 / k13 columns = norm_L), so the
 # 3.7 GB flashier RDS is never loaded.
 #   sbatch -p build --mem=24G --wrap "Rscript --vanilla cache/build_mutation_cache.R"

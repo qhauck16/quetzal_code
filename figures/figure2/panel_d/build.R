@@ -41,9 +41,8 @@ D_LEG_LAB <- c("SF3B1 hotspot mutation"      = "SF3B1 hotspot mutation",
 # Zoom callout (same idiom as figure 3 panel a): two short lines from the
 # CDF box's right corners, splaying out to the zoom panel's corners.
 # Ends in the CDF's own data units, set against the render.
-# MEASURED 2026-10-05 with ../../scripts/measure_zoom_connectors.py (box corners
-# -> zoom panel's left axis line, in this CDF's data units). Re-run it after ANY
-# layout change to this row; hand-tuned values drifted off the corners.
+# Measured with ../../scripts/measure_zoom_connectors.py (box corners -> zoom
+# panel's left axis line); re-run it after any layout change to this row.
 D_CALL_DX  <- 1.7708
 D_CALL_TOP <- 109.433
 D_CALL_BOT <- -83.142
@@ -198,8 +197,7 @@ d_lab_diag <- filter(d_lab_low, mutation_label != "Other SF3B1 Mutation")
 d_lab_oth  <- filter(d_lab_low, mutation_label == "Other SF3B1 Mutation")
 
 # ggrepel only avoids ITS OWN data, so the step lines and unlabelled
-# points were invisible to it and labels landed on them ("N626Y" sat on
-# the blue step; Quinn, 2026-10-05). Sample every class's step path
+# points are passed to it as invisible repel targets. Sample every class's step path
 # (geom_step "hv": horizontal run, then vertical rise) plus every point
 # into blank-label obstacle rows appended to each repel layer.
 d_step_obs <- d_zoom %>%
@@ -233,7 +231,7 @@ d_red_left <- filter(d_lab_diag, side < 0,
                      cumulative >= min(d_lab_blue$cumulative) - D_ROW_CLEAR)
 D_BLUE_XMAX <- min(d_red_left$reach) - D_GAP_X
 # Bottom-most K666N: its default left nudge put the leader straight
-# through the G740V point just above-left of it (Quinn, 2026-10-05).
+# through the G740V point just above-left of it.
 # Push it further left so the leader clears G740V.
 k_low <- with(d_lab_diag, which(proteinChange == "K666N")[which.min(cumulative[proteinChange == "K666N"])])
 if (length(k_low)) d_lab_diag$nx[k_low] <- -4 * D_GAP_X

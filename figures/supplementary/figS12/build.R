@@ -3,8 +3,7 @@
 # samples on GSP #13 that carry no NKAP mutation, for the genes that
 # pass the cohort-stratified CMH (Bonferroni p_adj < 0.05). Diagonal =
 # samples mutated in that gene (outlined); off-diagonal = samples
-# mutated in both. Source: flash_fact_char.Rmd, "NKAP sig-gene pairwise
-# co-occurrence heatmap". Inputs from cache/build_mutation_cache.R.
+# mutated in both. Inputs from cache/build_mutation_cache.R.
 source("common.R")
 
 co  <- fread(file.path("cache", "s12_cooccurrence.tsv"), data.table = FALSE)

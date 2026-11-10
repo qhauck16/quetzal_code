@@ -14,8 +14,7 @@
 #
 # plus one legend row at the bottom for the orange "unannotated
 # junction driving GSP #30" arcs.
-#
-# See panel_b/build.md for the design notes and traps.
+
 
 if (!exists("QROOT")) QROOT <- local({ d <- normalizePath(getwd())   # quetzal_code root
   while (!file.exists(file.path(d, ".quetzal_root"))) { if (dirname(d) == d) stop("run from inside quetzal_code/"); d <- dirname(d) }
@@ -24,7 +23,7 @@ panel_b <- panel_cached("b", local({
 
 PY <- file.path(QROOT, "coverage_tracks/fig4b_tracks")
 
-# Sampled off the reference render: the coverage red is exactly
+# Colours: the coverage red is
 # #C0392B (== PAL$sf3b1_mut["SF3B1 hotspot mutation"]) and the
 # unannotated-junction highlight is #F1A340 (ColorBrewer PuOr).
 RED    <- "#C0392B"
@@ -33,28 +32,21 @@ ORANGE <- "#F1A340"
 LAV    <- "#ccccff"           # same taper colour as figure 3 panel c
 
 # ------------------------------------------------------------------
-# Cohort labels. The PUBLISHED panel reads "High GSP #13 (15)" /
-# "Matched Controls (150)" -- BOTH halves are stale here. This is the
-# YLPM1 figure, the bigwigs are High_k30-*, and GSP_pygenome's ini
-# titles are "High_k30 (13)" and "Matched_Controls (130)". (Panel e's
-# pygenome run really does have 15/150; panel b's numbers were copied
-# from it.) Corrected on both counts.
+# Cohort labels: 13 top GSP #30 samples vs 130 matched controls.
 # ------------------------------------------------------------------
 HIGH_LAB <- "High GSP"
 CTRL_LAB <- "Matched\nControls"
 HIGH_N   <- "#30 (13)"
 CTRL_N   <- "(130)"
 
-BW_HIGH <- "High_k30-3-..bw"            # High_k65-* is a stale factor key
+BW_HIGH <- "High_k30-3-..bw"
 BW_CTRL <- "Matched_Controls-3-..bw"
 LK_HIGH <- "MeanPSI.High_k30-3-..links"
 LK_CTRL <- "MeanPSI.Matched_Controls-3-..links"
 
 # ------------------------------------------------------------------
 # Loci. `wide` is the pyGenomeTracks --region used to make these
-# bigwigs (flashier/poisson_NMF_junction_plots.Rmd, prep_pygenometrack
-# calls at the bottom of the file); the GSP_pygenome inis do not record
-# it. y_max is that region's own ini max_value, shared by both tracks
+# bigwigs (the track inis do not record it). y_max is that region's own ini max_value, shared by both tracks
 # so the two cohorts are comparable.
 #
 # The bigwigs contain data for EXACTLY `wide` and nothing outside it
@@ -85,7 +77,7 @@ for (k in names(LOCI)) {
 
 # ------------------------------------------------------------------
 # Row heights. patchwork heights are RELATIVE, so only the ratios here
-# are stable -- see ../figure2/compose.md. Everything that needs a
+# are stable. Everything that needs a
 # DRAWN size (the PSI-label solver) is derived from these, never
 # restated.
 #
@@ -115,13 +107,9 @@ STACK_H <- 2 * H_TRK + H_TRAP + H_GENE + H_AXIS
 # DROP_F -- the band BELOW the coverage baseline that TRIM38's high
 # track carries so its two orange arcs can bow DOWNWARD.
 #
-# Quinn, verbatim: "in 4b the yellow junctions in TRIM38 should curve
-# underneath the gene body, its too crowded on top - you can lower the
-# height of the 94.2 curve on the controls to allow space for the
-# yellow junctions". TRIM38's high track was a seven-arc fan with four
-# forced crossings; 1.27 and 6.91 are now solved in a mirrored world
-# below the baseline (see arc_frame's `dir`), which leaves five black
-# arcs up top.
+# TRIM38's orange arcs 1.27 and 6.91 are solved in a mirrored world
+# below the baseline (see arc_frame's `dir`), leaving five black arcs
+# up top.
 #
 # The band is bought as EXTRA ROW HEIGHT, not by squashing the
 # coverage: the high row is H_TRK * (1 + DROP_F) tall and its y range
@@ -129,22 +117,17 @@ STACK_H <- 2 * H_TRK + H_TRAP + H_GENE + H_AXIS
 # the panel is still exactly TRACK_H_IN. The two loci therefore stay
 # directly comparable, which they would not be if TRIM38's coverage
 # were drawn 30% shorter than KDM4C's. The whole stack pays for it
-# (everything is ~6% smaller); B_SCALE below carries the correction, so
-# it cannot go stale.
+# (everything is ~6% smaller); B_SCALE below carries the correction.
 #
 # The arcs CANNOT be drawn into the control track's own row -- these
 # are separate patchwork cells and a cell clips its neighbours' ink.
 #
-# Quinn also offered "you can lower the height of the 94.2 curve on the
-# controls to allow space" -- and it CANNOT be lowered, which is worth
-# recording so nobody tries again. 94.2 contains 1.38 and SHARES ITS
+# The controls' 94.2 arc cannot be lowered to make room: it contains 1.38 and SHARES ITS
 # RIGHT FOOT with it, so at that end the only thing keeping 1.38 under
 # it is how steeply 94.2 leaves the foot, and that steepness is the
 # amplitude, i.e. the apex. 0.702 of y_max is already the SMALLEST
-# apex that clears 1.38 by ARC_GAP; capping it at 0.50 (tried) just
-# turns a solved pair into a crossing, which is the defect Quinn
-# rejected the previous version for. The room comes out of the taller
-# high row instead, which costs nothing but page.
+# apex that clears 1.38 by ARC_GAP. The room comes out of the taller
+# high row instead.
 # ------------------------------------------------------------------
 DROP_F    <- 0.52     # of y_max, below the baseline, TRIM38 high only
 
@@ -196,13 +179,7 @@ SZ_LEG    <- SIZE_BASE * 0.85 / .pt
 txt_h_in <- function(sz) sz * .pt * 0.72 / 72
 
 # ------------------------------------------------------------------
-# The coverage y axis. Quinn, for EVERY sashimi in the paper: "the
-# numerical axis should have a line indicating it is an axis with two
-# ticks for the numbers, and they are currently misaligned, the 0 sits
-# entirely above the bottom of the track, it should sit beneath/even
-# with it."
-#
-# So: a rule spanning 0..y_max (the COVERAGE range -- never the drop
+# The coverage y axis: a rule spanning 0..y_max (the COVERAGE range -- never the drop
 # band below it, which is not part of the scale), a tick at each end,
 # and the numbers hung off the ticks. The 0 is CENTRED on its tick, so
 # it straddles the baseline instead of floating above it; the top
@@ -214,7 +191,7 @@ txt_h_in <- function(sz) sz * .pt * 0.72 / 72
 #
 # All four numbers live in the left gutter, which is OUTSIDE the drawn
 # x window, so the x SCALE has to keep them (a scale limit drops data
-# before anything is drawn -- ../figure2/compose.md) and `coord` sets
+# before anything is drawn) and `coord` sets
 # the view. AX_GUT is the gutter the scale keeps, in pt.
 # ------------------------------------------------------------------
 # Chrome matched to `sashimi_track_gg`'s own y axis (figures 1-3):
@@ -282,18 +259,15 @@ EXONS <- readRDS(EXON_RDS)
 # ------------------------------------------------------------------
 # Which junctions are "driving GSP #30" (the orange ones)?
 #
-# Quinn's rule, verbatim: "TRIM38 orange junctions should be based upon
-# the TRIM38 junctions that have high intensities in the TRIM38 poisson
-# NMF junction group in the top 100 junction groups that make up GSP
-# #30". So the orange set is READ OUT OF THE FACTORISATION, not
-# guessed from the geometry of the arcs.
+# The orange set is the gene's junctions with high intensity in its
+# Poisson NMF junction group, among the top 100 junction groups making
+# up GSP #30 -- READ OUT OF THE FACTORISATION, not from arc geometry.
 #
 # The chain, re-derived here and cached into
 # figure4/cache/panel_b_gsp30_juncs.tsv:
 #
-#  1. GSP #30's top junction groups. `flashier/fact_30_top_junctions.tsv`
-#     IS that list -- spec_flash_fact.Rmd's "top 250 GSPs 10 13 30"
-#     chunk writes one row per feature of
+#  1. GSP #30's top junction groups. `fact_30_top_junctions.tsv`
+#     IS that list: one row per feature of
 #     rownames(norm_F)[order(norm_F[, 30], decreasing = TRUE)][1:250],
 #     IN RANK ORDER, where norm_F = t(diag(ldf$D) %*% t(ldf$F)) of the
 #     3.7 GB softimpute_flash_300_qc_filtered.RDS. That loop can `next`
@@ -407,20 +381,16 @@ orange_keys <- function(gene, hi) {
 }
 
 # ------------------------------------------------------------------
-# Arc geometry.  (Rewritten; see build.md "Arcs" for the full story.)
+# Arc geometry.
 #
 # EACH FOOT SITS ON THE COVERAGE AT ITS OWN JUNCTION COORDINATE. The
-# old code drew y = apex * sin(pi t)^p, which is ZERO at t = 0 and
-# t = 1, so every foot landed on the track BASELINE no matter where the
-# coverage was -- Quinn's requirement #1, and the root of the "arcs
-# dangle off the bottom of the figure" complaint. The curve is now the
-# same parametric form `sashimi_track_gg()` and figure 3 panel c use:
+# curve is the same parametric form `sashimi_track_gg()` and figure 3 panel c use:
 #
 #     y(t) = (1 - t) y1 + t y2 + sin(t pi) * amp
 #
 # with y1 / y2 the coverage AT s1 and AT e2. X is untouched: every foot
 # is still drawn at the raw .links coordinate, so the arcs land exactly
-# on their splice sites (re-verified at 800 dpi, see build.md).
+# on their splice sites.
 #
 # ANCHOR_BP = 0, as in figure 3 panel c: the foot takes the coverage of
 # the bin the junction coordinate falls in, which is a bin that IS
@@ -433,7 +403,7 @@ orange_keys <- function(gene, hi) {
 # never as an absolute fraction of y_max: with the feet at coverage
 # height an absolute apex is routinely BELOW its own feet, the sine
 # bump goes negative and the arc is drawn drooping to the baseline and
-# back -- Quinn's "flip completely". Every arc here is guaranteed
+# back. Every arc here is guaranteed
 # peak >= max(y1, y2) + ARC_RISE by construction: the amplitude is
 # never solved DOWN from that floor, only up.
 #
@@ -605,7 +575,7 @@ nests <- function(a1, a2, b1, b2)
 # Signed vertical gap, in fractions of y_max, between every pair of
 # arcs that is NOT a forced crossing: (upper) - (lower) over the x they
 # share. Negative anywhere means an arc passes UNDER one it is tiered
-# above -- exactly the defect Quinn rejected. Printed on every build.
+# above. Printed on every build.
 arc_min_gap <- function(arcs) {
   n <- nrow(arcs)
   out <- list(gap = Inf, worst = "", forced = character(0))
@@ -740,7 +710,7 @@ arc_frame <- function(lk, d, y_max, orange_key = character(0),
 # So the arcs are CUT instead. Every label gets a box; each arc's curve
 # is split wherever it enters one, and only the surviving runs are
 # drawn. Nothing white is painted, the PDF stays vector-clean, and the
-# invariant Quinn asked for holds exactly: no line ever touches a
+# invariant holds exactly: no line ever touches a
 # glyph. The number lands ON the arc it belongs to, so attribution
 # needs no leader and no guesswork.
 #
@@ -769,8 +739,7 @@ arc_frame <- function(lk, d, y_max, orange_key = character(0),
 # site with 52.4 and 1.62; placed last it found no legal slot at all and
 # fell through to the fallback, and placed by tier order it landed on
 # the other two arcs' landings. First, it takes the one slot it has and
-# the roomy arcs work around it. (Tier order -- what this used to do --
-# and peak order were both tried.)
+# the roomy arcs work around it.
 # ------------------------------------------------------------------
 LAB_TS    <- seq(0.10, 0.90, by = 0.02)
 CUT_W     <- 1.5
@@ -914,8 +883,7 @@ place_psi <- function(arcs, d, y_max, trk_h_in, trk_w_in, s, e,
   }
   # Every column travels as DATA, never as an aes() reference to a
   # scalar in this environment -- a panel restored from
-  # panel_cached()'s saveRDS renders blank otherwise
-  # (../figure2/compose.md).
+  # panel_cached()'s saveRDS renders blank otherwise.
   data.frame(x = px[idx], y = py[idx], lab = arcs$lab[idx],
              col = arcs$col[idx], arc = idx,
              bw = bw[idx], bh = bh, bw2 = bw2[idx], bh2 = bh2,
@@ -1005,8 +973,8 @@ make_track <- function(L, cohort, col, lk_df, orange_key = character(0),
   p <- suppressMessages(
         do.call(sashimi_track_gg, sash) +
         # Right limit keeps the caption gutter too: the cohort captions sit
-        # at e + 3 pt, and a scale limit at `e` DROPPED all four (2026-10-06,
-        # "Removed 1 row" x4). coord_cartesian still sets the view.
+        # at e + 3 pt, and a scale limit at `e` would drop them.
+        # coord_cartesian still sets the view.
         scale_x_continuous(limits = c(s - AX_GUT * x_pt, e + MARG[2] * x_pt),
                            expand = c(0, 0)) +
         coord_cartesian(xlim = c(s, e), ylim = c(y_lo, y_max),
@@ -1275,7 +1243,7 @@ build_locus <- function(key, axis_bottom_pt = 0) {
   # Returned as a flat LIST, not a patchwork. `/` between two column
   # patchworks merges them into one flat stack and silently loses the
   # outer plot_layout's heights ("Need 7 panels, but ... only provide
-  # 3") -- see ../figure2/compose.md. Panel b is a single column, so
+  # 3"). Panel b is a single column, so
   # the honest construction is one flat stack of every row with one
   # heights vector.
   list(trk_hi, trk_ct, g$trap, g$gene, g$axis)

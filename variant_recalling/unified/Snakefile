@@ -185,9 +185,8 @@ def _normal_sm(wc):
     raise ValueError(f"No Normal row for rail_id {wc.rail_id} in {path}")
 
 def _bams_unless_done(out_pattern, **bams):
-    # TCGA BAMs are deleted once a sample is called (dbGaP, 2026-09-25).
-    # If this rule's output already exists, require no BAMs, so the DAG
-    # for calls_*.tsv doesn't fail on the reused samples' missing inputs.
+    # TCGA BAMs are deleted once a sample is called (dbGaP terms). If this
+    # rule's output already exists, require no BAMs.
     def f(wc):
         if os.path.exists(out_pattern.format(**wc)):
             return {}
@@ -203,9 +202,8 @@ rule mutect2:
             normal_bai= "{gene}/bams/{rail_id}_Normal.wxs.bai")),
         bed       = lambda wc: TARGET_BEDS[wc.gene],
         ref       = REF_FA
-        # wxs_manifest.tsv is NOT an input (only read by _normal_sm): it
-        # was rewritten 2026-10-05 and its new mtime would re-run every
-        # reused sample, whose BAMs are deleted.
+        # wxs_manifest.tsv is read by _normal_sm only, not declared as an
+        # input, so its mtime does not re-trigger samples whose BAMs are gone.
     output:
         raw      = "{gene}/mutect2/{rail_id}.raw.vcf",
         filtered = "{gene}/mutect2/{rail_id}.filtered.vcf"

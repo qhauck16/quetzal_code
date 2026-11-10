@@ -5,8 +5,8 @@
 # Rebuild just this panel:   Rscript compose.R c
 #
 # Intron-feature logistic-regression betas for the three GSP intron sets
-# (GSP #10/SF3B1, #13/NKAP-PRP8, #30/YLPM1). The model is transcribed
-# from diff_splicing/unified_results/scripts/fit_betas.R ("with_bp").
+# (GSP #10/SF3B1, #13/NKAP-PRPF8, #30/YLPM1), fitted below (model
+# "with_bp": all features including branchpoint score and distance).
 
 if (!exists("QROOT")) QROOT <- local({ d <- normalizePath(getwd())   # quetzal_code root
   while (!file.exists(file.path(d, ".quetzal_root"))) { if (dirname(d) == d) stop("run from inside quetzal_code/"); d <- dirname(d) }
@@ -17,29 +17,22 @@ panel_c <- panel_cached("c", local({
   C_SUB     <- file.path("20v60", "dpsi0.01_fc2.5",
                          "junctions_plus_characteristics.tsv")
 
-  # Column key -> directory + header. Order is the reference's.
+  # Column key -> directory + header.
   c_cols <- tibble::tibble(
     key   = c("sf3b1", "nkap", "ylpm1"),
-    # PRPF8, not PRP8 (the yeast name) -- the published header had the typo.
+    # PRPF8 is the human gene name (PRP8 is yeast).
     label = c("SF3B1 introns", "NKAP/PRPF8 introns", "YLPM1 introns"),
     x     = 1:3
   )
 
-  # Row order is FIXED here on purpose. The upstream script ends with
-  # arrange(variable), whose result depends on locale collation -- under
-  # C collation "Branchpoint_score" sorts before the lower-case names
-  # and the published row order flips. Pin it instead.
+  # Row order is fixed here rather than sorted, because alphabetical
+  # order depends on locale collation ("Branchpoint_score" vs lower-case).
   c_rows <- tibble::tibble(
     variable = c("upstream_AG_distance", "score_5ss", "score_3ss",
                  "length", "gc_content", "downstream_AG_distance",
                  "Branchpoint_score", "bp_distance_to_3ss"),
-    # Prose labels: these are NOT in the pipeline code, they were typed
-    # by hand in Illustrator.
-    # "log(intron length)" is Quinn's confirmed wording. NB the fitted
-    # model is scale(length) on raw bp (compute_features.R:41), so the
-    # label and the predictor disagree. Kept as instructed and because
-    # the betas here must match the published figure; if the model is
-    # ever refitted on log(length) the betas in this column change.
+    # Prose row labels. NB the model uses scale(length) on raw bp, not
+    # log(length); refitting on log(length) would change that row's beta.
     label = c("distance to 1st upstream AG (nt)",
               "5'ss MaxEnt score",
               "3'ss MaxEnt score",
@@ -51,7 +44,7 @@ panel_c <- panel_cached("c", local({
   )
   c_rows$y <- rev(seq_len(nrow(c_rows)))   # first row at the TOP
 
-  # ---- the model, verbatim from scripts/fit_betas.R (with_bp) -------
+  # ---- the model (with_bp) -----------------------------------------
   fit_one <- function(key) {
     feats <- data.table::fread(file.path(C_UNIFIED, key, C_SUB),
                                data.table = FALSE)
@@ -80,15 +73,9 @@ panel_c <- panel_cached("c", local({
                              p_value < 0.01  ~ "**",
                              p_value < 0.05  ~ "*",
                              TRUE            ~ "ns"),
-             # round(x, 3) prints -0.19 and 0.005 exactly as shown in
-             # the reference -- do not format() to a fixed width.
-             # NB `cell_label`, not `label`: BOTH c_cols and c_rows
-             # carry a `label` column (the column header and the prose
-             # row label), so an inner_join on a `label` here is
-             # silently renamed to label.x/label.y and c_tiles$label
-             # comes back NULL. The stopifnot on row count still
-             # passes, so the failure only shows up later as
-             # "no non-missing arguments to max".
+             # `cell_label`, not `label`: c_cols and c_rows both carry
+             # a `label` column, which the joins below would rename to
+             # label.x/label.y.
              cell_label = paste0(round(estimate, 3), " ", sig)) %>%
       select(variable, estimate, p_value, sig, cell_label)
     list(tab = tab, n_test = sum(d2$condition == "test"))
@@ -105,8 +92,8 @@ panel_c <- panel_cached("c", local({
 
   stopifnot(nrow(c_tiles) == nrow(c_rows) * nrow(c_cols))
 
-  # Cell text (Quinn, 2026-10-08): significant cells show beta to 2
-  # decimal places plus stars; non-significant cells are blank (colour only).
+  # Cell text: significant cells show beta to 2 decimal places plus
+  # stars; non-significant cells are blank (colour only).
   c_tiles <- c_tiles %>%
     mutate(cell_label = ifelse(sig == "ns", "", paste(sprintf("%.2f", estimate), sig)))
 
@@ -151,7 +138,7 @@ panel_c <- panel_cached("c", local({
 
   # Carry the text size as a COLUMN, not a captured scalar -- an aes()
   # (or even a bare `size =`) resolved from this local() environment is
-  # gone after saveRDS/readRDS. See ../../figure2/compose.md.
+  # gone after saveRDS/readRDS.
   # /.pt because scale_size_identity() feeds the value straight to the
   # `size` aesthetic, which ggplot reads in MILLIMETRES -- passing
   # points there renders the text ~2.8x too large.
@@ -170,8 +157,7 @@ panel_c <- panel_cached("c", local({
               color = "white", linewidth = 0.35) +
     geom_text(data = c_tiles,
               # `cell_label`, NOT `label`: after the join c_tiles$label
-              # is c_cols' COLUMN HEADER, so binding `label` here drew
-              # "SF3B1 introns" once per tile.
+              # is c_cols' column header.
               aes(x = x, y = y, label = cell_label, size = txt_pt),
               family = FONT_FAMILY, color = "grey10") +
     geom_text(data = c_n,
@@ -208,9 +194,8 @@ panel_c <- panel_cached("c", local({
           legend.title      = element_text(size = SIZE_BASE * 0.85),
           legend.margin      = margin(0, 0, 0, 0),
           legend.box.spacing = unit(1.2, "mm"),
-          # 9.5 pt top, not 12: measured at 400 dpi, panel c's title sat
-          # 14 px below panel d's across row 2. Re-measure with
-          # ../scripts/title_align.R if either panel's title changes.
+          # 9.5 pt top aligns this title with its row neighbour's
+          # (check with ../scripts/title_align.R if either title changes).
           plot.margin   = margin(9.5, 2, 2, 8, "pt"))
 
   wrap_elements(full = p)

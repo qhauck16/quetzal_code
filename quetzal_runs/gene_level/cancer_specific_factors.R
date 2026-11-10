@@ -76,7 +76,7 @@ tcga_to_gtex <- c(
 # Covariate handling.
 #
 # Covariates are read from the standardized table built by
-# tcga/covariate_table.R. RIN is dropped here because it is missing for
+# support_tables/covariate_table.R. RIN is dropped here because it is missing for
 # whole cohorts (TCGA-LAML, etc.) and is perfectly collinear with cohort
 # identity for any imputation scheme; we'd rather lose the RIN signal
 # than lose those cohorts to a downstream complete.cases() filter. We do
@@ -217,8 +217,7 @@ fit_bb <- function(cluster_test) {
   if (is.null(res)) return(NULL)
 
   # summary() can itself fail when the fit converges with a degenerate
-  # variance matrix (aod: "differing number of rows: 2, 3"; seen for
-  # chr11 DGKZ after the 2026-10-06 cluster rebuild). Treat as unfittable.
+  # variance matrix (aod: "differing number of rows: 2, 3"). Treat as unfittable.
   co <- tryCatch(summary(res)@Coef, error = function(e) NULL)
   if (is.null(co) || !"studyTCGA" %in% rownames(co)) return(NULL)
 

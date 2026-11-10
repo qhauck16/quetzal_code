@@ -12,10 +12,6 @@
 # Re-run only when the upstream data changes:
 #   Rscript --vanilla \
 #       scripts/build_cache_panel_g.R
-#
-# Transcribed from diff_splicing/combined_expression_analysis.Rmd
-# (build_set_pair / stratified_random / bootstrap_random_cdfs /
-#  plot_single_panel_cdf), pub_specs entry 5.
 # ------------------------------------------------------------------
 
 if (!exists("QROOT")) QROOT <- local({ d <- normalizePath(getwd())   # quetzal_code root
@@ -34,7 +30,7 @@ if (!nzchar(HERE) || !dir.exists(HERE)) HERE <- getwd()
 CACHE <- file.path(HERE, "cache")
 dir.create(CACHE, showWarnings = FALSE, recursive = TRUE)
 
-# ---- constants from the Rmd --------------------------------------
+# ---- constants ---------------------------------------------------
 N_TOP       <- 20L
 N_BOOTSTRAP <- 100L
 N_GRID      <- 200L
@@ -62,8 +58,7 @@ df <- fread(file.path(QROOT, "leafcutter_analyses/diff_splicing/unified_results/
               select(Intron_coord, Annot, Coding, UTR, GencodePC),
             by = "Intron_coord")
 
-# Alt 3'ss + alt 5'ss only, matching Fig. 4f and the rest of the paper (Quinn, 2026-11-09; all types
-# was tried the same day: 583 genes, p = 9.2e-6).
+# Alt 3'ss + alt 5'ss only, matching Fig. 4f and the rest of the paper.
 hits <- df |> filter(deltapsi > PSI, test / control > FC, type %in% c("alt 3'ss", "alt 5'ss"))
 cand <- hits |> filter(!Coding, !UTR) |> pull(gene_name) |> unique()
 cat("[cache g] candidate unproductive genes:", length(cand), "\n")
@@ -73,12 +68,9 @@ writeLines(cand, file.path(CACHE, "panel_g_cand_genes.txt"))
 # ------------------------------------------------------------------
 # 2. Row-slice the 7.7 G matrix with awk.
 #
-# `intersect(rownames(expr_mat))` in the Rmd is exactly what this awk
-# pass does -- a candidate gene that has no expression row simply never
-# matches, so the sliced file's rows ARE the final target set.
-# All ~11k columns are kept: the bootstrap samples from the whole
-# column pool, so the figure-3 trick of slicing to 20 columns is not
-# available here.
+# A candidate gene that has no expression row simply never matches, so
+# the sliced file's rows ARE the final target set. All ~11k columns are
+# kept because the bootstrap samples from the whole column pool.
 # ------------------------------------------------------------------
 if (!file.exists(SLICE)) {
   cat("[cache g] streaming row slice out of", EXPR_TSV, "...\n")
@@ -117,7 +109,7 @@ red <- tibble(gene_name = names(m), x = as.numeric(m))
 fwrite(red, file.path(CACHE, "panel_g_red.tsv"), sep = "\t")
 
 # ------------------------------------------------------------------
-# 5. Bootstrap -- 100 stratified random sample groups, verbatim.
+# 5. Bootstrap -- 100 stratified random sample groups.
 # ------------------------------------------------------------------
 stratified_random <- function(top_ids, full_info, seed) {
   proj <- full_info |>

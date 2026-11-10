@@ -13,7 +13,6 @@
 #   full MANE gene model              transcript_zoom_gg()
 #   genomic coordinate labels         bespoke row (same x scale)
 #
-# See panel_c/build.md for the design notes and traps.
 
 if (!exists("QROOT")) QROOT <- local({ d <- normalizePath(getwd())   # quetzal_code root
   while (!file.exists(file.path(d, ".quetzal_root"))) { if (dirname(d) == d) stop("run from inside quetzal_code/"); d <- dirname(d) }
@@ -30,7 +29,7 @@ CTRL_LAB <- "Matched Controls"
 HIGH_N   <- "(15)"
 CTRL_N   <- "(150)"
 
-BW_HIGH <- "High_k13-3-..bw"            # High_k20-* are a stale factor key
+BW_HIGH <- "High_k13-3-..bw"            # k13 high-loading cohort
 BW_CTRL <- "Matched_Controls-3-..bw"
 LK_HIGH <- "MeanPSI.High_k13-3-..links"
 LK_CTRL <- "MeanPSI.Matched_Controls-3-..links"
@@ -65,11 +64,11 @@ region_dir <- function(L, which = "wide") {
 
 # ------------------------------------------------------------------
 # Row heights. patchwork heights are RELATIVE, so only the ratios
-# here are stable -- see ../figure2/compose.md. Everything that needs
+# here are stable. Everything that needs
 # a DRAWN size (the PSI-label clearance solver, the callout's leader
 # drop) is derived from these, never restated.
 # ------------------------------------------------------------------
-# Quinn's rule: stretch the plot rather than shrink the type. The
+# Stretch the plot rather than shrink the type. The
 # two PSI numbers per track are what sets the floor on H_TRK -- they
 # are anchored APEX_GAP apart, so the track has to be tall enough for
 # APEX_GAP * H_TRK to exceed one line of SZ_PSI text. Everything else
@@ -92,8 +91,7 @@ C_TITLE_H  <- 0.34
 # number would then be drawn on the same page row and overprint. One
 # line of SZ_AXIS text is ~4.5 pt tall, so 5 pt buys both their half
 # line.
-# 5 -> 9 pt (2026-10-07, Quinn: rows read crowded); the tracks flatten
-# to pay for it because the gaps come off the budget first (below).
+# 9 pt between rows; the tracks flatten to pay for it because the gaps come off the budget first (below).
 TRK_GAP_PT <- 9
 # Whitespace between the top (SENP2 / PRKDC) and bottom (EZH2 / BRD9)
 # locus pairs, so the upper axis labels don't sit on the next track.
@@ -108,7 +106,7 @@ C_SCALE    <- (ROW_H[["c"]] - C_TITLE_H - (4 * TRK_GAP_PT + QUAD_GAP_PT) / 72) /
 TRACK_H_IN <- H_TRK * C_SCALE
 
 # Gutters, in pt. Only the RIGHT column carries the cohort captions
-# (as in the reference), so the two columns need different margins to
+# so the two columns need different margins to
 # end up with comparable track widths.
 MARG <- list(left  = c(30, 40),      # c(left, right) in pt
              right = c(22, 62))
@@ -194,10 +192,10 @@ ANCHOR_BP <- 0
 # these windows those tops are high: the cryptic site sits inside the
 # exon plateau, so its end of the arc starts as high as 0.81 of y_max
 # (PRKDC controls). An arc height expressed as an ABSOLUTE fraction of
-# y_max -- which is what this used to be -- is therefore below its own
+# y_max would therefore be below its own
 # endpoints, and sin(t pi) * (apex - max(y1,y2)) goes NEGATIVE: the
-# "arc" is drawn sagging down to the baseline and back up. Heights are
-# now relative to each arc's own higher endpoint.
+# "arc" would sag down to the baseline and back up. Heights are
+# relative to each arc's own higher endpoint.
 #
 # ARC_RISE is the bulge of the LOWEST arc above its own higher
 # endpoint; each arc above it is lifted by at least ARC_SEP more so the
@@ -297,7 +295,7 @@ arc_min_gap <- function(curves, peak) {
   g
 }
 
-# Bare 3-significant-digit values, as the reference prints them.
+# Bare 3-significant-digit values.
 # format() on the whole VECTOR pads to a common width ("92.40"), so
 # each value is formatted on its own.
 psi_fmt <- function(p)
@@ -425,17 +423,14 @@ place_psi <- function(g, L, side, obstacles = list()) {
 # ------------------------------------------------------------------
 # The inline "-11 nt" / "-5 nt" label, for the loci with no callout.
 # ------------------------------------------------------------------
-# As in the reference, it hangs just LEFT of the leftmost splice site
+# It hangs just LEFT of the leftmost splice site
 # -- over the exon's descending shoulder -- at a height derived from
 # the coverage under its own width, so it clears the exon below it.
 # The one place in the track guaranteed to be arc-free: every arc here
 # starts at a splice site and runs rightwards.
 #
-# It is drawn on the HIGH track only, once per locus. The reference
-# puts it on both cohorts at EZH2... except it does not: EZH2's
-# control track has no "-11 nt" in the reference either, because there
-# is no room above the grey exon. That is worse here, not better:
-# y_max is the pipeline's ini value and is driven by the CONTROLS, so
+# It is drawn on the HIGH track only, once per locus: there is no room
+# above the grey exon on the control tracks, because y_max is the pipeline's ini value and is driven by the CONTROLS, so
 # a control exon plateau fills 0.91 of y_max while half a line of
 # SZ_NT is 0.11 of it. Placed there the text printed ON the coverage.
 # One label per locus, on the cohort the cryptic junction belongs to,
@@ -462,8 +457,7 @@ nt_place <- function(g, L, side, nt) {
 # ------------------------------------------------------------------
 # Zoom callouts: the EDGE OF THE JUNCTION ARC, at nucleotide scale.
 # ------------------------------------------------------------------
-# Quinn: "the zoom in 3c should have the edge of an arc and a label for
-# the nt, not a curvy label for the nt". `zoom_callout_gg`'s built-in
+# `zoom_callout_gg`'s built-in
 # annotation is a decorative geom_curve leader from the text down to
 # the coverage; it is switched off here (`nt_label = NULL`) and
 # replaced by the real thing:
@@ -738,7 +732,7 @@ make_track <- function(L, cohort, col, side,
   obst <- c(obst, extra_obst)
 
   # ---- PSI numbers: INLINE, on their own arcs ----------------------
-  # Quinn chose one sashimi label style for the whole paper: the number
+  # One sashimi label style for the whole paper: the number
   # sits in the middle of its own arc, in a gap cut out of the arc (the
   # figure 4 look). The shared helper does exactly that, so the track is
   # rebuilt with show_psi = TRUE and every obstacle this panel knows
@@ -898,9 +892,7 @@ build_quadrant <- function(key, side, box_hi = NULL, box_ct = NULL) {
     # the High (blue) inset drops 0 -- the top of the High track, i.e.
     # the callout panel's own bottom edge -- and the Controls (grey)
     # inset drops one whole track row, H_TRK / H_CALL, which is the top
-    # edge of the grey source box. (Both callouts previously pointed at
-    # the High box, which read as if the grey inset magnified the blue
-    # track.) The insets are ordered along x so the two pairs of
+    # edge of the grey source box. The insets are ordered along x so the two pairs of
     # leaders cannot cross: the inset whose leaders stop HIGHER (High)
     # is the one nearer the source box -- see box_hi / box_ct below.
     specs <- list(

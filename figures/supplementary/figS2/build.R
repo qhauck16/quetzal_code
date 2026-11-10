@@ -2,8 +2,8 @@
 # junctions, as in figure 1 panel b, over a range of fold-change
 # requirements (rows) for the three cohort comparisons (columns).
 # Recovery logic and cache are figure 1's (figure1/compose.R
-# build_panel_b(), originally model_eval/quetzal_benchmarking.Rmd); only
-# the FC loop is new. FC >= 1 is the plain direction test.
+# build_panel_b()), looped over FC thresholds. FC >= 1 is the plain
+# direction test.
 if (!exists("QROOT")) QROOT <- local({ d <- normalizePath(getwd())   # quetzal_code root
   while (!file.exists(file.path(d, ".quetzal_root"))) { if (dirname(d) == d) stop("run from inside quetzal_code/"); d <- dirname(d) }
   d })
@@ -71,7 +71,7 @@ p <- ggplot(d, aes(psi, rec, colour = set)) +
   labs(x = "|ΔPSI| cutoff", y = "Percent recovery") +
   theme_publication() +
   theme(legend.position = "bottom", panel.spacing = unit(0.8, "lines"),
-        # gridlines back on in the supplement (Quinn: odd without them here)
+        # gridlines on in the supplement
         panel.grid.major = element_line(colour = "grey90", linewidth = 0.25),
         strip.background = element_rect(fill = "grey93", colour = NA),
         strip.text = element_text(size = SIZE_BASE),

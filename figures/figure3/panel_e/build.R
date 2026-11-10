@@ -7,9 +7,8 @@
 #   frameshifting cryptic 3'ss genes, in-frame cryptic 3'ss genes, and
 #   an RPM-matched control gene set for each.
 #
-# Transcribed from diff_splicing/combined_expression_analysis.Rmd
-# (build_set_pair / match_by_rpm / plot_single_panel_cdf). See
-# panel_e/build.md for the analysis rules and the layout reasoning.
+# Gene sets follow diff_splicing/unified_results df_final.tsv; controls
+# are 1:1 RPM-matched with MatchIt.
 #
 # Sourced by ../compose.R, which supplies theme.R's tokens, the
 # tidyverse, ggrepel, CACHE and panel_cached().
@@ -27,38 +26,13 @@ panel_e <- panel_cached("e", local({
   E_SEED   <- 20260922L
   E_LAB_PT <- SIZE_BASE           # gene callouts
   E_LEG_PT <- SIZE_LEGEND         # legend text
-                                  # Both stay at the shared tokens.
-                                  # They were 7 pt while row 3 was
-                                  # 2.45 in; row 3 has since been grown
-                                  # and then NARROWED (cell 3.40 ->
-                                  # 3.23 in, row 2.95 -> 3.05 in) when
-                                  # figure 3 went from four rows to
-                                  # three. The narrowing was paid for
-                                  # by re-wrapping the legend and
-                                  # re-cutting the tiers, NOT by
-                                  # shrinking the type -- see build.md.
-                                  # E_LAB_PT is the LAST constant to
-                                  # touch, never the first.
+                                  # Shared tokens; grow the cell
+                                  # before shrinking E_LAB_PT.
   E_BOXPAD <- 0.20                # ggrepel box.padding (DDB1 only)
 
-  # Panel geometry, MEASURED off the composed render at 400 dpi (row 3
-  # middle cell, ROW_H[3] = 3.05 in, COL_W$def[2] = 0.38 of 8.5 in):
-  # x ticks at -1.0/-0.5/0.0/0.5 land 219.3 px apart and the y ticks
-  # 184.0 px per 0.25, i.e. 438.7 px (1.0967 in) per x-unit and
-  # 736.0 px (1.8400 in) per y-unit; the drawn panel is 1014 x 907 px
-  # = 2.535 x 2.267 in.
-  #
-  # RE-MEASURE THESE FIRST whenever compose.R's ROW_H or COL_W change,
-  # then re-derive E_PITCH, the bands and the tier columns, and only
-  # then consider the point sizes. The history of this pair:
-  #   ROW_H[3] 2.45, cell 3.40 -> 1.4718 / 1.3937
-  #   ROW_H[3] 2.95, cell 3.40 -> 1.4718 / 1.7600
-  #   ROW_H[3] 3.05, cell 3.23 -> 1.0967 / 1.8400
-  #   ROW_H[3] 2.75, cell 4.50 -> 1.6688 / 1.6025   (current, 2026-10-05:
-  #     d|e two columns, f full-width row 4; x from axis length 3.855 in)
-  # The x figure fell by 25%: everything measured in x-units -- the
-  # legend block, the label widths, the tier columns -- got 34% WIDER
-  # in data units at a stroke, which is what broke the old layout.
+  # Panel geometry: inches per data unit in the drawn panel at the
+  # current ROW_H / COL_W. Re-measure whenever those change, then
+  # re-derive E_PITCH, the bands and the tier columns.
   E_IN_PER_X <- 1.6688
   E_IN_PER_Y <- 1.6025
   E_EXPAND   <- 0.05              # ggplot's default continuous mult
@@ -66,16 +40,13 @@ panel_e <- panel_cached("e", local({
   e_pan_y <- E_YLIM + c(-1, 1) * E_EXPAND * diff(E_YLIM)
 
   # Drawn width of an italic gene name at E_LAB_PT, in x-units.
-  # 0.630 em/char is MEASURED (MAD1L1 renders 168 px wide at 400 dpi =
-  # 0.420 in for 6 characters at 8 pt), not the 0.56 used for upright
-  # text elsewhere in this figure.
+  # 0.630 em/char is measured for italic text (wider than upright).
   E_CHAR_EM  <- 0.630
   lab_w <- function(g) nchar(g) * E_CHAR_EM * E_LAB_PT / 72 / E_IN_PER_X
 
-  # Legend block, measured as an ink bounding box off a 400 dpi render
-  # of this legend at this cell size (not with ggplotGrob -- the grob
-  # misses ~0.15 in of the width). E_LEG_TOP is the drop from the
-  # guide box's top (= the panel top) to the first line's ink.
+  # Legend block size in inches (ink bounding box; ggplotGrob
+  # underestimates the width). E_LEG_TOP is the drop from the guide
+  # box's top (= the panel top) to the first line's ink.
   E_LEG_W   <- 1.032 / E_IN_PER_X
   E_LEG_TOP <- 0.068 / E_IN_PER_Y
   E_LEG_H   <- 0.983 / E_IN_PER_Y
@@ -87,34 +58,19 @@ panel_e <- panel_cached("e", local({
   e_leg$ymin <- e_leg$ymax - E_LEG_H
 
   # Series colours. Names double as the legend text, so the wrapping
-  # lives here and nothing has to re-map labels later.
-  #
-  # THE WORDING IS FIXED; only the wrapping is a layout choice, and in
-  # a 2.535 in panel the wrapping is load-bearing. A legend is as wide
-  # as its widest LINE across ALL entries, so the previous wrap was
-  # 1.515 in wide because of "Frameshifted (n = 971)" -- re-wrapping
-  # only the two long entries does nothing at all. Measured on the
-  # render at this cell size:
-  #   2-line RPM entries, 1-line n entries   1.515 x 0.642 in
-  #   all four entries wrapped (this one)    1.032 x 0.983 in
-  #   n entries wrapped, RPM 2-line          1.407 x 0.812 in
-  #   n entries 1-line, RPM 3-line           1.515 x 0.812 in
-  # Only the narrow one works. 1.515 in is 1.381 x-units here, so that
-  # block reaches x = -0.013 and there is no room at all between it
-  # and the frameshift curve for the top tier of names -- which is
-  # exactly the overlap this rebuild had to fix. 1.032 in is 0.941
-  # x-units, so the block ends at x -0.452 and the top tier clears it.
-  # The extra height (0.983 vs 0.642 in) is paid for out of the tier
-  # split: see E_SPLIT.
+  # lives here and nothing has to re-map labels later. All four entries
+  # are wrapped: a legend is as wide as its widest line, and the narrow
+  # block leaves room for the top tier of names beside the frameshift
+  # curve.
 
   HIGHLIGHT <- c("SMAD4", "ARID1A", "PALB2", "FANCD2", "DEPDC5", "DDB1",
                  "BRD2", "BRCA1", "RBBP8", "XRCC5", "NHEJ1", "CHFR",
                  "MAD1L1", "MAD2L2", "TOPBP1", "CTC1", "EZH2", "BRD9")
 
   # ---------------- data ------------------------------------------
-  # 20-column slices of the two 13 GB expression matrices, built once
-  # into cache/ (see build.md). header=TRUE is required: fread's
-  # header sniffing gets these wrong and returns V1..V21.
+  # 20-column slices of the two expression matrices, built once into
+  # cache/ by scripts/build_cache_panel_e.sh. header=TRUE is required:
+  # fread's header sniffing gets these wrong and returns V1..V21.
   read_mat <- function(f) {
     data.table::fread(file.path(CACHE, f), header = TRUE) |>
       as.data.frame() |>
@@ -202,8 +158,8 @@ panel_e <- panel_cached("e", local({
       length(complem), " ", p_lab, "\n")
 
   # -- gene labels sit at their percentile ON THE FRAMESHIFT CURVE --
-  # SMAD4 and DEPDC5 fall in the complement set, so they are (and must
-  # be) dropped here -- 16 of the 18 requested names survive.
+  # SMAD4 and DEPDC5 fall in the complement set, so they are dropped
+  # here -- 16 of the 18 requested names survive.
   fs_curve <- curves |>
     dplyr::filter(group == G_FS) |>
     dplyr::mutate(ecdf_y = rank(x, ties.method = "first") / dplyr::n())
@@ -221,10 +177,10 @@ panel_e <- panel_cached("e", local({
                      sort(hl$ecdf_y)), collapse = " | "), "\n")
 
   # ---------------- repel obstacles -------------------------------
-  # Only DDB1 is still placed by ggrepel (see the ladder block below),
-  # but ggrepel only avoids its OWN layer's data, so the four step
-  # curves and the legend are invisible to it. Feed them in as
-  # zero-text rows; DDB1 then cannot be pushed onto a curve.
+  # Only DDB1 is placed by ggrepel (see the ladder block below), but
+  # ggrepel only avoids its OWN layer's data, so the four step curves
+  # and the legend are invisible to it. Feed them in as zero-text rows;
+  # DDB1 then cannot be pushed onto a curve.
   obstacles <- curves |>
     dplyr::filter(is.finite(x)) |>
     dplyr::group_by(group) |>
@@ -247,32 +203,16 @@ panel_e <- panel_cached("e", local({
   obstacles <- dplyr::bind_rows(obstacles, leg_block)
 
   # ---------------- label ladders ---------------------------------
-  # Same idiom as figure 4 panel g: names in a tidy right-aligned
-  # column on the free flank of the curve, short leaders running
-  # RIGHTWARDS to the point. Because every label in a column sits at
-  # the SAME x and every leader leaves that column heading right, no
-  # leader can ever cross a label in its own column.
+  # Names in tidy right-aligned columns on the free flank of the curve,
+  # short leaders running RIGHTWARDS to the point, so no leader crosses
+  # a label in its own column.
   #
-  # Panel g gets all ten of its names into one column; this panel has
-  # sixteen in 2.267 in of drawn height, with a legend in the same
-  # column. At SIZE_BASE a name plus a readable gutter is 0.110 in
-  # tall, so one column tops out at ~20 names with no legend -- but
-  # the legend eats the top 0.983 in, so the region left of it holds
-  # only ~8.
-  #
-  # The three tiers step RIGHT as they climb, following the curve's
-  # left flank, which is what keeps the leaders short; they do NOT buy
-  # vertical room, because they are y-disjoint. What the narrow cell
-  # changed is the SPLIT. The legend now reaches down to y 0.565, and
-  # tiers A and B sit in its x-shadow (their left edges are at -0.79
-  # and -0.45, the legend ends at -0.452), so A and B have to fit
-  # BELOW it: y 0.070..0.548, which is 0.478 y-units and holds 7
-  # names, not 9. Tier C's column is right of the legend, so it takes
-  # the other 8.
-  #
-  # The splits therefore move from (0.35, 0.70) to (0.35, 0.55), which
-  # are still natural gaps in the label percentiles -- the build
-  # prints them; BRD9 | XRCC5 and EZH2 | MAD1L1 are the two widest.
+  # Sixteen names do not fit one column beside the legend, so they are
+  # split into three tiers that step RIGHT as they climb, following the
+  # curve's left flank to keep leaders short. Tiers A and B sit in the
+  # legend's x-shadow and must fit below it; tier C is right of it.
+  # E_SPLIT is cut at natural gaps in the label percentiles (printed
+  # above).
   E_SPLIT  <- c(0.35, 0.55)       # 5 / 2 / 8
   E_COL_A  <- -0.47               # right edge, bottom tier
   E_COL_B  <- -0.13               # right edge, middle tier
@@ -299,23 +239,16 @@ panel_e <- panel_cached("e", local({
   # turns the ladder into a true column. The nudge has to be a plain
   # numeric vector computed HERE (it is stored as a layer parameter and
   # survives saveRDS); the obstacle rows get a zero nudge. Only DDB1
-  # still uses this -- see below.
+  # uses this -- see below.
   col_nudge <- function(d, n_obs, x_col) c(x_col - d$x, rep(0, n_obs))
 
-  # The three ladders are placed BY HAND rather than by ggrepel.
-  # ggrepel's equilibrium for a column that is packed against its band
-  # is "boxes just touching", and box.padding is the only lever on the
-  # gutter -- but pushing padding far enough to open a readable gutter
-  # makes the stack taller than the band, at which point repel silently
-  # lets the boxes overlap instead (measured: padding 0.06/0.11/0.20 ->
-  # gutters of 2/4/2-with-merges px at 400 dpi). Even pitch, order
-  # preserved, stack centred on the tier's own points and clamped into
-  # the band gives an exact, reproducible ladder instead.
-  # DERIVED, not measured: one line of cap height plus the gutter the
-  # approved build used (0.030 in = 12 px at 400 dpi), converted
-  # through E_IN_PER_Y. Stating it as a y-unit constant is what went
-  # stale when the row changed shape -- 0.0625 y-units was 0.110 in at
-  # E_IN_PER_Y 1.76 and would be 0.115 in now.
+  # The three ladders are placed BY HAND rather than by ggrepel: in a
+  # packed band ggrepel either lets boxes touch or, with enough padding
+  # for a gutter, silently overlaps them. Even pitch, order preserved,
+  # stack centred on the tier's own points and clamped into the band
+  # gives an exact, reproducible ladder.
+  # Pitch = one line of cap height plus a 0.030 in gutter, converted
+  # through E_IN_PER_Y so it tracks the panel's drawn height.
   E_GUTTER_IN <- 0.030
   E_PITCH   <- (E_LAB_PT * 0.717 / 72 + E_GUTTER_IN) / E_IN_PER_Y
   E_SEG_GAP <- 0.022 * (1.4718 / E_IN_PER_X)   # ~0.022 in of air
@@ -343,16 +276,13 @@ panel_e <- panel_cached("e", local({
   # Clearance audit: the frameshift CDF is the leftmost curve, so a
   # label is clear of ALL four iff the FS curve is right of the column
   # at the label's row. The curve climbs left-to-right, so the tightest
-  # row is the box's BOTTOM edge, not its centre -- checking the centre
-  # is what let MAD2L2's last glyph sit 0.007 in off the red curve.
+  # row is the box's BOTTOM edge, not its centre.
   # Printed every build; under ~0.05 units (0.07 in) a tier has to move.
   E_LAB_HALF_H <- (E_LAB_PT * 0.717 / 72) / 2 / E_IN_PER_Y
   fs_x_at <- approxfun(fs_curve$ecdf_y, fs_curve$x, rule = 2)
   lad$clear <- fs_x_at(lad$lab_y - E_LAB_HALF_H) - lad$lab_x
   # ... and clear of the legend block on the LEFT. A label whose box
   # overlaps the legend's rows must start right of its right edge.
-  # This is the check the narrow cell broke: six names printed inside
-  # the legend text before the rebuild.
   lad$lab_left <- lad$lab_x - lab_w(lad$gene_name)
   over_leg <- lad$lab_y + E_LAB_HALF_H > e_leg$ymin &
               lad$lab_y - E_LAB_HALF_H < e_leg$ymax
@@ -368,17 +298,8 @@ panel_e <- panel_cached("e", local({
   stopifnot(all(is.na(lad$leg_gap) | lad$leg_gap > 0.03))
 
   # p sits in the empty wedge right of the curves, right-aligned at the
-  # x limit exactly as in figure 4 panel g. Its ROW had to come down
-  # from 0.78 to 0.40 when the cell narrowed, and that is measured, not
-  # taste: the string is 0.685 in = 0.625 x-units wide here, so parked
-  # at x = 0.80 it reaches back to x = 0.175 -- and at y = 0.78 the
-  # rightmost of the four curves is already at x = 0.302 (measured off
-  # the 400 dpi render), with RBBP8's leader running to its point at
-  # x = 0.20. There is no y near 0.78 where the string fits: clearing
-  # the curves would need a right edge at x = 0.955, past the panel.
-  # At y = 0.40 the curves reach only x = 0.047, so the string clears
-  # them by 0.128 x-units (0.140 in) and clears every leader (tier B's
-  # longest ends at x = -0.02).
+  # x limit. At y = 0.40 the string clears all four curves and every
+  # leader; higher up the curves reach too far right for it to fit.
   ann <- data.frame(x = 0.80, y = 0.40, label = p_lab)
 
   # ---------------- plot ------------------------------------------

@@ -1,10 +1,6 @@
 
 # Cache builder for figure 2, panel b (neuronal GSP ECDF).
 #
-# Faithful extraction of the upstream chain in
-#   tcga/genome_wide/flashier/neuronal_gsp.Rmd
-# chunks `loading re-used files`, `finding top junctions and nearby
-# annotated junctions`, and `GTEx and TCGA PSI`.
 #
 # Produces two caches so the ECDF can be replotted without re-running
 # any of it:

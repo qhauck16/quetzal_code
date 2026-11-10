@@ -133,23 +133,13 @@ add_noncoding_stars <- function(p, gd, jc_tsv, y_pad = 1.6, star_size = 3.2,
 # 2. Panel 1a -- Illustrator schematic.
 #    .ai files are PDF-compatible; pdftocairo reads them.
 # ------------------------------------------------------------------
-# preserve_aspect = TRUE keeps the schematic's text un-stretched.
-# Row 1's height is tuned below so the image's aspect matches the
-# cell aspect and the image fills it (no vertical whitespace above
-# it under the "a" tag).
-# preserve_aspect = FALSE fills the cell exactly, so the schematic is
-# flush with panel b's top instead of floating centred with slack
-# above it (coord_equal centres, and no margin tweak could pull it
-# up). Safe here only because the row-1 geometry was tuned so the
-# cell aspect (~1.18) is within ~1% of the image's (~1.19) -- the
-# resulting stretch is imperceptible. Re-check if those change.
-# wrap_elements() so panel a gets the SAME tag treatment as panel b
-# (also a wrap_elements). As a bare ggplot, patchwork reserved ~68 px
-# at the top of a's cell for the "a" tag, which pushed its content
-# that far below panel b's -- wrapping makes both tags overlay.
-# The art's labels are Arial; every other panel draws in FONT_FAMILY
-# (Helvetica -> Nimbus Sans here). `pdf_subst_font()` re-sets the
-# schematic's text in that face -- see ../scripts/pdf_font_subst.R.
+# preserve_aspect = FALSE fills the cell exactly so the schematic is
+# flush with panel b's top; the row-1 cell aspect (~1.18) is within ~1%
+# of the image's (~1.19), so the stretch is imperceptible. Re-check if
+# the row-1 geometry changes.
+# wrap_elements() gives panel a the same tag treatment as panel b.
+# pdf_subst_font() re-sets the schematic's Arial text in FONT_FAMILY
+# (see ../scripts/pdf_font_subst.R).
 panel_a <- wrap_elements(full =
   gg_from_pdf(pdf_subst_font("panel_a/gene_level_workflow.pdf"),
               dpi = 600,
@@ -269,8 +259,7 @@ build_panel_b <- function() {
       geom_line(linewidth = 0.7) +
       geom_point(size = 1.3) +
       scale_x_reverse(limits = c(max(psi_vals), min(psi_vals))) +
-      # Percent labels: the title says "Percent recovery", and a 0-1
-      # axis under it read as a mismatch (QA review).
+      # Percent labels to match the "Percent recovery" axis title.
       scale_y_continuous(limits = c(0, 1),
                          labels = scales::percent_format(accuracy = 1)) +
       scale_color_manual(values = c(leafcutter = PAL$leafcutter,
@@ -318,13 +307,9 @@ panel_b_plots <- build_panel_b()
 
 # 2x2 grid: top row = KICH_vs_LUAD | KICH_vs_TGCT
 #            bottom row = TGCT_vs_LUAD | legend
-# TGCT_vs_LUAD is aligned left (under KICH_vs_LUAD); legend fills
-# the bottom-right cell. Legend is rebuilt from a small dummy ggplot
-# via ggplotify::as.ggplot so it composites correctly.
-# Drawn by hand in normalized [0,1] coords rather than as a ggplot
-# guide: a real legend sizes itself from the text and overflows this
-# narrow cell (labels ran off the page edge). Explicit key + text
-# positions are guaranteed to fit.
+# The legend is drawn by hand in normalized [0,1] coords rather than as
+# a ggplot guide, which sizes itself from the text and would overflow
+# this narrow cell.
 panel_b_legend_keys <- data.frame(
   y     = c(0.60, 0.40),
   col   = c(PAL$leafcutter, PAL$matched),
@@ -379,9 +364,8 @@ bdh1_gd <- gd_repath(readRDS("panel_c/output/BDH1_k4/gene_data.RDS"))
 # lib-internal `palet`.
 LC$palet <- unname(sapply(as.character(seq_len(ncol(bdh1_gd$res$L))), factor_color))
 
-# Structure plot: kept but condensed. Kill gridlines + panel border,
-# keep cohort labels along the bottom, small typography. Structure is
-# the "signal preview" for the panel -- genome tracks below are the star.
+# Structure plot: no gridlines or panel border, cohort labels along the
+# bottom, small typography.
 panel_c_struct <- LC$plot_structure_static(bdh1_gd) +
   theme_publication() +
   theme(legend.position   = "none",
@@ -396,22 +380,12 @@ panel_c_struct <- LC$plot_structure_static(bdh1_gd) +
         # Asymmetric L/R margin nudges the structure plot left within
         # its cell, tightening the gap to the coverage stack.
         plot.margin       = margin(2, 20, 2, 0, "pt"),
-        # Aspect ratio removed -- let patchwork match structure_plot
-        # height to the coverage overlay height on the right.
+        # No fixed aspect ratio, so the height matches the coverage
+        # overlay on the right.
         aspect.ratio      = NULL)
 
-# Coverage-only tracks (five cohorts, NO gene track, NO coord axis).
-# pygenome's simple_coverage.pdf stacks: sashimi tracks (top ~42%),
-# coverage tracks (~43%), coord axis + gene body (~15%). Trim the
-# sashimi off the top AND the coord axis + gene body off the bottom.
-# Also trim the right cohort labels ("LIHC (354,) .") -- we redraw
-# clean labels below. Left y-axis labels are kept because the width
-# they eat exactly equals the plot data area's left offset in the raw
-# PDF, so cropping them would misalign with a fresh gene body below.
-# Panel c coverage: build entirely from raw bigwigs + a hand-rolled
-# gene body (no pygenometracks, no ggbio, no ggdraw + draw_grob
-# positioning games). Every layer is a native ggplot / patchwork
-# element so the composed figure is deterministic.
+# Panel c coverage: built from raw bigwigs + a hand-rolled gene body.
+# Every layer is a native ggplot / patchwork element.
 bdh1_region_txt <- readLines(
   "panel_c/output/BDH1_k4/regions/default/region.txt", warn = FALSE)[1]
 bdh1_region  <- gsub(",", "", bdh1_region_txt)
@@ -420,17 +394,9 @@ bdh1_x_start <- as.numeric(sub(".*:(\\d+)-.*", "\\1", bdh1_region))
 bdh1_x_end   <- as.numeric(sub(".*-(\\d+)",   "\\1", bdh1_region))
 
 COHORT_LABELS <- c("LIHC", "SKCM", "LGG", "COAD", "UVM")
-# Still tab20, but from the hue families the structure plot on the LEFT
-# of this panel does NOT use (cyan, pink, grey). The old light blue /
-# orange / green / red / purple were the pastel twins of the structure
-# plot's topic colours, so the coverage tracks read as if they were
-# related to those topics (Quinn). Adjacent tracks alternate hue.
-# 2026-10-05 (Quinn): COAD (#9EDAE5) and UVM (#F7B6D2) read as lighter
-# LIHC / SKCM. Every track now has its own hue family: COAD light green
-# and UVM light blue -- tab20 families the structure plot shows only as
-# thin bands (it is mostly red / orange / olive / brown / purple).
-# 2026-10-06 (Quinn): SKCM pink -> tab20 light brown, UVM light blue ->
-# tan (#E5C494, the figures' Set2 tan; tab20 has no cream/tan).
+# Each cohort gets its own hue family, chosen from colours the structure
+# plot on the left uses little or not at all, so the coverage tracks do
+# not read as related to its topics. UVM is the figures' Set2 tan.
 COHORT_COLORS <- c(LIHC = "#17BECFFF", SKCM = "#C49C94FF", LGG  = "#7F7F7FFF",
                     COAD = "#98DF8AFF", UVM  = "#E5C494FF")
 
@@ -495,7 +461,7 @@ arc_row_gg <- arc_row_gg + annotate(
   "text",
   x = (min(arcs_df$x_start) + max(arcs_df$x_end)) / 2,
   y = 1.85, hjust = 0.5, vjust = 1,
-  # Only the GSP name is italic (Quinn, 2026-10-05); a bit larger than 3.0.
+  # Only the GSP name is italic.
   label = 'italic("k4")*"-unique junctions"', parse = TRUE,
   size = 3.5,
   family = FONT_FAMILY, color = "grey15")
@@ -519,10 +485,8 @@ panel_c_overlay_gg <- Reduce(`/`, all_rows) + plot_layout(heights = all_heights)
 # grid).
 panel_c_overlay <- {
   tf <- tempfile(fileext = ".pdf")
-  # cairo_pdf with a white background, NOT pdf(): the base pdf()
-  # device set the text in its own Helvetica, so this stack's labels
-  # read in a different face from every other panel, and its default
-  # transparent page rasterised with a light grey backing (QA review).
+  # cairo_pdf with a white background, not pdf(): pdf() substitutes its
+  # own Helvetica and rasterises its transparent page with a grey backing.
   grDevices::cairo_pdf(tf, width = 8, height = 3.5, bg = "white")
   print(panel_c_overlay_gg); dev.off()
   pf <- tempfile()
@@ -538,38 +502,25 @@ panel_c_overlay <- {
 }
 
 # Side-by-side: structure_plot LEFT | coverage-with-arc+gene overlay RIGHT.
-# Use cowplot::plot_grid instead of patchwork's `|` + wrap_elements --
-# patchwork adds internal spacing around wrap_elements that was
-# shrinking the ggdraw canvas of panel_c_overlay so the bottom
-# coverage rows got clipped. plot_grid gives the two cells their
-# full requested relative widths with no extra padding.
-# Both halves of panel c occupy the SAME vertical band (bottom-
-# aligned, PANEL_C_H of the row) so the coverage stack and the
-# structure plot read as equal height. One constant drives both --
-# they can't drift apart.
+# cowplot::plot_grid rather than patchwork's `|`, whose padding around
+# wrap_elements clips the bottom coverage rows.
+# Both halves occupy the same vertical band (PANEL_C_H of the row) so
+# the coverage stack and the structure plot read as equal height.
 PANEL_C_H <- 0.82
-# Raised off the row's bottom edge by PANEL_C_STRUCT_LIFT (top unchanged):
-# at y = 0 the 45-deg cohort labels' descenders ran into panel d's row and
-# were clipped ("SKCM", "COAD"; Quinn 2026-10-06).
+# Raised off the row's bottom edge so the 45-deg cohort labels'
+# descenders are not clipped by panel d's row.
 PANEL_C_STRUCT_LIFT <- 0.04
 panel_c_struct_shrunk <- cowplot::ggdraw() +
   cowplot::draw_plot(panel_c_struct, x = 0, y = PANEL_C_STRUCT_LIFT,
                      width = 1, height = PANEL_C_H - PANEL_C_STRUCT_LIFT)
-# The coverage raster's own content starts lower inside its region
-# than the structure plot's does, so bottom-aligning both left the
-# coverage sitting ~57 px (of a 435 px band) too low. Lift it by that
-# measured fraction so the two halves' content tops line up.
+# The coverage raster's content starts lower inside its region than the
+# structure plot's; lift it so the two halves' content tops line up.
 PANEL_C_COV_LIFT <- 0.13
 panel_c_overlay <- cowplot::ggdraw() +
   cowplot::draw_plot(panel_c_overlay, x = 0, y = PANEL_C_COV_LIFT,
                      width = 1, height = PANEL_C_H)
-# Coverage narrowed a bit (right side was 1.62 -> 1.45), structure
-# widened (was 0.7 -> 0.95) so it feels more prominent.
-# wrap_elements() to match panels a/b/d/e. Patchwork applies the
-# plot_annotation tag theme differently to a bare cowplot gtable than
-# to a wrapped element, which is why "c" rendered bold while the rest
-# did not -- keeping all five the same object type keeps the tags
-# consistent.
+# wrap_elements() to match panels a/b/d/e: patchwork styles tags on a
+# bare cowplot gtable differently from a wrapped element.
 panel_c <- wrap_elements(full = cowplot::plot_grid(
   panel_c_struct_shrunk, panel_c_overlay,
   ncol = 2, rel_widths = c(0.95, 1.45)))
@@ -592,9 +543,7 @@ ezh2_violin <- ezh2_violin_raw +
   scale_fill_manual(values = setNames(
     c(PAL$tcga_test, PAL$tcga_other),
     c("TCGA-LAML", "Other\nCohorts"))) +
-  # Keep the visible axis range close to the actual data (was max*1.9,
-  # which stretched the plot to make room for the p-value). clip="off"
-  # lets ggpubr's stat_compare_means draw its bracket + p-value ABOVE
+  # Keep the visible axis range close to the data; clip="off" lets ggpubr's stat_compare_means draw its bracket + p-value ABOVE
   # the top axis without expanding the y-scale.
   coord_cartesian(ylim = c(-0.24 * ezh2_loading_max,
                             ezh2_loading_max * 1.20), clip = "off") +
@@ -606,14 +555,8 @@ ezh2_violin <- ezh2_violin_raw +
         axis.text.x     = element_text(angle = 0, hjust = 0.5,
                                         size = SIZE_BASE))
 
-# Gene body + k6 arcs (navy blue via PAL$factor["6"], bigger arcs) +
-# red stars for non-coding + numeric labels 1..N.
-# arc_y_offset = 3 pulls the arcs from y ~29 down to y = 8, so they
-# sit just above the gene body (user: "junctions should be just above
-# the gene body, right now they are way above it").
-# arc_y_offset = 0.8 puts arcs at y=5.8, sitting DIRECTLY on top of the
-# gene body drawn at y=5 (essentially no visible gap).
-# Bespoke EZH2 arcs-over-gene-body -- same style as panel c.
+# EZH2 arcs over the gene body, same style as panel c, with red stars
+# for non-coding junctions and numeric labels 1..N.
 # Gene body sits at y=1 (per gene_body_gg row layout for a single tx);
 # arcs are drawn as curved geom_paths above the gene body with
 # linewidth scaled by their Poisson-factor weight, and number labels
@@ -671,11 +614,9 @@ ezh2_num_df <- data.frame(
   x = (ezh2_arcs_df$x_start + ezh2_arcs_df$x_end) / 2,
   y = 1.15 + arc_amp + 0.40,
   label = as.character(ezh2_arcs_df$number))
-# Spread labels whose arcs sit side by side: junctions 2 and 3 are
-# adjacent short arcs, and their numbers (and red asterisks) printed
-# as "23" and "**" (QA review). Enforce a minimum spacing of 2.2% of
-# the gene's span, pushing each crowded pair apart symmetrically; the
-# star data frame below reuses these x's so star and number stay paired.
+# Spread labels of adjacent short arcs (junctions 2 and 3) to a minimum
+# spacing of 2.2% of the gene's span, pushing crowded pairs apart
+# symmetrically; the star data frame below reuses these x's.
 local({
   sep <- 0.022 * (ezh2_x_end - ezh2_x_start)
   o <- order(ezh2_num_df$x); x <- ezh2_num_df$x[o]
@@ -716,9 +657,8 @@ ezh2_arcs <- ezh2_gene_body +
   } +
   theme(plot.margin = margin(2, 30, 10, 6, "pt"))
 
-# Build the 5 CDFs directly from gd data -- matches the reference
-# figure by showing ONLY TCGA-LAML vs GTEx-BLOOD (drops the "Other TCGA"
-# / "Other GTEx" pools that plot_psi_cdfs_full_static adds by default).
+# Build the 5 CDFs directly from gd data, showing only TCGA-LAML vs
+# GTEx-BLOOD (no "Other TCGA" / "Other GTEx" pools).
 # Title each panel with its junction NUMBER (1..N) to match the labels
 # painted on ezh2_arcs.
 build_two_cohort_cdfs <- function(gd, title_prefix = "Junction ") {
@@ -755,17 +695,9 @@ build_two_cohort_cdfs <- function(gd, title_prefix = "Junction ") {
       scale_y_continuous(limits = c(0, 1), breaks = c(0, 0.5, 1)) +
       labs(title = paste0(title_prefix, i),
            x = "Junction PSI", y = "Empirical CDF") +
-      # Bottom-right (the empty corner of an ECDF), right-aligned and
-      # small enough that the longest string ("p = 1.44e-62") clears
-      # the y-axis line. x must stay <= 1 or the scale limits drop it.
-      # Middle-right, not the bottom-right corner: every curve here
-      # rises almost vertically at PSI ~ 0, and a bottom-right label
-      # long enough to hold "p = 1.44e-62" reached back into that rise
-      # and printed over the curves (QA review). By PSI ~ 0.45 every
-      # curve is above 0.9, so x 0.45-1 at y ~ 0.45 is always empty.
-      # Junction 1 also carries the colour key (stacked, lower right, in
-      # the same empty region), so its p-value moves up to sit above the
-      # key -- still right of PSI 0.45 and below the curves' ~0.9 plateau.
+      # Middle-right: every curve is above 0.9 by PSI ~ 0.45, so that
+      # region is empty. x must stay <= 1 or the scale limits drop it.
+      # Junction 1 also holds the colour key, so its p-value sits higher.
       annotate("text", x = 1, y = if (i == 1) 0.62 else 0.45, label = pval_lab,
                hjust = 1, vjust = 0.5, size = 2.0, family = FONT_FAMILY) +
       theme_publication() +
@@ -790,9 +722,8 @@ build_two_cohort_cdfs <- function(gd, title_prefix = "Junction ") {
     plots[[length(plots) + 1L]] <- p
   }
   list(plots = plots,
-       # get_plot_component(..., "guide-box-bottom"), not get_legend():
-       # get_legend() found several guide boxes, returned the first --
-       # an EMPTY one -- and the CDF colours had no key (QA review).
+       # get_plot_component(..., "guide-box-bottom"), not get_legend(),
+       # which returns the first (empty) of several guide boxes.
        shared_legend = cowplot::get_plot_component(
          plots[[1]] + theme(legend.position = "bottom",
                             legend.title = element_blank()),
@@ -806,8 +737,7 @@ cdf_legend    <- ezh2_cdf_pack$shared_legend
 # Layout:
 #   [ gene body + arcs               ] full width
 #   [ violin | CDFs (row of 5) ] widths 1 : 4  (colour key inside Junction 1)
-# The colour key lives inside the Junction 1 CDF (see build_two_cohort_cdfs);
-# the old shared legend row below the CDFs is gone.
+# The colour key lives inside the Junction 1 CDF (see build_two_cohort_cdfs).
 panel_d <- wrap_elements(full =
   ezh2_arcs /
     ((ezh2_violin | ezh2_cdfs) + plot_layout(widths = c(1, 4))) +
@@ -820,8 +750,8 @@ nf1_gd <- gd_repath(readRDS("panel_d_e/output/NF1_LUSC/NF1/gene_data.RDS"))
 
 nf1_violin_raw <- LDE$plot_loading_violins(nf1_gd)
 nf1_loading_max <- max(nf1_gd$res$L[, nf1_gd$fact_idx])
-# Lift the comparison bracket clear of the top outlier: ggpubr puts it
-# just above the data maximum, where it touched the point at ~1.0 (QA).
+# Lift the comparison bracket clear of the top outlier (ggpubr puts it
+# just above the data maximum).
 lift_bracket <- function(p, y) {
   for (i in seq_along(p$layers))
     if (inherits(p$layers[[i]]$stat, "StatSignif"))
@@ -884,18 +814,14 @@ nf1_region_txt <- readLines(file.path(nf1_narrow_dir, "region.txt"),
                              warn = FALSE)[1]
 nf1_reg  <- gsub(",", "", nf1_region_txt)
 nf1_chrom   <- sub(":.*", "", nf1_reg)
-# Tighten to the true region of interest -- outer splice sites of the
-# junctions we display (PSI >= 5), plus a small pad. Avoids the ~1 kb
-# empty edges on either side from the pygenome default region.
+# Outer splice sites of the displayed junctions (PSI >= 5) plus a small pad.
 nf1_x_start <- 31248900
 nf1_x_end   <- 31258700
 
-# y max = 1.35 x the track's own coverage maximum -- the same ratio
-# figures 3 and 4 use (their pyGenomeTracks max_value, e.g. SENP2 11.67
-# against a coverage peak of 8.64). At exactly 1x the arcs leaving the
-# tallest exon had no headroom and ran off the top of the track.
-NF1_YMAX_F <- 1.8   # NF1 has five arcs leaving one exon (3/4 loci have two), so it needs
-                    # more headroom than their ~1.35x; at 1.35x the arcs jammed at the top.
+# y max = a multiple of each track's own coverage maximum, leaving
+# headroom for the arcs.
+NF1_YMAX_F <- 1.8   # five arcs leave one exon, so NF1 needs more headroom than
+                    # the ~1.35x used in figures 3 and 4.
 NF1_YMAX <- NF1_YMAX_F * c(
   tcga = max(bigwig_binned(file.path(nf1_narrow_dir, "TCGA-LUSC-3-..bw"),
                            nf1_chrom, nf1_x_start, nf1_x_end)$coverage),
@@ -912,16 +838,12 @@ nf1_sashimi_tcga <- sashimi_track_gg(
   track_label  = "TCGA-LUSC",
   links_path   = file.path(nf1_narrow_dir, "MeanPSI.TCGA-LUSC-3-..links"),
   min_psi      = 1,
-  # y axis = this track's own coverage maximum, as in figures 3 and 4
-  # (Quinn). The helper's default is 3.8x that, to leave headroom for
-  # arcs, which squashed NF1's coverage into the bottom quarter. Arcs are
-  # drawn over the coverage instead, anchored at its height, with a
-  # guaranteed rise above their higher foot.
+  # y axis scaled from this track's own coverage maximum; arcs are drawn
+  # over the coverage, anchored at its height, with a guaranteed rise.
   y_max        = NF1_YMAX[["tcga"]],
   # Containment order, outermost highest: 17% (exon 1 -> last exon)
   # contains 31% and 30%, which contain the short cryptic 21%. The
-  # helper's default ranks by span with SHORTEST highest, which put 17%
-  # UNDER the arcs it contains and forced crossings.
+  # helper's default (shortest span highest) would force crossings.
   apex_override = c("21%" = 0.66, "31%" = 0.76, "30%" = 0.76, "17%" = 0.96),
   highlight    = NF1_UNIQUE,
   min_arc_rise = 0.10,
@@ -938,11 +860,7 @@ nf1_sashimi_gtex <- sashimi_track_gg(
   track_label  = "GTEx-Lung",
   links_path   = file.path(nf1_narrow_dir, "MeanPSI.GTEx-LUNG-3-..links"),
   min_psi      = 1,
-  # y axis = this track's own coverage maximum, as in figures 3 and 4
-  # (Quinn). The helper's default is 3.8x that, to leave headroom for
-  # arcs, which squashed NF1's coverage into the bottom quarter. Arcs are
-  # drawn over the coverage instead, anchored at its height, with a
-  # guaranteed rise above their higher foot.
+  # As for the TCGA track.
   y_max        = NF1_YMAX[["gtex"]],
   apex_override = c("3.9%" = 0.60, "40%" = 0.70, "37%" = 0.72, "16%" = 0.96),
   highlight    = NF1_UNIQUE,
@@ -988,17 +906,13 @@ nf1_tx_216 <- transcript_zoom_gg(
   nf1_txmodels[["NF1-216 (NMD)"]], nf1_tx_lo, nf1_tx_hi,
   highlight = c(nf1_x_start, nf1_x_end),
   tx_label  = "NF1-216 (NMD)",
-  # LEFT end: this isoform ends inside the highlighted window, so a
-  # right-aligned label ran into the lavender band (QA review).
+  # Left end: this isoform ends inside the highlighted window.
   label_side = "left",
   label_size = 2.6, label_family = FONT_FAMILY)
 
-# Right column, all NATIVE ggplots (no raster). The sashimi used to be
-# rasterized and stretched to fill its cell, which distorted its text;
-# patchwork aligns panel EDGES rather than scales, so the sashimi's
-# narrow x-range and the trapezoid/transcripts' wide x-range coexist
-# fine in one flat stack. Flat (not nested) so plot_layout can address
-# every row.
+# Right column, all native ggplots. Patchwork aligns panel edges rather
+# than scales, so the sashimi's narrow x-range and the transcripts' wide
+# one coexist in one flat stack (flat so plot_layout addresses every row).
 nf1_right_col <- (nf1_sashimi_tcga / nf1_sashimi_gtex / nf1_trap /
                    nf1_tx_mane / nf1_tx_216) +
   plot_layout(heights = NF1_ROW_H)
@@ -1025,8 +939,7 @@ figure1 <- ((panel_a | panel_b) + plot_layout(widths = c(1.63, 1.37))) /
            panel_d /
            panel_e +
   # Row 1 height + the (1.63, 1.37) widths above are tuned together so
-  # panel b's 2x2 of square plots fills its cell (a taller/narrower
-  # cell left a ~128 px dead band between the two rows).
+  # panel b's 2x2 of square plots fills its cell.
   plot_layout(heights = c(1.95, 1.085, 1.30, 1.15)) +
   plot_annotation_publication()
 

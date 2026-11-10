@@ -1,7 +1,7 @@
 # Supplementary Note (IDH1 / SPOP): LeafCutter differential splicing of
 # mutation-defined groups (samples/<comparison>.tsv, from select_samples.R).
 # Same steps and settings as the GSP comparisons
-# (tcga/genome_wide/flashier/diff_splicing/Snakefile):
+# (../leafcutter_analyses/diff_splicing/Snakefile):
 #   regtools -a 8 -m 50 -M 500000 -s XS -> leafcutter_cluster_regtools.py
 #   -m 10 -l 500000 -p 0.0001 -> leafcutter_ds.R --num_threads 4.
 # Runs on midway2 (leafcutter_ds conda env and ~/software/leafcutter live there).

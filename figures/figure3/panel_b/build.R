@@ -1,5 +1,5 @@
 # Figure 3, panel b. Sourced by ../compose.R, which supplies the shared
-# setup (theme tokens, FLASHIER, PAGE_W, ROW_H, COL_W, panel_cached).
+# setup (theme tokens, PAGE_W, ROW_H, COL_W, panel_cached).
 # Must leave `panel_b` defined.
 #
 # Rebuild just this panel:   Rscript compose.R b
@@ -10,12 +10,10 @@
 #    body's top edge, one circle per carrier sample, coloured by TCGA
 #    project.
 #
-# The reference was drawn by hand in Illustrator. Everything here is
-# derived: stack membership from the TSV, label text by prefix-collapse,
-# x positions by a piecewise aa->inch map plus a collision sweep, and
-# every font/circle size from one auto-fit scale factor (see B_FIT).
-#
-# See panel_b/build.md for the top-60 rule and the broken-axis rationale.
+# Everything is derived: stack membership from the TSV, label text by
+# prefix-collapse, x positions by a piecewise aa->inch map plus a
+# collision sweep, and every font/circle size from one auto-fit scale
+# factor (see B_FIT).
 
 source("scripts/nkap_variants.R")
 
@@ -28,17 +26,10 @@ panel_b <- panel_cached("b", local({
   # ================================================================
   # All of these are BASE values; the auto-fit in section 5 scales them
   # by one factor so the two cartoons exactly fill the cell's height.
-  # 62 -> 68. Swept at the CURRENT cell width (a|b = 0.58/0.42) with
-  # PRPF8's new segment fractions: 62 -> S 1.002, 68 -> 1.074,
-  # 72 -> 1.066, 76 -> 1.060. 62 was the optimum at the OLD, wider cell
-  # and went stale with it. The mechanism: a shallower angle spends the
-  # label's length on WIDTH, and width is what binds here (the auto-fit
-  # reports xover = 0 at the binding S, i.e. it stops because any more
-  # type would overrun, not because it ran out of height). Steepening
-  # trades that width for height, and there WAS 0.22 in of unused
-  # height to trade into -- at 68 h_req 2.563 against h_avail 2.576, so
-  # the panel now fills its cell and the dead band is gone.
-  # RE-SWEEP after any change to COL_W$ab or the segment fractions.
+  # B_ANGLE is the label angle that maximises the auto-fit scale at the
+  # current cell width: a steeper angle trades the label's width (which
+  # binds here) for height. Re-sweep after any change to COL_W$ab or the
+  # segment fractions.
   B_ANGLE     <- 68                    # rotated stack labels, degrees
   B_LAB_PT0   <- SIZE_BASE * 0.58      # mutation labels
   B_TICK_PT0  <- SIZE_BASE * 0.55      # aa tick numbers
@@ -77,14 +68,13 @@ panel_b <- panel_cached("b", local({
   # part of the layout solve (section 5), not just of the drawing.
   B_CAP1_TXT <- "Mutations in the top 60\nsamples on GSP #13"
   B_CAP2_TXT <- "TCGA samples carrying a plotted\nmutation with GSP #13 < 1e-4"
-  # ONE line now: the footnote used to be broken over two because it sat
-  # in a 0.62 in legend COLUMN. Under the 4 x 4 block it has ~2.9 in.
+  # One line: under the 4 x 4 legend block the footnote has ~2.9 in.
   B_FOOT_TXT <- "*Called via WXS or RNA-seq"
 
   B_SIN <- sin(B_ANGLE * pi / 180)
   B_COS <- cos(B_ANGLE * pi / 180)
 
-  # TCGA project colours, as published in the reference's legend.
+  # TCGA project colours.
   B_PROJ_COL <- c(
     "TCGA-UCEC" = "#9fd4fa", "TCGA-BLCA" = "#bce4a1", "TCGA-BRCA" = "#ffc98e",
     "TCGA-LIHC" = "#ff8e92", "TCGA-ACC"  = "#ffbdd5", "TCGA-READ" = "#b8c7d0",
@@ -101,36 +91,27 @@ panel_b <- panel_cached("b", local({
   # The cell-minus-margins arithmetic below is only an ESTIMATE of the
   # drawn panel -- patchwork adds its own margins around a
   # wrap_elements() and the title band is not exactly 2 * lineheight.
-  # B_CAL_W / B_CAL_H correct it BY MEASUREMENT off the 400 dpi render.
-  # Re-measure with the [panel b] cal line printed below whenever the
-  # row height, the column split or the title changes; they ARE only
-  # ratios, but patchwork's own margins are absolute, so a ratio fitted
-  # at one cell width is wrong at another. (Both went stale when the
-  # a|b split moved 0.52/0.48: width was out by +0.65%, height by
-  # -1.4%.) Method: crop the drawing area, find the rows carrying a
-  # >1000 px horizontal rule -- those are the two protein bodies' top
-  # and bottom edges -- and check that
+  # B_CAL_W / B_CAL_H correct it BY MEASUREMENT off the render. They are
+  # ratios, but patchwork's margins are absolute, so re-measure with the
+  # [panel b] cal line printed below whenever the row height, the column
+  # split or the title changes: check that
   #   the body's drawn width       == B_BODY_W
   #   NKAP top - PRPF8 top (drawn) == yN_body_t - yP_body_t
-  # both printed by the cal line. Scale the factor by the ratio and
-  # repeat. If they drift, lollipops stop touching and every derived
-  # text offset goes stale. Same practice as figure 2's title
-  # alignment -- see ../figure2/compose.md.
+  # and scale each factor by the ratio. If they drift, lollipops stop
+  # touching and every derived text offset is off.
   B_CELL_W <- PAGE_W * COL_W$ab[2] / sum(COL_W$ab)
   B_MAR    <- c(t = 0, r = 2, b = 2, l = 2)          # plot.margin, pt
   B_TITLE_H <- (2 * SIZE_TITLE * 1.15 + 2) / 72       # 2 title lines + gap
-  # Re-measured 2026-09-23 at the a|b split 0.58/0.42 (cell 3.57 in).
+  # Measured at the a|b split 0.58/0.42 (cell 3.57 in).
   B_CAL_W  <- 0.9852
   B_CAL_H  <- 0.9882
   B_W_TOT  <- (B_CELL_W - (B_MAR[["r"]] + B_MAR[["l"]]) / 72) * B_CAL_W
   B_H_TOT  <- (ROW_H[["ab"]] - B_TITLE_H -
                (B_MAR[["t"]] + B_MAR[["b"]]) / 72) * B_CAL_H
 
-  # The legend no longer takes a column off the right-hand edge: a
-  # single 1 x 16 column starved both cartoons of 0.67 in (17% of the
-  # cell) and forced the broken axis to spend 30% of NKAP's width on a
-  # region with no mutations. It is now a 4 x 4 block in the dead space
-  # above NKAP's label staircase, so BOTH proteins get the full width.
+  # The legend is a 4 x 4 block in the dead space above NKAP's label
+  # staircase rather than a column off the right-hand edge, so BOTH
+  # proteins get the full width.
   B_BODY_W  <- B_W_TOT                    # protein cartoon width
   # Nothing -- circle, tick number or rotated label -- may reach past
   # this; it is the drawing area's own right edge less a hairline.
@@ -188,7 +169,7 @@ panel_b <- panel_cached("b", local({
       if (!length(k)) return(NULL)
       # A circle is starred when the same residue was ALSO called from
       # the WXS or RNA-seq pipeline, not only from the MAF/AlphaMissense
-      # column -- that is what the reference's footnote means.
+      # column.
       alt <- c(extract_all_positions(row[["wxs_mutation"]],    g),
                extract_all_positions(row[["rnaseq_mutation"]], g))
       data.frame(rail_id = row$rail_id, rank = row$rank, k13 = row$k13,
@@ -201,8 +182,7 @@ panel_b <- panel_cached("b", local({
   # The panel's circles ABOVE the body are the carriers among the top
   # `B_TOPN` samples by GSP #13. A sample carrying two changes in the
   # same window (866663 = R402Q + L313M, 111261 = L1872P + S1887L)
-  # contributes ONE circle: the one at the more recurrent residue. That
-  # is what removes L313M / S1887L, which the reference does not draw.
+  # contributes ONE circle: the one at the more recurrent residue.
   top <- long[long$rank <= B_TOPN, ]
   rec <- as.data.frame(table(paste(top$gene, top$pos)), stringsAsFactors = FALSE)
   top$nrec <- rec$Freq[match(paste(top$gene, top$pos), rec$Var1)]
@@ -211,8 +191,8 @@ panel_b <- panel_cached("b", local({
 
   # Stacks: one column per set of changes whose RESIDUE SPANS overlap.
   # "P1880_N1881del", "N1881_V1883dup" and "N1881insKN" all touch
-  # residue 1881, so they share a column (as the reference draws them);
-  # N371K and Q372H are 1 aa apart but disjoint, so they stay separate.
+  # residue 1881, so they share a column; N371K and Q372H are 1 aa
+  # apart but disjoint, so they stay separate.
   # Position numbers are taken only from `<AA-letter><digits>` so the
   # "13" in "R402Sfs*13" is not mistaken for a residue.
   chg_span <- function(s) {
@@ -238,11 +218,10 @@ panel_b <- panel_cached("b", local({
   }
 
   # Circles BELOW the body: samples outside the top 60 that carry one of
-  # the plotted changes and have GSP #13 < 1e-4 (three as of 2026-10-08).
+  # the plotted changes and have GSP #13 < 1e-4.
   plotted <- unique(top$change)
   # Only carriers with NO detectable phenotype (GSP #13 < 1e-4, the control
   # threshold used throughout), so the contrast with the top 60 is clean.
-  # (Quinn, 2026-10-08: drops PRPF8 R1832H at rank 130, GSP #13 = 3.1e-3.)
   B_BELOW_MAX <- 1e-4
   below <- long[long$rank > B_TOPN & long$k13 < B_BELOW_MAX & long$change %in% plotted, ]
   below <- below[order(below$gene, below$pos, below$rank), ]
@@ -252,8 +231,8 @@ panel_b <- panel_cached("b", local({
               B_BELOW_MAX, paste(below$gene, below$change, collapse = ", ")))
 
   # ----------------------------------------------------------------
-  # Stack label: collapse the shared prefix progressively, exactly as
-  # the reference does. R402* + R402Q + R402Sfs*13 -> "R402*/Q/Sfs*13".
+  # Stack label: collapse the shared prefix progressively.
+  # R402* + R402Q + R402Sfs*13 -> "R402*/Q/Sfs*13".
   # ----------------------------------------------------------------
   collapse_changes <- function(ch, pos) {
     u <- unique(ch[order(pos, ch)])
@@ -281,8 +260,7 @@ panel_b <- panel_cached("b", local({
   rownames(stacks) <- NULL
 
   # Stack order, bottom -> top: descending GSP #13, so the strongest
-  # carrier sits on the body. (The reference's own order is not
-  # reproducible from the current loadings -- see build.md.)
+  # carrier sits on the body.
   top <- top[order(top$stack, top$rank), ]
   top$slot <- ave(top$rank, top$stack, FUN = seq_along) - 1L
   below$slot <- ave(below$rank, below$stack, FUN = seq_along) - 1L
@@ -302,19 +280,12 @@ panel_b <- panel_cached("b", local({
         list(c(285, 415),    c("Domain of Unknown Function")))),
     PRPF8 = list(
       len = 2305, ticks = c(0, 1579, 1754, 2000, 2305),
-      # frac[1] 0.15 -> 0.22, paid for by frac[3] 0.47 -> 0.40.
-      # Quinn: "3b the mutations are falling off the edge of the RNase
-      # H-domain, which, you can make smaller so as to allow the text
-      # for PRPF8's earlier domains to actually be readable".
-      # The four N-terminal boxes (NTD/HB/RT/Thumb/X) all live in
-      # segment 1, and the auto-fit sizes a domain name from its BOX
-      # width, so at 0.15 both NTD and Thumb/X were pinned to the
-      # 3.2 pt floor and "Thumb/X" ran its X into the box border.
-      # Segment 3 (aa 1754-2000) holds the RNase H-Domain and the
-      # mutation-dense run; it can afford the loss because the width
-      # constraint has slack here (the auto-fit reports xover = 0, i.e.
-      # it is HEIGHT-bound, not width-bound). Re-check that xover stays
-      # 0 after any further change.
+      # The four N-terminal boxes (NTD/HB/RT/Thumb/X) share segment 1,
+      # and the auto-fit sizes a domain name from its BOX width, so
+      # segment 1 gets 0.22 to keep those names readable. Segment 3
+      # (aa 1754-2000, RNase H-Domain and the mutation-dense run) can
+      # spare the width while the auto-fit reports xover = 0 (height-
+      # bound); re-check that after any change.
       brk = c(0, 1579, 1754, 2000, 2305), frac = c(0.22, 0.24, 0.40, 0.14),
       groups = list(
         list(c(0, 289, 558, 905, 1406), c("NTD", "HB", "RT", "Thumb/X")),
@@ -396,12 +367,9 @@ panel_b <- panel_cached("b", local({
       #     lines that collide unless their PERPENDICULAR separation
       #     clears half a text block each (perp = dx*sin - dy*cos).
       #
-      # ONE pass, taking the max of both. They used to be two passes,
-      # and that silently broke (a): pass (b) moves x[i-1] right AFTER
-      # pass (a) has spaced x[i] off its old position, so wherever the
-      # perpendicular term came out below `cd` -- which happens whenever
-      # the stack gets SHORTER (dy < 0, e.g. R368Q's 3 circles then
-      # N371K's 1) -- the two stacks' circles ended up overlapping.
+      # ONE pass, taking the max of both: as two passes, pass (b) could
+      # move x[i-1] right after pass (a) had spaced x[i], so circles of
+      # adjacent stacks overlapped wherever the stack got SHORTER.
       gapmin <- rep(0, length(x))       # required x[i] - x[i-1]
       for (i in seq_along(x)[-1]) {
         # (n/2)*lh is a block's perpendicular ink half-extent; the extra
@@ -414,21 +382,19 @@ panel_b <- panel_cached("b", local({
         x[i] <- max(x[i], x[i - 1] + gapmin[i])
       }
       # (d) A stack may not leave the drawn stretch its residue lives in.
-      #     The forward sweep only pushes RIGHT, and it pushed PRPF8's
-      #     P1880/N1881 column (aa 1880-1883, inside the RNase H domain,
-      #     which ends at 2000) out over the LINKER to Jab1/MPN -- a
-      #     circle floating over a region its residue is not in. So cap
-      #     each stack at the right edge of its own segment (a domain
-      #     group, or the unannotated gap between two groups -- e.g.
-      #     PRPF8 aa 1406-1579, where Q1575H genuinely sits) and sweep
-      #     BACKWARD, pulling earlier stacks left to keep their spacing.
+      #     The forward sweep only pushes RIGHT and can push a column out
+      #     over a linker its residue is not in. So cap each stack at the
+      #     right edge of its own segment (a domain group, or the
+      #     unannotated gap between two groups -- e.g. PRPF8 aa 1406-1579,
+      #     where Q1575H sits) and sweep BACKWARD, pulling earlier stacks
+      #     left to keep their spacing.
       seg_edges <- sort(unique(unlist(lapply(B_PROTEIN[[g]]$groups, function(gr)
                           range(gr[[1]])))))
       seg_edges <- sort(unique(c(0, seg_edges, B_PROTEIN[[g]]$len)))
       k  <- findInterval(st$pos[ix], seg_edges, rightmost.closed = TRUE)
       # Keep a stack ~2 circle diameters inside its segment's right edge,
-      # not half of one: at cd/2 the aa-1880 column sat right on the
-      # "2000" tick and read as if it were at residue 2000 (Quinn).
+      # so a column near a boundary does not read as sitting on the next
+      # tick (e.g. the aa-1880 column vs the "2000" tick).
       ub <- B_MAP[[g]](seg_edges[pmin(k + 1, length(seg_edges))]) - 2.2 * cd
       lb <- B_MAP[[g]](seg_edges[k]) + cd / 2
       n  <- length(x)
@@ -457,8 +423,7 @@ panel_b <- panel_cached("b", local({
       # The slide is bounded by how far the first stack may travel left,
       # so it can FAIL to clear the edge. What it cannot absorb is
       # returned as `xover` and the auto-fit treats it exactly like a
-      # height overflow -- otherwise the tallest label silently printed
-      # outside the cell (it used to land on the legend).
+      # height overflow, so no label prints outside the cell.
       reach <- x + st$nlines[ix] / 2 * lh * B_SIN + st$linew[ix] * B_COS
       over  <- max(reach) - B_X_RIGHT
       if (over > 0) {
@@ -473,9 +438,8 @@ panel_b <- panel_cached("b", local({
     body_h  <- max(0.070 * S, 1.35 * dom_pt / 72)
     # tick numbers and the italic gene name share one row, both hung
     # from the row's top edge; the row must hold a full line of the
-    # LARGER of the two. Neither digits nor NKAP/PRPF8 have a descender,
-    # so 1.30 lineheights was 0.03 in of nothing, twice over.
-    # B_TICK_LEN + B_TICK_GAP: the numbers start below the tick marks (they overlapped, Quinn 2026-11-09).
+    # LARGER of the two. Neither digits nor NKAP/PRPF8 have a descender.
+    # B_TICK_LEN + B_TICK_GAP: the numbers start below the tick marks.
     tick_h  <- 1.18 * max(tick_pt, gene_pt) / 72 + (B_TICK_LEN + B_TICK_GAP) * cd
     lab_pad <- 0.28 * cd
 
@@ -485,17 +449,13 @@ panel_b <- panel_cached("b", local({
     # (nlines*lh/2) perpendicular to the text direction -- which is
     # +-(nlines*lh/2)*sin in x and +-(nlines*lh/2)*cos in y.
     #
-    # Reserving `max(n)*cd + max(ink)` (what this used to do) over-
-    # reserves whenever the tallest STACK and the longest LABEL are
-    # different stacks, and it gives no per-stack extents at all -- and
-    # those extents are what let the "outside the top 60" caption slide
-    # under PRPF8's label band below instead of costing a full row.
-    # The perpendicular half-extent is nlines*lh/2 -- the same half the
-    # x extents below and the collision sweep above both use. `ink` used
-    # the FULL nlines*lh, which reserved half a label block of empty air
-    # over the top of each staircase, twice, for 0.10 in of the cell.
-    # (nlines*lh/2 still carries ~20% margin over the real ink: the
-    # block's true half-extent is ((nlines-1)*B_LAB_LH + 0.72)/2 lines.)
+    # Per-stack extents (rather than max(n)*cd + max(ink)) let the
+    # "outside the top 60" caption slide under PRPF8's label band below
+    # instead of costing a full row. The perpendicular half-extent is
+    # nlines*lh/2 -- the same half the x extents below and the collision
+    # sweep above both use (it carries ~20% margin over the real ink:
+    # the block's true half-extent is ((nlines-1)*B_LAB_LH + 0.72)/2
+    # lines).
     st$ink    <- st$linew * B_SIN + st$nlines * lh / 2 * B_COS
     st$ink_t  <- st$n * cd + lab_pad + st$ink
     st$ink_x1 <- st$x - st$nlines * lh / 2 * B_SIN
@@ -505,11 +465,10 @@ panel_b <- panel_cached("b", local({
     # outside the top 60 (two or three x positions) and the aa-axis row
     # (tick numbers on the GROUP EDGES, italic gene name hard left).
     # They only have to be stacked where their ink actually shares an x
-    # span -- which, because the ticks sit on group edges, it never
-    # does here. Reserving the SUM unconditionally cost 0.21 in of a
-    # 2.58 in cell for a clash that does not happen; reserve the MAX and
-    # start the axis row at the body's own bottom edge. `off` is how far
-    # below the body that row begins, so the test drives the drawing too.
+    # span -- which, because the ticks sit on group edges, it never does
+    # here. So reserve the MAX, not the sum, and start the axis row at
+    # the body's own bottom edge. `off` is how far below the body that
+    # row begins, so the test drives the drawing too.
     foot_of <- function(g) {
       ix <- which(st$gene == g)
       nb <- st$below[ix]
@@ -542,15 +501,8 @@ panel_b <- panel_cached("b", local({
     # It hangs from the two NKAP circles it annotates on two SHORT
     # leaders of equal length and equal slope, mirrored about its own
     # centre (section 7). That geometry only closes if the caption is
-    # CENTRED on those two circles, so its x is no longer slid sideways
-    # to dodge PRPF8's tall labels -- it is pinned, and what the
-    # clearance costs is paid vertically, in `drop`.
-    #
-    # The earlier solve slid it left until it was free, which bought the
-    # height back but left one leader vertical and the other a 0.6 in
-    # near-horizontal diagonal reaching for a circle 0.5 in outside the
-    # caption. That pair is what Quinn read as inconsistent. The height
-    # this costs is roughly what `foot_of` above just gave back.
+    # CENTRED on those two circles, so its x is pinned and the clearance
+    # from PRPF8's tall labels is paid vertically, in `drop`.
     note_ln <- strsplit(B_CAP2_TXT, "\n", fixed = TRUE)[[1]]
     note_w <- max(str_w(note_ln, note_pt))
     note_h  <- length(note_ln) * 1.15 * note_pt / 72
@@ -567,10 +519,8 @@ panel_b <- panel_cached("b", local({
     # circles' own depth, then the leader, then the two text lines.
     stub_dy <- B_STUB_LEN * cd * cos(B_STUB_ANG * pi / 180)
     # Clear air between where a leader STOPS and where the caption's
-    # first line starts. Without it the two coincide, and the left-hand
-    # leader drove its stroke straight through the "A" of "TCGA"
-    # (visible at 1200 dpi). In circle diameters, so it scales with the
-    # auto-fit like every other offset here.
+    # first line starts, so no stroke runs into the text. In circle
+    # diameters, so it scales with the auto-fit like every other offset.
     stub_pad <- B_STUB_PAD * cd
     cap_dep <- max(0, bN[["belowb"]] + stub_dy + stub_pad + note_h -
                       bN[["foot"]])
@@ -671,10 +621,9 @@ panel_b <- panel_cached("b", local({
   ticks <- do.call(rbind, lapply(names(B_PROTEIN), function(g) {
     p <- B_PROTEIN[[g]]
     n <- length(p$ticks)
-    # The END tick numbers are aligned INWARD, not centred. A centred
+    # The END tick numbers are aligned INWARD, not centred: a centred
     # "0" hangs half its width outside the cell (the body starts at
-    # x = 0) and a centred "2305"/"415" runs into the legend column,
-    # where it printed on top of the "*Called via WXS" footnote.
+    # x = 0) and a centred "2305"/"415" runs into the neighbouring ink.
     data.frame(gene = g, x = B_MAP[[g]](p$ticks), lab = as.character(p$ticks),
                hj = c(0, rep(0.5, n - 2), 1),
                stringsAsFactors = FALSE)
@@ -685,8 +634,8 @@ panel_b <- panel_cached("b", local({
 
   # Gene name shares the tick row; it starts clear of the "0" tick
   # label, whose half-width is measured, not guessed.
-  # Dropped 0.30 cd lower than the tick numbers (Quinn, 2026-11-09): hung at the tick row's top edge the
-  # italic names touched the bottom of the domain maps.
+  # Hung slightly below the tick numbers so the italic names clear the
+  # bottom of the domain maps.
   gname <- data.frame(
     gene = names(B_PROTEIN),
     y    = TICK_T[names(B_PROTEIN)] - (0.34 + B_TICK_LEN + B_TICK_GAP - 0.04) * G$cd,
@@ -740,13 +689,11 @@ panel_b <- panel_cached("b", local({
         half[ok] * B_SIN)
   }
 
-  # Solve the legend's type size against that free width, exactly as the
-  # old right-hand column solved it against its 0.62 in. It has to be a
-  # BISECTION, not a one-way shrink: the block's width grows with the
+  # Solve the legend's type size against that free width. It has to be
+  # a BISECTION, not a one-way shrink: the block's width grows with the
   # type while the free width SHRINKS with it (a taller block reaches
-  # down into the staircase), so a proportional step overshoots and a
-  # shrink-only loop then exits at the first size that happens to fit --
-  # it settled on 3.9 pt where 5.2 pt fits.
+  # down into the staircase), so a shrink-only loop exits at the first
+  # size that happens to fit rather than the largest.
   leg_need <- function(pt) {
     dsw <- B_LEG_D_LINE * pt / 72
     ent <- dsw * (1.32 + B_LEG_GAPC) + max(str_w(projs, pt))
@@ -801,10 +748,9 @@ panel_b <- panel_cached("b", local({
   nk      <- st[st$gene == "NKAP", ]
   br_x    <- min(nk$x) - 1.15 * cd
   br_lo   <- BODY_T[["NKAP"]]
-  # Set on ONE line whenever the room left of the bracket takes it. The
-  # two-line break was sized for the old narrow pocket; on one line the
-  # caption spans the width the legend block above it does, and its
-  # smaller height buys the bracket back the space it costs.
+  # Set on ONE line whenever the room left of the bracket takes it; on
+  # one line the caption spans the width of the legend block above it,
+  # and its smaller height buys the bracket back the space it costs.
   cap1_txt <- B_CAP1_TXT
   cap1_x   <- br_x - 0.55 * cd
   .one     <- gsub("\n", " ", B_CAP1_TXT, fixed = TRUE)
@@ -833,10 +779,7 @@ panel_b <- panel_cached("b", local({
   # The caption hangs from its own two circles: it is centred on them
   # (section 5) and its ink top is exactly one leader below them, so the
   # two leaders come out the SAME LENGTH and the SAME SLOPE, mirrored
-  # about the caption's centre. Neither is parallel to a page edge, and
-  # neither is long: previously one was a 0.23 in vertical riser and the
-  # other a 0.61 in near-horizontal reach to a circle half an inch
-  # outside the caption, and the pair read as two different ideas.
+  # about the caption's centre.
   # They cross the aa-axis row, which carries no ink at those x -- the
   # numbers sit on the GROUP EDGES, 0 / 272 / 415.
   isN    <- circ_b$y0 > 0.5 * (BODY_B[["NKAP"]] + BODY_T[["PRPF8"]])
@@ -865,11 +808,10 @@ panel_b <- panel_cached("b", local({
     xend = pmin(pmax(nbx + .dir * G$stub_dx, cap2_x + 0.03),
                 cap2_x + G$note_w - 0.03),
     yend = lead_end)
-  # Both prose blocks share the middle band; the footnote keeps the old
-  # treatment (CENTRED in its own free slot rather than hung from the
-  # band's top edge -- pinned to the top it left one 0.34 in blank strip
-  # running the full panel width between it and PRPF8's labels). The
-  # floor of a slot is the tallest PRPF8 label whose ink is under it.
+  # Both prose blocks share the middle band; the footnote is CENTRED in
+  # its own free slot rather than hung from the band's top edge, which
+  # would leave a blank strip between it and PRPF8's labels. The floor
+  # of a slot is the tallest PRPF8 label whose ink is under it.
   band_t  <- yN_note_t
   band_b  <- yP_body_t
   pr_top  <- function(a, b) {
@@ -884,11 +826,8 @@ panel_b <- panel_cached("b", local({
   # The WXS/RNA-seq footnote belongs between the two cartoons -- the
   # starred circles are in both -- and it is the only furniture that can
   # fill the left of the middle band, which PRPF8's own short labels
-  # cannot reach. It is therefore CENTRED in the slot, across as well as
-  # down: hung hard left it left the whole column between its right end
-  # and the caption empty, and that column was the panel's largest blank
-  # rectangle (1.05 x 0.85 in). Centred it straddles that column, and
-  # the residual splits in two.
+  # cannot reach. It is CENTRED in the slot, across as well as down, so
+  # no single large blank rectangle is left beside it.
   foot_x <- max(0.02, (cap2_x - G$lab_pad - G$foot_w) / 2)
   foot <- data.frame(
     x = foot_x,

@@ -78,9 +78,8 @@ all_s <- bind_rows(sheets)
 stopifnot(!any(duplicated(all_s[, c("comparison", "rail_id")])),
           !any(duplicated(paste(all_s$comparison, all_s$tcga_barcode))))
 dl <- all_s %>% distinct(rail_id, tcga_barcode, project)
-# All TCGA BAMs were deleted on 2026-09-25, but the diff-splicing .junc files
-# (same regtools settings, relabelled by the aliquot fix) were kept: a sample
-# with a .junc there needs no download.
+# A sample that already has a diff-splicing .junc file (same regtools settings)
+# needs no BAM download.
 JUNC <- file.path(dirname(file.path(QROOT, "leafcutter_analyses/diff_splicing/unified_results")), "junc_files")
 dl$have_junc <- file.exists(file.path(JUNC, paste0(dl$rail_id, ".junc")))
 fwrite(dl, file.path(OUT, "download_list.tsv"), sep = "\t")

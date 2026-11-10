@@ -65,7 +65,7 @@ def pick_samples_local(info_df, factor_col, seed,
 
     rng = np.random.default_rng(seed)
     # Largest-remainder allocation so the per-cohort counts sum to exactly
-    # n_ctrl (independent rounding gave 201 for 200; quetzal_code 2026-10-26).
+    # n_ctrl.
     raw = col1_proj * n_ctrl
     alloc = np.floor(raw).astype(int)
     short = n_ctrl - int(alloc.sum())

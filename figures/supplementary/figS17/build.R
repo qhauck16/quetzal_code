@@ -6,8 +6,7 @@
 # fill is intron coverage / mean coverage of the 20 flanking exonic bp
 # (1 = exon-box height, bins < 0.1 zeroed, clipped at 2 x box). Rows
 # sorted by the centre of mass of the top-15 trace (3'-most on top).
-# Port of diff_splicing/ylpm1/plot_intron_retention_heatmap.py
-# --n_genes 100; traces from cache/build_s16_cache.py.
+# Traces from cache/build_s16_cache.py (--n_genes 100).
 source("common.R")
 
 tr <- fread(file.path("cache", "s16_traces.tsv"), data.table = FALSE)
@@ -31,8 +30,8 @@ d <- tr %>% inner_join(genes %>% select(gene, row), by = "gene") %>%
          ymin = base + Y0,
          ymax = pmin(base + Y0 + EH * ratio, base + YMAX)) %>%
   # No baseline: runs of zeroed bins become NA so the ribbon breaks there
-  # instead of drawing a hairline under every intron (Quinn: a baseline
-  # made the enrichment look weaker). Zero bins touching coverage stay,
+  # instead of drawing a hairline under every intron (a baseline makes
+  # the enrichment look weaker). Zero bins touching coverage stay,
   # so each island tapers to the floor.
   group_by(gene, column) %>% arrange(bin, .by_group = TRUE) %>%
   mutate(nz = ratio > 0,

@@ -1,13 +1,6 @@
 # Per-gene "full_info" / "full_plus_variants" tables: GSP loading per TCGA
 # sample + catalogued mutations + self-called WXS / RNA-seq variants.
 #
-# Ported 2026-10-05 from tcga/genome_wide/flashier/flash_fact_char.Rmd so
-# quetzal_code builds every table its figures read. Logic is the Rmd's,
-# chunk by chunk (named below); only the three near-identical
-# extract_{sf3b1,nkap,ylpm1}_variants() became extract_called_variants()
-# with per-gene arguments. Validate against the Rmd's outputs after any
-# change (see build.md files next to the drivers).
-#
 # Drivers (one per figure, each writes its own cache/):
 #   figure2/scripts/build_cache_sf3b1_variants.R  -> SF3B1 (+ SUGP1)
 #   figure3/scripts/build_cache_nkap_variants.R   -> NKAP / PRPF8 / FAM50A / SLU7
@@ -27,8 +20,7 @@ first <- dplyr::first
 
 VT_FIG_ROOT <- file.path(QROOT, "figures")
 
-# ---- shared inputs ("loading re-used files", "correlating flashier
-#      factors with mutation status", "per-gene AlphaMissense lookup") ----
+# ---- shared inputs: loadings, mutation status, AlphaMissense lookup ----
 vt_inputs <- function() {
   tcga_metadata <- fread(file.path(QROOT, "inputs/tcga_v2_samples.tsv"), data.table = FALSE) %>%
     mutate(sampleId = sapply(strsplit(tcga_barcode, "-"), function(x) {
@@ -51,14 +43,14 @@ vt_inputs <- function() {
        am_lookup = am_lookup, L = L)
 }
 
-# GSP column + project, as `<GENE>_factor` in the Rmd.
+# GSP column + project, as `<GENE>_factor`.
 vt_factor <- function(I, k) {
   I$L[, c("rail_id", paste0("k", k))] %>%
     left_join(select(I$tcga_metadata, c(rail_id, gdc_cases.project.project_id)),
               by = "rail_id")
 }
 
-# Catalogued mutations for one gene, as `<GENE>_mutations` in the Rmd.
+# Catalogued mutations for one gene, as `<GENE>_mutations`.
 vt_mutations <- function(I, gene) {
   I$mut_data_am09 %>%
     filter(hugoGeneSymbol == gene) %>%
@@ -67,7 +59,7 @@ vt_mutations <- function(I, gene) {
     unique()
 }
 
-# ---- "Function to process a single VEP VCF" (verbatim) ----------------
+# ---- process a single VEP VCF -------------------------------------------
 # Handles both Mutect2 VCFs (AD/DP in FORMAT) and bcftools VCFs (DP4/DP in INFO)
 process_vep_vcf <- function(vcf_file, genome = "hg38", file_id = NULL) {
   vcf <- readVcf(vcf_file, genome = genome)
@@ -157,7 +149,7 @@ process_vep_vcf <- function(vcf_file, genome = "hg38", file_id = NULL) {
   list(final_vcf_df = final_vcf_df, gt_long_df = bind_rows(gt_long))
 }
 
-# hgvs_protein_simple for MODERATE/HIGH calls (SF3B1 + NKAP chunks).
+# hgvs_protein_simple for MODERATE/HIGH calls (SF3B1 + NKAP).
 .hgvs_missense_indel <- function(d) {
   d %>% mutate(hgvs_protein_simple = case_when(
     Consequence == "missense_variant" & !is.na(Amino_acids) &
@@ -179,7 +171,7 @@ process_vep_vcf <- function(vcf_file, genome = "hg38", file_id = NULL) {
     TRUE ~ NA_character_))
 }
 
-# extract_{sf3b1,nkap,ylpm1}_variants(), merged. `mode`:
+# Called variants for one gene. `mode`:
 #   "moderate_high" (SF3B1, NKAP): IMPACT MODERATE/HIGH, then `region`
 #   "ptc" (YLPM1): SYMBOL == ptc_symbol and a PTC consequence
 # `transcript_match`: "prefix" = Feature without version %in% transcripts
@@ -284,7 +276,7 @@ extract_called_variants <- function(I, vcf_dir, source_label, apply_filter_pass,
       TRUE                    ~ .data[[backfill_col]]))
 }
 
-# ---- SF3B1: "SF3B1 cdf", "SUGP1 CDFs", "adding variants to SF3B1 df" ----
+# ---- SF3B1 (+ SUGP1) ----------------------------------------------------
 build_sf3b1_tables <- function(I, k = 10) {
   kcol <- paste0("k", k)
   sf <- left_join(vt_factor(I, k), vt_mutations(I, "SF3B1"), by = "rail_id")
@@ -338,7 +330,7 @@ build_sf3b1_tables <- function(I, k = 10) {
        SF3B1_full_plus_variants = .add_calls(SF3B1_SUGP1_full_info, wxs, rna, "gene_mutation"))
 }
 
-# ---- NKAP: "processing variants" --------------------------------------
+# ---- NKAP ---------------------------------------------------------------
 build_nkap_tables <- function(I, k = 13) {
   kcol <- paste0("k", k)
   all_mutations <- unique(bind_rows(lapply(c("NKAP", "PRPF8", "FAM50A", "SLU7"),
@@ -380,7 +372,7 @@ build_nkap_tables <- function(I, k = 13) {
        NKAP_full_plus_variants = .add_calls(NKAP_full_info, wxs, rna, "gene_mutation"))
 }
 
-# ---- YLPM1: "YLPM1 parsing vcf" ---------------------------------------
+# ---- YLPM1 --------------------------------------------------------------
 build_ylpm1_tables <- function(I, k = 30) {
   kcol <- paste0("k", k)
   yl <- left_join(vt_factor(I, k), vt_mutations(I, "YLPM1"), by = "rail_id")
@@ -410,7 +402,7 @@ build_ylpm1_tables <- function(I, k = 30) {
        YLPM1_full_plus_variants = .add_calls(yl, wxs, rna, "proteinChange"))
 }
 
-# Write each table to <cache_dir>/<name>.tsv (readr, as the Rmd did).
+# Write each table to <cache_dir>/<name>.tsv (readr).
 write_variant_tables <- function(tabs, cache_dir) {
   dir.create(cache_dir, showWarnings = FALSE, recursive = TRUE)
   for (n in names(tabs)) {

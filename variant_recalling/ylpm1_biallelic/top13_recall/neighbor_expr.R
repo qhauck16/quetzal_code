@@ -1,11 +1,11 @@
 # Possible YLPM1-locus deletions in the top-13 GSP #30 samples: per-cohort z-scored RPM
-# (tcga_gene_expression/combined_scaled_rpm.tsv, the Fig. 4g matrix: z within each TCGA project) of the
+# (../../../expression/combined_scaled_rpm.tsv, the Fig. 4g matrix: z within each TCGA project) of the
 # genes around YLPM1 + YLPM1 itself (see GENES).
 # One panel, all 13 samples; the 4 with putative two-LoF evidence are coloured and labelled.
 # Out: neighbor_expr.pdf
 source("../../../figures/supplementary/common.R")
 # The N_NEAR protein-coding genes nearest YLPM1 by strand-IGNORANT distance (distance() is strand-aware and
-# NAs opposite-strand genes -- that bug first dropped LTBP2, AREL1, PROX2, RPS6KL1), + YLPM1, chr14 order.
+# NAs opposite-strand genes), + YLPM1, chr14 order.
 N_NEAR <- 10
 suppressPackageStartupMessages(library(GenomicRanges))
 gg <- readRDS("../../../inputs/gencode_v46_granges.RDS")
@@ -16,7 +16,7 @@ dd <- distance(gg, yl, ignore.strand = TRUE)
 near <- gg[order(dd)][1:(N_NEAR + 1)]
 GENES <- near$gene_name[order(start(near))]
 cat("[neighbors] genes:", paste(sprintf("%s(%dkb)", GENES, round(dd[match(GENES, gg$gene_name)] / 1e3)), collapse = " "), "\n")
-# Three groups (Quinn, 2026-10-30):
+# Three groups:
 #   strong double mutants (2): 461535 (Y1506*/P1507fs + R1719*), 866724 (A252fs + Q437*);
 #   likely single mutants: the other 11 of the top 13 on GSP #30;
 #   LoF mutants with GSP #30 < 1e-4: variant table, LoF = protein change matching fs|*|splice (Fig. 4a rule).

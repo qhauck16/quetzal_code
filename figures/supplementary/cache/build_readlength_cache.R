@@ -1,9 +1,6 @@
 # Cache for supplementary figure S4 (GSP #3 read-length junctions).
-# covariate_gsp_figures.Rmd's paths / top5 / meta / build_junction_set /
-# per_cohort_cdf / build_junction_set_76 / per_cohort_cdf_76 chunks,
-# VERBATIM, run from that Rmd's directory (its paths are relative). Its
-# ggsave calls are disabled; only the per-cohort mean-PSI tables are
-# written here. Needs the 3.7 GB flashier RDS -> build partition.
+# Writes the per-cohort mean-PSI tables. Needs the 3.7 GB flashier RDS
+# -> build partition.
 if (!exists("QROOT")) QROOT <- local({ d <- normalizePath(getwd())   # quetzal_code root
   while (!file.exists(file.path(d, ".quetzal_root"))) { if (dirname(d) == d) stop("run from inside quetzal_code/"); d <- dirname(d) }
   d })

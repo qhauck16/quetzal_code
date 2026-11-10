@@ -164,9 +164,7 @@ if (control_mode) {
   # Same NA filtering / FFPE defaulting as the TRUE pipeline, and exclude the
   # actual TRUE test rail_ids so the control doesn't recycle the mutants.
   # Restricted to samples in the flashier loadings (same universe as the
-  # TRUE pipeline's full_info). Until 2026-09-25 this drew from every BAM
-  # in the inventory, so rail_ids outside the flashier object -- incl.
-  # normal-labelled ones from the patient-level sort bug -- could enter.
+  # TRUE pipeline's full_info).
   candidate_pool <- tcga_metadata[, covariates_to_match] %>%
     filter(rail_id %in% available_rail_ids,
            rail_id %in% gene_info$rail_id,

@@ -1,7 +1,7 @@
-# One-off: plot the MANE NF1 transcript model and the NF1-216
-# (ENST00000495910.6, an NMD isoform) directly from the GENCODE v46
-# GRanges that powers the plotting_genes pipeline. Run interactively in
-# RStudio with cwd = plotting_genes/NF1_transcript_models/.
+# Plot the MANE NF1 transcript model and NF1-216 (ENST00000495910.6, an
+# NMD isoform) from the GENCODE v46 GRanges. Writes NF1_MANE.pdf,
+# NF1-216.pdf and NF1_MANE_and_216.pdf to the working directory; run
+# from this directory.
 
 
 if (!exists("QROOT")) QROOT <- local({ d <- normalizePath(getwd())   # quetzal_code root
@@ -15,9 +15,7 @@ suppressPackageStartupMessages({
   library(rtracklayer)
 })
 
-# These two paths were relative in the original file; updated to
-# absolute here so the script still runs from quetzal_code/. They must
-# match `gencode_granges` / `mane_summary` in quetzal_code/paths.yaml.
+# Must match `gencode_granges` / `mane_summary` in quetzal_code/paths.yaml.
 GENCODE_RDS <- file.path(QROOT, "inputs/gencode_v46_granges.RDS")
 MANE_TSV    <- file.path(QROOT, "inputs/MANE.GRCh38.v1.4.summary.txt")
 OUT_DIR     <- "."

@@ -143,11 +143,8 @@ plot_structure_static <- function(gd) {
   num_factors <- ncol(res_sub$F)
   pal <- factor_palette(num_factors)
 
-  # structure_plot's default loadings_order = "embed" orders samples by
-  # a t-SNE embedding, and n = 5000 subsamples -- both unseeded. Without
-  # this the panel reshuffles on every run (a rerun moved 6034 px at
-  # 110 dpi while every other panel was byte-identical), which makes any
-  # figure diff useless for spotting real regressions.
+  # structure_plot's default loadings_order = "embed" (t-SNE) and n = 5000
+  # subsampling are both unseeded; seed so the panel is reproducible.
   set.seed(20260922)
   fastTopics::structure_plot(
     res_sub,

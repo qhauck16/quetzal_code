@@ -3,13 +3,12 @@
 #
 # "Used" = every rail_id in any results/*/bams_used.tsv or
 # control_results/*/bams_used.tsv. Those samples came from several
-# download rounds (download/ plan of 2026-04-20 plus older per-gene
-# rounds now in deprecated/, spop/, idh1/), so the file_id for each is
-# looked up in every GDC metadata.cohort*.json saved next to a manifest.
+# download rounds, so the file_id for each is looked up in every GDC
+# metadata.cohort*.json saved next to a manifest.
 # Each hit is checked against the BAM on disk by file size.
 #
 # 24 used samples had no saved JSON record or a size mismatch. For those,
-# download/gdc_api_rnaseq_bams_2026-09-25.tsv holds a GDC API query (files
+# download/gdc_api_rnaseq_bams_*.tsv holds a GDC API query (files
 # endpoint, RNA-Seq BAMs) by BOTH the metadata barcode and the barcode in
 # the BAM's own @RG SM tag (download/bam_sm_check_unresolved.tsv). 13 of
 # them are a DIFFERENT ALIQUOT of the same patient than recount3 lists for
@@ -79,11 +78,9 @@ hits <- bind_rows(
 # On-disk BAM for the size check (inventory path relative to diff_splicing/).
 inv <- read_tsv("download/bam_inventory.tsv", show_col_types = FALSE) %>%
   transmute(rail_id, home_bam, disk_size = file.size(home_bam))
-# FROZEN after 2026-09-25: the used BAMs were deleted. An aliquot has
-# several GDC RNA BAMs (genomic / transcriptome / chimeric) and only the
-# byte-size match against the file on disk tells which one was used, so
-# this script cannot be re-run without them. The saved, size-verified
-# download/used_bams.* (read-only) are the record.
+# Needs the used BAMs on disk: an aliquot has several GDC RNA BAMs (genomic /
+# transcriptome / chimeric) and only the byte-size match against the file on
+# disk tells which one was used. download/used_bams.* is the saved record.
 n_on_disk <- sum(file.exists(inv$home_bam[inv$rail_id %in% used$rail_id]))
 if (n_on_disk < nrow(used))
   stop(sprintf(paste0("Only %d/%d used BAMs on disk -- refusing to rebuild. ",

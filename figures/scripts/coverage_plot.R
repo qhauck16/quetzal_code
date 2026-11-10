@@ -1,7 +1,6 @@
-# Custom coverage + sashimi plot helpers built from raw bigwigs (via
-# rtracklayer) and MeanPSI .links files. Purpose: bypass pygenometracks
-# entirely so we control every pixel of the figure and don't depend on
-# raster crops + patchwork/cowplot placement games.
+# Coverage + sashimi plot helpers built directly from raw bigwigs (via
+# rtracklayer) and MeanPSI .links files, so every track is a native ggplot
+# rather than a rasterised pyGenomeTracks crop.
 
 suppressPackageStartupMessages({
   library(rtracklayer)
@@ -24,10 +23,8 @@ bigwig_binned <- function(bw_path, chrom, start, end, n_bins = 2000) {
                                           coverage   = numeric(0)))
   # Each bin is INTEGER bp wide. Use floor so the bins exactly tile
   # the region (drop the last up-to-(bin_size-1) bp), then place each
-  # bin center at its true genomic position -- earlier code mixed
-  # fractional bin spacing with integer bin_size, which drifted the
-  # coverage x-position ~1 bp per bin (2000 bins -> ~200 bp shift at
-  # the right edge, breaking alignment with junction arcs).
+  # bin center at its true genomic position, so coverage stays aligned
+  # with the junction arcs.
   n_bp <- length(bw)
   bin_size <- max(1L, as.integer(floor(n_bp / n_bins)))
   n_bins_actual <- as.integer(floor(n_bp / bin_size))
@@ -55,8 +52,7 @@ coverage_track_gg <- function(bw_path, chrom, start, end,
                               # y_max, the numbers at their ticks -- in
                               # the same style as sashimi_track_gg's, so
                               # every coverage track in the paper reads
-                              # alike (QA review: figure 1 panel c's
-                              # tracks had none). Off by default.
+                              # alike. Off by default.
                               y_axis = FALSE,
                               y_axis_pt = 6) {
   df <- bigwig_binned(bw_path, chrom, start, end)
@@ -75,7 +71,7 @@ coverage_track_gg <- function(bw_path, chrom, start, end,
     theme_void() +
     # Right gutter holds the overflowing cohort label (hjust = -0.05
     # places it outside the panel). Sized for the largest label at
-    # the current label_size -- widen if that grows again.
+    # the default label_size.
     theme(plot.margin      = margin(0, 44, 0, 0, "pt"),
           plot.background  = element_rect(fill = NA, color = NA),
           panel.background = element_rect(fill = NA, color = NA))
@@ -309,21 +305,20 @@ sashimi_track_gg <- function(bw_path, chrom, start, end,
                               lw_scale = 1.0,
                               # How far back from a splice site to look
                               # for the "exon top" an arc end is pinned
-                              # to (see peak_y below). The 200 bp default
-                              # is what figures 1 and 2 were tuned with;
-                              # a small value (~15) instead pins the arc
-                              # to the coverage AT the junction, which is
-                              # what you want when the exon next door is
-                              # much taller than the splice site itself
-                              # and would otherwise flatten the arc.
+                              # to (see peak_y below). 200 bp suits
+                              # figures 1 and 2; a small value (~15)
+                              # instead pins the arc to the coverage AT
+                              # the junction, which is what you want when
+                              # the exon next door is much taller than
+                              # the splice site itself and would
+                              # otherwise flatten the arc.
                               # X is never affected -- only the height.
                               anchor_bp = 200,
-                              # How the PSI number is rendered. NULL keeps
-                              # the historic "96%" / "1.4%" form; pass a
+                              # How the PSI number is rendered. NULL gives
+                              # the "96%" / "1.4%" form; pass a
                               # function(psi) -> character for anything
-                              # else (figure 3 panel c prints the bare
-                              # 3-significant-digit values its reference
-                              # does, with no % sign).
+                              # else (figure 3 panel c prints bare
+                              # 3-significant-digit values, no % sign).
                               psi_format = NULL,
                               # FALSE draws the arcs but no PSI numbers,
                               # for callers that place the numbers
@@ -337,13 +332,10 @@ sashimi_track_gg <- function(bw_path, chrom, start, end,
                               show_psi = TRUE,
                               # "inline" (default): each PSI number sits ON
                               # its own arc, near the arc's middle, in a gap
-                              # cut out of the arc -- the style Quinn chose
-                              # for every sashimi plot in the paper
-                              # ("label in the middle of the arc"). The
-                              # number slides along its arc only if another
-                              # label or another arc would touch it.
-                              # "offset": the older solver, number above or
-                              # below the apex.
+                              # cut out of the arc. The number slides along
+                              # its arc only if another label or another
+                              # arc would touch it.
+                              # "offset": number above or below the apex.
                               psi_style = "inline",
                               # Extra boxes an inline label must not touch,
                               # as a list of c(x0, x1, y0, y1) in data units
@@ -412,10 +404,9 @@ sashimi_track_gg <- function(bw_path, chrom, start, end,
           plot.background  = element_rect(fill = NA, color = NA),
           panel.background = element_rect(fill = NA, color = NA))
   if (nrow(links) > 0) {
-    # Sort SHORT -> LONG and assign apex heights MONOTONICALLY (no
-    # cycling): shortest arc highest, longest arc lowest. Cycling with
-    # `%% n_rows` put the longest arc back on the top tier, where it
-    # swept across shorter arcs and their labels.
+    # Sort SHORT -> LONG and assign apex heights MONOTONICALLY:
+    # shortest arc highest, longest arc lowest, so a long arc never
+    # sweeps across shorter arcs and their labels.
     ord <- order(links$e2 - links$s1, decreasing = FALSE)
     links <- links[ord, , drop = FALSE]
     n_arc <- nrow(links)
@@ -459,12 +450,10 @@ sashimi_track_gg <- function(bw_path, chrom, start, end,
       # its arc's tier, `apex_y - max(y1, y2)` goes negative and the
       # "arc" is drawn sagging BELOW its own endpoints. Guarantee a
       # visible rise above the higher endpoint instead. Purely a floor:
-      # arcs whose tier already clears their endpoints are untouched,
-      # so this cannot move a figure that was already correct.
+      # arcs whose tier already clears their endpoints are untouched.
       # NB the floor must be skipped entirely when off: `max(apex,
       # max(y1,y2) + 0)` still clamps the apex up to the higher
-      # endpoint, which makes `apex - max(y1,y2)` exactly 0 and draws
-      # every arc as a STRAIGHT CHORD.
+      # endpoint, which draws every arc as a STRAIGHT CHORD.
       apex_y <- if (min_arc_rise > 0)
                   max(apex_rows[i], max(y1, y2) + min_arc_rise * y_max)
                 else apex_rows[i]
@@ -531,9 +520,8 @@ sashimi_track_gg <- function(bw_path, chrom, start, end,
     if (show_psi && identical(psi_style, "inline")) {
       y_per_pt <- y_max / track_pt
       # REAL string widths, measured on cairo (the device the figures are
-      # written with). The nchar() * 0.52 em estimate undershot this
-      # font by ~15%, so the gap cut into each arc was too narrow and the
-      # arc ends poked into "31%", "17%", "40%" (figure 1e, Quinn).
+      # written with); an nchar()-based estimate undershoots this font, so
+      # the gap cut into each arc would be too narrow.
       lab_w_pt <- local({
         old <- grDevices::dev.cur(); tf <- tempfile(fileext = ".pdf")
         grDevices::cairo_pdf(tf, width = 4, height = 4)
@@ -552,9 +540,9 @@ sashimi_track_gg <- function(bw_path, chrom, start, end,
       cuts     <- replicate(n_arc, list(), simplify = FALSE)
       # Longest arcs first: they have the most room to slide.
       ord_i <- order(-(links$e2 - links$s1))
-      # Slide up to 0.37 of the span either way (was 0.30): in figure 3
-      # panel c the dashed zoom leaders cross the middle of the High
-      # track, and the only clear slots for 43.6 / 70.8 lie further out.
+      # Slide up to 0.37 of the span either way: in figure 3 panel c the
+      # dashed zoom leaders cross the middle of the High track, and the
+      # only clear slots for 43.6 / 70.8 lie further out.
       ts <- 0.5 + c(0, rbind(seq(0.03, 0.37, 0.03), -seq(0.03, 0.37, 0.03)))
       for (i in ord_i) {
         cv <- curves[[i]]
@@ -694,10 +682,10 @@ sashimi_track_gg <- function(bw_path, chrom, start, end,
   # Track label sits INSIDE the panel at the top-right, so it doesn't
   # rely on plot.margin room and never gets clipped.
   # Sits inside its OWN track, a touch below the very top, so it
-  # doesn't hug the baseline of the track stacked above it (which
-  # made "GTEx-Lung" read as if it belonged to the TCGA panel).
+  # doesn't hug the baseline of the track stacked above it and read
+  # as belonging to that track.
   # Default bottom margin reserves ONE HALF-LINE of axis text under the
-  # baseline. Tracks are normally stacked flush, and the "0" is now
+  # baseline. Tracks are normally stacked flush, and the "0" is
   # centred ON the baseline while the next track's y_max number is
   # centred on its top tick -- without this gap those two land on the
   # same page row and overprint. A caller that sets plot.margin itself
@@ -735,16 +723,16 @@ transcript_zoom_gg <- function(exons, x_lo, x_hi,
                                 label_size = 3.2,
                                 label_family = "Nimbus Sans",
                                 # --- optional genomic-axis ticks -------------
-                                # Accepted but IGNORED since 2026-10-28: Quinn
-                                # removed the coordinate ticks (they read as
-                                # thin exons). Kept so callers need not change.
+                                # Accepted but IGNORED: the gene model
+                                # draws no coordinate ticks (they read as
+                                # thin exons). Kept for caller compatibility.
                                 x_ticks = NULL,
                                 tick_h = 0.30,
                                 tick_color = "grey25",
                                 tick_linewidth = 0.3,
                                 # --- which end the gene label hangs off ------
-                                # "right" (default, historic behaviour) puts
-                                # it over the transcript's 3'-most edge.
+                                # "right" (default) puts it over the
+                                # transcript's 3'-most edge.
                                 # "left" is for genes whose terminal exon at
                                 # that end is a fat UTR block the label would
                                 # otherwise sit on (e.g. SENP2).
@@ -786,10 +774,9 @@ transcript_zoom_gg <- function(exons, x_lo, x_hi,
     # over by aes(): a cached panel is restored with readRDS into a
     # different environment, where tidy evaluation can no longer find
     # them, and the whole panel renders blank.
-    # No coordinate ticks on the gene model (Quinn 2026-10-28): any vertical
-    # rule near the backbone reads as a thin exon. x_ticks is accepted and
-    # ignored so callers need not change; the coordinate numbers are drawn
-    # by the callers' axis rows.
+    # No coordinate ticks on the gene model: any vertical rule near the
+    # backbone reads as a thin exon. x_ticks is accepted and ignored; the
+    # coordinate numbers are drawn by the callers' axis rows.
     scale_x_continuous(limits = c(x_lo, x_hi), expand = c(0, 0)) +
     scale_y_continuous(limits = c(0, 2), expand = c(0, 0)) +
     coord_cartesian(clip = "off") +
@@ -806,9 +793,8 @@ transcript_zoom_gg <- function(exons, x_lo, x_hi,
     #
     # vjust = 0 anchors the text's BOTTOM edge at y, which is what
     # guarantees clearance above the exon boxes (top edge at
-    # 1 + exon_h/2). Centring with vjust = 0.5 makes the gap depend
-    # on the rendered text height, which is unknown here -- that is
-    # what left this label sitting too low.
+    # 1 + exon_h/2). Centring with vjust = 0.5 would make the gap depend
+    # on the rendered text height, which is unknown here.
     p <- p + annotate("text",
                        x     = if (label_side == "right") tx_hi else tx_lo,
                        y     = 1 + exon_h / 2 + 0.16,
@@ -847,7 +833,7 @@ trapezoid_gg <- function(x_lo, x_hi, win_lo, win_hi,
 }
 
 # ------------------------------------------------------------------
-# ZOOM CALLOUT ROW  (figure 3 panel c; figure 4 will want it too)
+# ZOOM CALLOUT ROW  (figure 3 panel c)
 # ------------------------------------------------------------------
 # One ggplot that sits directly ABOVE a stack of coverage/sashimi
 # tracks and holds N boxed "magnifier" insets. Each inset re-reads its

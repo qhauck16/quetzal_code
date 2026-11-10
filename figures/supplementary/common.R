@@ -5,7 +5,7 @@
 #   Rscript --vanilla figS7/build.R
 #   ./build_all.sh            # every figure
 #
-# Same conventions as the main figures (../figure2/compose.md): FONT_FAMILY
+# Same conventions as the main figures: FONT_FAMILY
 # and SIZE_* tokens from ../theme.R, gene symbols italic via gene_md() /
 # gene_pm(), x tick labels angled 45 deg, page sizes in absolute inches.
 

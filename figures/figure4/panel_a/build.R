@@ -5,32 +5,19 @@
 # a. YLPM1 LoF mutants are the top 13 samples on GSP #30.
 #    Left: full CDF with the zoom region boxed. Right: the zoom, with
 #    each sample's protein change labelled.
-#    Source: flash_fact_char.Rmd (the YLPM1 counterpart of figure 3's
-#    panel a), reading YLPM1_full_plus_variants.tsv.
+#    Reads the variant table YLPM1_full_plus_variants (vt_path).
 #
-# Unlike figure 3 panel a -- which classifies by which of four genes is
-# hit and in what window -- this panel is BINARY on the table's own
-# `frameshift` flag (115 TRUE of 9800). That is the whole claim: loss
-# of function, not any YLPM1 variant. The table also carries a
-# three-level `plot_color`, which is NOT what the published figure
-# uses; its legend has two entries.
+# Samples are split BINARY: YLPM1 loss of function (frameshift / stop /
+# splice-site, see A_LOF_RX) vs everything else.
 #
 # ------------------------------------------------------------------
 # LABELS: SAME IDIOM AS FIGURE 3 PANEL A
 # ------------------------------------------------------------------
-# The two panels are the same figure type in two figures and are
-# deliberately built from the SAME code: `cdf_place_labels()` below is
-# a verbatim copy of figure 3 panel a's, and the drawn result uses the
-# same label size, the same leader style (0.12 pt grey55, drawn only
-# when the label is more than lead_min_pt from its marker) and the
-# same legend treatment. Keep them in step.
-#
-# ggrepel used to place these twelve. It cannot see any layer but its
-# own, so it had no idea where the markers or the two step staircases
-# were: D2015Vfs*40 printed on top of its own point, the red step line
-# ran through M1180Cfs*27 and P177Rfs*42, and the three labels lifted
-# into the headroom threw leaders across each other. The solver treats
-# all of that as explicit geometry.
+# `cdf_place_labels()` below is a copy of figure 3 panel a's, with the
+# same label size, leader style (0.12 pt grey55, drawn only when the
+# label is more than lead_min_pt from its marker) and legend treatment.
+# Keep them in step. A custom solver is used instead of ggrepel because
+# ggrepel cannot see the markers or the step lines of other layers.
 
 A_INFO <- vt_path("YLPM1_full_plus_variants")
 
@@ -39,8 +26,7 @@ A_NOT     <- "No YLPM1 frameshift/early stop"
 A_LEVELS  <- c(A_LOF, A_NOT)
 # Legend labels: gene_pm() renders paste(italic("YLPM1"), " frameshift") and the italic glyph's overhang
 # swallows the leading space ("YLPM1frameshift"); a trailing space INSIDE italic() survives. Not "~": plotmath "~" pulls the
-# Symbol font, which fails here ("failed to find or load PDF CID font"). Local to this panel because theme.R's
-# gene_pm() is shared by every figure.
+# Symbol font, which fails to load on the PDF device.
 A_LEG_LAB <- function(x) lapply(x, function(s) if (s == A_LOF) quote(paste(italic("YLPM1 "), "frameshift/early stop")) else
                                                quote(paste("No ", italic("YLPM1 "), "frameshift/early stop")))
 A_COL     <- setNames(c("#E74C3C", "#34495E"), A_LEVELS)
@@ -48,8 +34,7 @@ A_COL     <- setNames(c("#E74C3C", "#34495E"), A_LEVELS)
 # ==================================================================
 #  Shared "CDF + labelled zoom" label machinery.
 #  KEEP IN SYNC with ../../figure3/panel_a/build.R -- the two copies
-#  are deliberately identical (only these two build.R files may be
-#  edited, so the code cannot live in ../scripts/).
+#  are deliberately identical.
 # ==================================================================
 
 # Exact Helvetica metrics. Widths must come from a *cairo* device:
@@ -180,9 +165,8 @@ cdf_place_labels <- function(labs, pts, segs, xlim, ylim, w_in, h_in,
   # The box has to be as tall as the FONT, not as the measured ink.
   # geom_text(vjust = 0.5) centres each string on its OWN ink box, so
   # "R366Q" (caps only) and "N1881_V1883dup" (underscore below the
-  # baseline) sit differently inside the same nominal row -- and two
-  # stacked boxes sized from cairo's grobHeight printed the upper
-  # string's underscore as a bar through the lower string's digits.
+  # baseline) sit differently inside the same nominal row, so boxes
+  # sized from the ink would let stacked strings touch.
   # 0.94 em spans cap height + descender with a little slack.
   th <- max(m$h, lab_pt * 0.92)
   hw <- (m$w / 2 + pad_x) * ux
@@ -209,9 +193,7 @@ cdf_place_labels <- function(labs, pts, segs, xlim, ylim, w_in, h_in,
     cbind(expand.grid(o = off_pt,  d = dys),        mode =  1),
     cbind(expand.grid(o = voff_pt, d = c(1, -1)),   mode =  0))
   # Displacement of the label from its point, in points, plus a
-  # QUADRATIC far term: without it the solver happily parks one label
-  # 50 pt away to save two labels 25 pt each -- the same linear cost,
-  # but one leader flying across the panel instead of two short ones.
+  # QUADRATIC far term so two short leaders beat one long one.
   # `gvis` is the part that is VISIBLE (leader length) and is what the
   # polish loop minimises; the side/centred preferences only steer the
   # per-label search and must not enter the objective, or the solver
@@ -242,10 +224,8 @@ cdf_place_labels <- function(labs, pts, segs, xlim, ylim, w_in, h_in,
       ay <- labs$y[i] + G$d[k] * uy
       cx <- ax + md * hw[i]; cy <- ay
       hv <- if (md < 0) 1 else 0
-      # The text is anchored pad_x INSIDE the box edge. Anchoring it
-      # at the edge itself puts all of pad_x on the far side and
-      # none between the string and its own marker, which is what
-      # printed "Y1506*" flush against its point.
+      # The text is anchored pad_x INSIDE the box edge, so the gap
+      # sits between the string and its own marker.
       lx <- ax + md * pad_x * ux
     } else {
       cx <- labs$x[i]
@@ -269,16 +249,14 @@ cdf_place_labels <- function(labs, pts, segs, xlim, ylim, w_in, h_in,
   # SOFT: a leader crossing another leader (w_cross) and a leader
   # passing within lead_pad of a string without entering it
   # (w_graze -- a hairline 1 pt past the final "I" of "R290I" prints
-  # as "R290Il"). Both were tried as hard constraints and both made
-  # things WORSE: they take slots away from the greedy so early that
-  # later labels end up needing the level-2 escape hatch, and a
-  # leader clean through a string is far uglier than either. As
-  # penalties they simply steer.
+  # as "R290Il"). These are soft because as hard constraints they take
+  # slots away from the greedy so early that later labels need the
+  # level-2 escape hatch.
   #
   # The relaxation ladder is the last resort, one step at a time:
   # level 1 lets a leader cross a string, level 2 lets a step line
-  # cross it. Level 2 is the defect this panel started with and
-  # exists only so a label can never be silently dropped.
+  # cross it. Level 2 exists only so a label can never be silently
+  # dropped.
   place_once <- function(ord, relax) {
     lx <- ly <- sx <- sy <- ex <- ey <- rep(NA_real_, n)
     hj   <- rep(0, n)
@@ -449,19 +427,13 @@ cdf_xlim <- function(x, w_in, gut_l_pt, gut_r_pt) {
 # ==================================================================
 
 # Loss of function is read from the protein change, NOT from the table's
-# `frameshift` column or its `plot_color`. Both are INCOMPLETE: they are a
-# strict subset that misses 5 samples, and THREE OF THOSE ARE IN THE TOP 13
-# on GSP #30 --
-#     rank 2  X1783_splice              flagged "Other YLPM1 Mutation"
-#     rank 3  YLPM1:S145fs              flagged "No YLPM1 Mutation"
-#     rank 9  YLPM1:A252fs,YLPM1:Q437*  flagged "No YLPM1 Mutation"
-# Drawing those three as non-variants is what made the CDF look wrong: it put
-# apparent non-variants above the LoF samples and broke the panel's whole claim.
-#
-# With this rule the boundary is exactly clean: ranks 1-13 all carry a LoF
-# protein change and rank 14 is the first sample with none, so "YLPM1 LoF
-# mutants are the top 13 samples on GSP #30" is literally true of the data.
-# 120 LoF vs the column's 115; no sample the column calls TRUE is excluded.
+# `frameshift` column or its `plot_color`, which miss 5 LoF samples, three
+# of them in the top 13 on GSP #30 --
+#     rank 2  X1783_splice
+#     rank 3  YLPM1:S145fs
+#     rank 9  YLPM1:A252fs,YLPM1:Q437*
+# With this rule ranks 1-13 all carry a LoF protein change and rank 14 is
+# the first sample with none. 120 LoF samples in total.
 A_LOF_RX <- "fs|\\*|splice"     # frameshift / stop gained / splice-site
 
 panel_a <- panel_cached("a", local({
@@ -483,13 +455,10 @@ panel_a <- panel_cached("a", local({
     ungroup()
 
   A_ZOOM_FROM <- -4
-  # Zoom callout, as in figure 3 panel a (Quinn: keep it consistent).
-  # Two short lines from the box's right corners splaying out to the zoom
-  # panel's corners; ends in the CDF's own data units, set by eye against
-  # the render. DX is in log units.
-  # MEASURED 2026-10-05 with ../../scripts/measure_zoom_connectors.py (box corners
-  # -> zoom panel's left axis line, in this CDF's data units). Re-run it after ANY
-  # layout change to this row; hand-tuned values drifted off the corners.
+  # Zoom callout, as in figure 3 panel a: two short lines from the box's
+  # right corners out to the zoom panel's corners, in the CDF's own data
+  # units (DX in log units). Values from ../../scripts/measure_zoom_connectors.py;
+  # re-run it after any layout change to this row.
   A_CALL_DX  <- 1.7965
   A_CALL_TOP <- 107.542
   A_CALL_BOT <- -41.272
@@ -502,7 +471,7 @@ panel_a <- panel_cached("a", local({
              ymin = 0, ymax = 102, fill = NA, color = "black",
              linewidth = 0.4) +
     scale_color_manual(values = A_COL, drop = FALSE, name = NULL,
-                       labels = A_LEG_LAB) +  # italic gene, spaced with ~ (see A_LEG_LAB)
+                       labels = A_LEG_LAB) +  # italic gene (see A_LEG_LAB)
     scale_y_continuous(labels = function(x) paste0(x, "%"),
                         breaks = c(0, 25, 50, 75, 100)) +
     # xlim pinned too: the callout segments reach past the data, and a
@@ -522,23 +491,15 @@ panel_a <- panel_cached("a", local({
   a_lab  <- filter(a_zoom, nzchar(proteinChange), variant_class == A_LOF)
 
   # The zoom gets its OWN y range, not the CDF's. Both classes are
-  # already past 90% by log = -4, so reusing c(0, 108) squeezed every
-  # point into the top fifth of the panel and left the labels nothing
-  # to spread into.
-  #
-  # The top was 112, and that was 12 units of headroom for labels that
-  # only ever needed 4: half the panel above the data was empty. 104
-  # keeps one clear text row above the 100% row -- which is where the
-  # unlabelled navy cloud's step line runs the full panel width -- and
-  # nothing more. Measured on the render: no blank band over 0.1 in
-  # anywhere inside the panel.
+  # already past 90% by log = -4, so c(0, 108) would squeeze every
+  # point into the top fifth of the panel. The top keeps one clear text
+  # row above the 100% row, where the navy step line runs full width.
   A_ZLIM <- c(min(a_zoom$cumulative) - 1.2, 101.6)
 
-  # Drawn size of the zoom's PANEL (not its cell), in inches. Measured
-  # off the render at 400 dpi. Every point->data conversion in the
-  # solver hangs off these two numbers, so re-measure (find the run of
-  # the x-axis line, and of the left border) after any change to
-  # ROW_H[["ab"]], COL_W$ab or the widths below.
+  # Drawn size of the zoom's PANEL (not its cell), in inches. Every
+  # point->data conversion in the solver hangs off these two numbers, so
+  # check them against the render after any change to ROW_H[["ab"]],
+  # COL_W$ab or the widths below.
   A_ZOOM_W_IN <- PAGE_W * (COL_W$ab[1] / sum(COL_W$ab)) * 0.4525 - 0.0
   A_ZOOM_H_IN <- ROW_H[["ab"]] - 0.75
 
@@ -560,7 +521,7 @@ panel_a <- panel_cached("a", local({
     arrange(cumulative, logk30) %>%
     mutate(pref = ifelse(row_number() %% 2 == 1, -1, 1),
            # re-called mutations carry a "YLPM1:" prefix in the variant table; drop it so they read like
-           # the annotated ones (Quinn, 2026-11-09)
+           # the annotated ones
            x = logk30, y = cumulative,
            text = gsub(",", "; ", gsub("YLPM1:", "", proteinChange, fixed = TRUE), fixed = TRUE))
 
@@ -599,7 +560,7 @@ panel_a <- panel_cached("a", local({
               label.r = grid::unit(0, "pt"),
               show.legend = FALSE) +
     scale_color_manual(values = A_COL, drop = FALSE, name = NULL,
-                       labels = A_LEG_LAB) +  # italic gene, spaced with ~ (see A_LEG_LAB)
+                       labels = A_LEG_LAB) +  # italic gene (see A_LEG_LAB)
     # Ticks only over the DATA. The x limits carry a label gutter on
     # each side (cdf_xlim), and a tick out in that gutter reads as
     # "the zoom starts there", contradicting the box drawn on the CDF.
@@ -629,9 +590,8 @@ panel_a <- panel_cached("a", local({
                                    override.aes = list(linewidth = 1.2))),
     "guide-box-bottom", return_all = TRUE))
 
-  # 0.16, not 0.22: the legend is two rows, and the extra cell height
-  # was a 0.4 in blank band between the CDF's x-axis title and the
-  # first key.
+  # Sized for the two-row legend, so no blank band opens between the
+  # CDF's x-axis title and the first key.
   panel_a_cdf <- panel_a_cdf +
     annotate("segment", x = max(a_cum$logk30) + 0.25,
              xend = max(a_cum$logk30) + 0.25 + A_CALL_DX,
@@ -646,7 +606,7 @@ panel_a <- panel_cached("a", local({
         title = gene_md("YLPM1 LoF mutants are the top 13\nsamples on GSP #30"),
         # Zero top margin on both: patchwork stacks a plot_annotation
         # title on its own plot margin, which labs()-titled panels do
-        # not have. See ../figure2/compose.md.
+        # not have.
         theme = theme(plot.title = ggtext::element_markdown(halign = 0.5, lineheight = 0.9,
           size = SIZE_TITLE, face = "bold", hjust = 0.5,
           family = FONT_FAMILY, margin = margin(0, 0, 2, 0)),

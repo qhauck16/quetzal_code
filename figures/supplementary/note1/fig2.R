@@ -9,7 +9,7 @@
 #      ON that curve (cohort + change), not a curve.
 # Samples: tumours in the flashier fit with mutation calls (AlphaMissense-
 # merged PanCanAtlas + GDC table); home-cohort mutant = any call in the gene;
-# wild-type = no call in the gene. All curves solid (Quinn 2026-10-09).
+# wild-type = no call in the gene. All curves solid.
 # Per-cohort stats for every cohort are still written to note1_cdf_stats.tsv.
 # Loadings: shared_cache/gsp_loadings.tsv (the figures' normalised L).
 # Test: one-sided Wilcoxon rank-sum, mutant > wild-type.
@@ -61,11 +61,11 @@ fmt_p <- function(p) ifelse(p < 1e-3, formatC(p, format = "e", digits = 1), form
 # tumours of every OTHER cohort, pooled. Mutants of the gene outside the home
 # cohort that are not hotspots are left out of both "other" curves.
 # `drop`: cohorts left out of the "other cohorts" curves entirely (IDH1: the
-# other brain cohort, GBM -- Quinn 2026-10-09, "for IDH1, just do non-brain",
+# other brain cohort, GBM -- non-brain only,
 # since GSP #1 is brain-associated and GBM confounds the pooled comparison).
 # all_other: the 4th curve is EVERY tumour outside the home cohort, mutants
 # included, labelled just "Other cohorts"; the hotspot carriers are then
-# returned as `pts` to be labelled on that curve (SPOP, Quinn 2026-10-09).
+# returned as `pts` to be labelled on that curve (SPOP).
 four_way <- function(d, gene, home, hot, drop = character(0), other_lab = "other cohorts",
                      all_other = FALSE) {
   lv <- c(sprintf("%s mutant (%s)", gene, sub("TCGA-", "", home)),
@@ -97,7 +97,7 @@ four_way <- function(d, gene, home, hot, drop = character(0), other_lab = "other
 }
 # label_hot: draw the hotspot carriers as labelled points ON the other-cohort
 # wild-type curve instead of as a curve of their own (SPOP: only 3 carriers
-# outside PRAD -- too few for a CDF, Quinn 2026-10-09).
+# outside PRAD -- too few for a CDF).
 four_plot <- function(fw, gsp, title, label_hot = FALSE) {
   d <- fw$d %>% arrange(logk) %>% group_by(curve) %>% mutate(cumulative = row_number() / n() * 100) %>% ungroup()
   key <- fw$s %>% mutate(k = ifelse(is.na(p), sprintf("%s (n = %d)", curve, n),

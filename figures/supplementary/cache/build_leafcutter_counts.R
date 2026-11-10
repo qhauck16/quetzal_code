@@ -1,8 +1,6 @@
-# Cache for supplementary figure S8 (LeafCutter summary). The code below
-# is leafcutter_meta_analysis.Rmd's config / mane / helpers /
-# load_leaf_sigs / counts chunks, VERBATIM (extracted by
-# figures/supplementary build notes), run from the Rmd's own directory so
-# its relative paths resolve. Writes cache/s8_counts.tsv.
+# Cache for supplementary figure S8 (LeafCutter summary). Runs from
+# leafcutter_analyses/diff_splicing/unified_results so relative paths
+# resolve. Writes cache/s8_counts.tsv.
 if (!exists("QROOT")) QROOT <- local({ d <- normalizePath(getwd())   # quetzal_code root
   while (!file.exists(file.path(d, ".quetzal_root"))) { if (dirname(d) == d) stop("run from inside quetzal_code/"); d <- dirname(d) }
   d })
@@ -13,7 +11,7 @@ COMPARISONS  <- c("10v30", "20v60", "30v90")
 DPSI_VALUES  <- c(0.01, 0.05)
 FC_VALUES    <- c(1, 2.5, 5)
 
-# Paths (relative to this Rmd inside diff_splicing/unified_results).
+# Paths (relative to unified_results).
 REAL_DIR     <- "../results"
 CTRL_DIR     <- "../control_results"
 INTRONS_PATH <- "../gencode_v46_introns.tsv"

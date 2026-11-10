@@ -14,21 +14,19 @@
 #
 #   cache/build_mutation_cache.R     S10, S12   any cwd (absolute paths); --mem=24G
 #   cache/build_overlap_cache.R      S6, S9    any cwd (absolute paths)
-#   cache/build_leafcutter_counts.R  S8        any cwd (setwd()s itself to
-#                                              flashier/diff_splicing/unified_results)
-#   cache/build_readlength_cache.R   S4        any cwd (setwd()s itself to
-#                                              flashier/just_for_fun/nmd_investigation);
+#   cache/build_leafcutter_counts.R  S8        any cwd (setwd()s itself)
+#   cache/build_readlength_cache.R   S4        any cwd (setwd()s itself);
 #                                              loads the 3.7 GB flashier RDS -> SLURM
 #   cache/build_s5_heatmap_cache.R   S5        any cwd (absolute paths); flashier RDS +
 #                                              536 M mutation table -> SLURM, tens of GB
 #   cache/build_s14_cache.R          S15       any cwd (absolute paths); bigwig reads -> SLURM
 #   cache/build_s16_cache.py         S17       python3.12 env (pyBigWig); imports cache/s16_lib/
 #   cache/s2/run.sh                  S3        any cwd (cd's itself to figure1/panel_d_e)
-#   (the NKAP-syndrome figure, formerly S19, moved to note2/: build_cache.R + fig1.R, run from supplementary/)
+#   note2/: build_cache.R + fig1.R (Supplementary Note 2), run from supplementary/
 #
 #   cache/build_ylpm1_expression_row.sh  (any dir; streams the 7.7 GB matrix) -> ylpm1_expression_row.tsv (S18)
 # Also read directly (not cached here): figure1/panel_b/recovery_cache (S2),
-# figure3/cache/panel_e_scaled.tsv (S14), and tcga/ tables (S7, S11, S13, S18, S20).
+# figure3/cache/panel_e_scaled.tsv (S14), and variant/phenotype tables (S7, S11, S13, S18, S20).
 #   figS16 (YLPM1 splice variant): run figS16/fetch.sh first (GDC slicing; needs the token path).
 RSCRIPT=Rscript
 cd "$(dirname "$(readlink -f "$0")")" || exit 1

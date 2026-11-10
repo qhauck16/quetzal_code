@@ -4,8 +4,7 @@
 #   chr14:74812626 A>G = intron position -2 of MANE exon 11's acceptor.
 #   RNA-seq STAR 2-Pass Genome (01A-02R-1325-07): whole YLPM1 locus.
 #   Tumour WGS (01A-01D-A97E-36; 295 GB file, so slicing only): +-300 bp.
-# The token is passed by path inside the curl header and never printed
-# (Quinn approved this use of the token file, 2026-10-26).
+# The token is passed by path inside the curl header and never printed.
 set -euo pipefail
 cd "$(dirname "$0")"
 T=${GDC_TOKEN_FILE:?set GDC_TOKEN_FILE to your GDC token file (controlled access)}

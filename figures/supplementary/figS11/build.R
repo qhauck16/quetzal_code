@@ -2,10 +2,8 @@
 # Empirical CDF of GSP #13 as in figure 3 panel a: any NKAP variant vs
 # every other sample, with every NKAP mutant affected at amino acid 329
 # or earlier labelled.
-# Source: tcga/genome_wide/flashier/cdf_supplements.Rmd (chunk
-# "NKAP aa <= 329"); data NKAP_full_plus_variants.tsv. The mutation
-# parsing is that chunk's, verbatim: it reads all three mutation
-# columns (TCGA call, WXS re-call, RNA-seq re-call).
+# Data: NKAP_full_plus_variants (vt_path()); the mutation parsing reads
+# all three mutation columns (TCGA call, WXS re-call, RNA-seq re-call).
 source("common.R")
 
 d <- fread(vt_path("NKAP_full_plus_variants"), data.table = FALSE)

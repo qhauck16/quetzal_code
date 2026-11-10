@@ -1,28 +1,19 @@
 # Pie chart with EVERY percentage drawn at its own wedge. Shared by
-# figure 3 panel d and figure 4 panel d; the wedge geometry was worked
-# out first for figure 2 panel e, which still has its own tuned copy
-# (it predates this file and is signed off -- do not "unify" it without
-# re-checking that panel pixel for pixel).
+# figure 3 panel d and figure 4 panel d (figure 2 panel e has its own
+# tuned copy).
 #
-# Quinn's rule, and it is absolute:
-#   "pie charts in all figures should always have the numbers on the
-#    chart - you can add a rectangle around the ones that are too big
-#    for their wedge"
-# So: percentages are NEVER in the legend, and they are NEVER fanned
-# out on leader lines either. Every label sits on its own wedge's
-# mid-ray. When the text is too big for the wedge to contain it, the
-# label still sits on that ray but gets a filled rectangle behind it so
-# it stays legible where it crosses the rim or covers a neighbour.
+# Percentages are never in the legend and never on leader lines. Every
+# label sits on or beside its own wedge; a label too big for its wedge
+# gets a filled rectangle behind it so it stays legible.
 #
 # WHY CARTESIAN, NOT coord_polar: polar coords give no control over
-# where a label lands, and the whole job here is controlling exactly
-# that. Drawing the wedges as polygons under coord_equal() means every
-# label position is an ordinary x/y that can be reasoned about, and a
-# label's bounding box can be compared against its neighbours'.
+# where a label lands. Drawing the wedges as polygons under coord_equal()
+# makes every label position an ordinary x/y whose bounding box can be
+# compared against its neighbours'.
 #
 # Wedge order is clockwise from 12 o'clock in REVERSE level order,
 # which reproduces coord_polar(theta = "y") + position_stack (first
-# level ends up last clockwise) and so matches the published figures.
+# level ends up last clockwise).
 
 # Clockwise angle from 12 o'clock -> cartesian. The math angle is
 # a = pi/2 - theta.
@@ -32,16 +23,13 @@ cw2xy <- function(theta, r) cbind(x = r * cos(pi / 2 - theta),
 # Drawn width and cap height of each string, in inches, at the size it
 # will actually be set. Guessing from nchar() is not good enough: the
 # labels are digits plus "." plus "%", whose advance widths differ by
-# 3x in Helvetica ("." 0.278 em, "%" 0.889 em), and the fit test below
-# turns a few percent of width error into a label that is boxed when
-# it should not be -- or, worse, not boxed when it should be.
+# 3x in Helvetica, and the fit test below turns a few percent of width
+# error into a wrongly boxed (or unboxed) label.
 #
 # MEASURE ON cairo_pdf, which is the device the figures are written
 # with. The base pdf() device uses the built-in Helvetica AFM metrics,
-# but cairo resolves "Helvetica" through fontconfig to whatever this
-# machine actually has, and that substitute is 12-18% WIDER here. Using
-# pdf() metrics sized every box ~15% too small, so the text overhung
-# its own white box and the collision test let neighbours touch.
+# but cairo resolves "Helvetica" through fontconfig to a substitute that
+# is 12-18% wider.
 .pie_str_size_in <- function(labels, pt, family) {
   old <- grDevices::dev.cur()
   tf  <- tempfile(fileext = ".pdf")
@@ -76,7 +64,7 @@ cw2xy <- function(theta, r) cbind(x = r * cos(pi / 2 - theta),
 #   ang_tol_deg    how far off its own mid-ray a boxed label may sit.
 #                  Widened per wedge to that wedge's half-angle. This
 #                  is what buys the horizontal space; with 0 the
-#                  solver degenerates to the old radius-only slide.
+#                  solver only slides along the radius.
 #   x_max          optional hard right-hand bound for a boxed label's
 #                  right EDGE, in pie radii from the centre. For a pie
 #                  inset beside something tall (fig 3 panel d's 650-count
@@ -173,20 +161,11 @@ pie_labels_on_wedges <- function(df, cat_col, palette,
   ord$r[ord$fits] <- pmin(pmax(r_inside, r_min[ord$fits]), r_max[ord$fits])
 
   # ---- boxed labels: a 2-D search, not a slide along the ray ------
-  # Quinn: "pie charts should have the percentages over their relevant
-  # wedges, but not overlapping, use the vertical and horizontal space
-  # to do this".
+  # Pinning every box to its own mid-ray leaves the radius as the only
+  # free parameter; with several adjacent narrow wedges that stacks the
+  # boxes into a tight fan and parks inner ones on neighbouring wedges.
   #
-  # The previous version pinned every box to its own mid-ray and left
-  # the RADIUS as the only free parameter. With several sub-6% wedges
-  # adjacent -- which is the normal case, because narrow wedges cluster
-  # -- that stacks the boxes into one tight diagonal fan and, worse,
-  # parks the inner ones ON TOP OF neighbouring wedges: figure 3 panel
-  # d had "0.32%" sitting across the pink and orange wedges it does not
-  # name. Radius alone cannot fix that; the boxes need the tangential
-  # direction too.
-  #
-  # So each boxed label now searches a polar NEIGHBOURHOOD of its wedge
+  # So each boxed label searches a polar NEIGHBOURHOOD of its wedge
   # -- an angular offset as well as a radius -- under two hard
   # constraints and one soft one:
   #   HARD  the box may not intersect the pie disc at all, so a chip
@@ -213,9 +192,9 @@ pie_labels_on_wedges <- function(df, cat_col, palette,
                       c(-1, 1))) * (2 * pi / 180)
 
     # Points along the OUTER part of every boxed (small) wedge's mid-ray.
-    # In the published panel each sliver stays visible at the rim and its
-    # chip sits beside it or further in -- so a candidate chip pays for
-    # every one of these points it would cover, its own wedge's included.
+    # Each sliver should stay visible at the rim with its chip beside it
+    # or further in -- so a candidate chip pays for every one of these
+    # points it would cover, its own wedge's included.
     rim <- do.call(rbind, lapply(boxed, function(k)
       cbind(x = seq(0.70, 1.0, by = 0.05) * ux[k],
             y = seq(0.70, 1.0, by = 0.05) * uy[k])))
@@ -239,11 +218,8 @@ pie_labels_on_wedges <- function(df, cat_col, palette,
                 ok <- FALSE; break
               }
             if (ok) {
-              # Reference style (Figure3-NKAP_improved.pdf panel d): the
-              # chip sits ON the pie, near the rim of its own wedge, so
-              # prefer radius r_pref and the wedge's own ray.
-              # Quinn: "as close as possible to their respective wedge
-              # without overlapping another label", and ON the pie. So the
+              # The chip sits ON the pie, as close as possible to
+              # its own wedge without overlapping another label. The
               # cost is the chip centre's distance from its OWN wedge
               # (zero anywhere inside the wedge), plus a light pull
               # towards r_pref so a chip inside its wedge sits nearer the
@@ -264,8 +240,8 @@ pie_labels_on_wedges <- function(df, cat_col, palette,
         }
       }
       if (is.null(best)) {
-        # Nothing legal inside the tolerance: fall back to the old
-        # behaviour (straight out along the ray) rather than dropping
+        # Nothing legal inside the tolerance: fall back to
+        # straight out along the ray rather than dropping
         # the number, and say so.
         best <- c(r_box_max * ux[i], r_box_max * uy[i])
         warning(sprintf("pie_labels_on_wedges: no clear slot for '%s'",
@@ -284,16 +260,11 @@ pie_labels_on_wedges <- function(df, cat_col, palette,
   ord$ly <- ifelse(is.na(ord$py), ord$r * uy, ord$py)
 
   # Everything is a COLUMN of the layer data -- an aes() closing over a
-  # local scalar renders blank after the panel cache's readRDS. See
-  # ../figure2/compose.md.
+  # local scalar renders blank after the panel cache's readRDS.
   # A box pushed out along its mid-ray no longer touches its wedge, and
-  # when several slivers are adjacent -- which they are by construction,
-  # since narrow wedges cluster -- the fan of boxes becomes ambiguous:
-  # figure 3 panel d stacks four of them (5.06 / 1.60 / 4.95 / 0.32) in
-  # one corner with nothing saying which is which. Colouring each box's
-  # BORDER with its own wedge's fill resolves that without a leader
-  # line, which Quinn has rejected twice. White fill stays, so the
-  # number is still black-on-white and fully legible.
+  # adjacent slivers' boxes become ambiguous. Colouring each box's
+  # BORDER with its own wedge's fill identifies it without a leader
+  # line. White fill stays, so the number is still black-on-white.
   lab <- data.frame(
     label = ord$label,
     x     = ord$lx,
@@ -321,9 +292,8 @@ pie_labels_on_wedges <- function(df, cat_col, palette,
                  colour = "white", linewidth = 0.35)
   # Labels that fit inside their wedge: plain text. Labels that do not:
   # a rounded CHIP FILLED WITH ITS OWN WEDGE'S COLOUR, no border, black
-  # text -- the look of the published Figure3-NKAP_improved.pdf panel d,
-  # which Quinn asked every pie to match. The fill is what ties a chip
-  # to its wedge, so a chip may sit across neighbouring wedges.
+  # text. The fill is what ties a chip to its wedge, so a chip may sit
+  # across neighbouring wedges.
   inl <- lab[!lab$boxed, , drop = FALSE]
   if (nrow(inl))
     p <- p + geom_text(data = inl, aes(x = x, y = y, label = label),

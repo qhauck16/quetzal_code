@@ -1,13 +1,10 @@
 # Re-set an external vector PDF's text in the figures' own typeface.
 #
-# WHY: panels 1a and 2a are Illustrator schematics. Their labels are
-# real vector text, but in Arial / Arial-Bold / Arial-Italic (plus a
-# TeXGyreHeros-Bold title), all EMBEDDED as font subsets. Every
-# R-drawn panel uses `FONT_FAMILY` ("Helvetica"), which fontconfig
-# resolves to Nimbus Sans on this machine. Arial and Nimbus Sans are
-# metrically compatible but visually distinct (R leg, G spur, t and C
-# terminals, digit shapes), so the schematics read as a different
-# typeface from the rest of the page. Quinn asked for them to match.
+# WHY: panels 1a and 2a are Illustrator schematics whose labels are vector
+# text in embedded Arial subsets. Every R-drawn panel uses `FONT_FAMILY`
+# ("Helvetica"), which fontconfig resolves to Nimbus Sans. The two are
+# metrically compatible but visually distinct, so the schematics are re-set
+# to match the rest of the page.
 #
 # HOW: `pdftops -noembt1 -noembtt -noembcidps -noembcidtt` writes
 # PostScript that REFERENCES the fonts by name instead of embedding
@@ -18,18 +15,12 @@
 # compatible, nothing reflows: every string keeps its advance width
 # and the artwork's boxes still fit their labels.
 #
-# This is the only route available on midway3: there is no mutool,
-# qpdf binary, pikepdf, PyMuPDF or inkscape here, and poppler/cairo
-# cannot substitute a font on their own.
+# (No mutool, qpdf, pikepdf, PyMuPDF or inkscape is available on the build
+# host; poppler/cairo cannot substitute a font on their own.)
 #
-# KNOWN COSMETIC COST: the PostScript round trip makes Ghostscript
-# render the black block arrows' hairline stroke (a purple outline in
-# the source art) about a pixel wide, where poppler drew it
-# sub-pixel. It is a property of the gs round trip, not of the font
-# flags -- an embedded-font control run shows the same halo. Rasterise
-# the substituted PDF at a higher dpi (see the `dpi` argument at the
-# call sites) so the hairline stays sub-pixel relative to the drawn
-# size.
+# COSMETIC COST: the PostScript round trip renders the black block arrows'
+# hairline stroke about a pixel wide. Rasterise the substituted PDF at a
+# higher dpi (the `dpi` argument at the call sites) to keep it sub-pixel.
 
 # Returns the path of the substituted PDF, regenerating it only when
 # the source is newer (or `force`). Output lands beside the source as

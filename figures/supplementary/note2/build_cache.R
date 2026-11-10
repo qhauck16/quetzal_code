@@ -1,7 +1,6 @@
-# Cache for Supplementary Note 2, Figure 1 (was Supplementary Fig. S8): TCGA tumours carrying the NKAP
+# Cache for Supplementary Note 2, Figure 1: TCGA tumours carrying the NKAP
 # neurodevelopmental-syndrome substitutions (p.R330C, p.R330H) vs their cohorts.
-# Ported from tcga/genome_wide/flashier/diff_splicing/nkap_rare_disease.Rmd
-# (same event set). Extended: PSI for EVERY sample of the two cohorts, not
+# PSI for EVERY sample of the two cohorts, not
 # just the cohort median, so the figure can show the carrier's rank.
 #
 # Events: NKAP 20v60 LeafCutter, dPSI > 0.05, FC > 2.5, alt 3'ss whose cryptic

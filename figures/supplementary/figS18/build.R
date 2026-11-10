@@ -1,12 +1,10 @@
 # Supplementary figure: GSP #30 vs YLPM1 expression.
 #   a  top 100 samples on GSP #30: log loading vs YLPM1 expression
 #      (TCGA cohort-scaled RPM), YLPM1 mutants labelled
-#      (ylpm1_lof_investigation.Rmd)
 #   b  YLPM1 LoF samples split by SVM phenotype status
 #   c  YLPM1 expression: phenotype-positive, the 25 phenotype-negative
 #      intermediates nearest the boundary, and everyone else
-#      (diff_splicing/ylpm1/top500_alt3_fc_vs_loading.Rmd, last two
-#       chunks). Wilcoxon rank-sum p-values.
+#      Wilcoxon rank-sum p-values.
 # NB LoF = protein change matching "*", "fs" or "splice", the rule panel
 # b's source uses AND figure 4 panel a uses. The original panel a used
 # the table's plot_color column, which leaves X1783_splice as "other";

@@ -97,8 +97,7 @@ if (!have_cache("panel_c_matrix.tsv", "panel_c_cols.tsv",
 
   # Right-hand GSP labels: each label stays LEVEL WITH ITS OWN ROW, in
   # one of two staggered columns (near / far), so a leader is a short
-  # horizontal tick instead of a long diagonal (Quinn, 2026-10-05: "I
-  # don't want GSP21's label to be all the way down nearby GSP35").
+  # horizontal tick instead of a long diagonal.
   #
   # Placement is a greedy 2-D search, top row first. Candidates are
   # (column, dy) with dy stepping away from the row; a candidate must
@@ -155,8 +154,7 @@ if (!have_cache("panel_c_matrix.tsv", "panel_c_cols.tsv",
   # Far offset only has to clear the near labels that actually sit
   # BESIDE a far label (within one label height of it), not the widest
   # near label anywhere -- the label block packs tight and the heatmap
-  # gets the freed width (Quinn, 2026-10-05: "labels really right up
-  # against each other").
+  # gets the freed width.
   nb_w <- vapply(which(c_lab$pref == "far"), function(i) {
     k <- which(c_lab$pref == "near" & abs(c_lab$y_row - c_lab$y_row[i]) < text_h_rows)
     if (length(k)) max(c_w_in[k]) else 0
@@ -261,7 +259,7 @@ if (!have_cache("panel_c_matrix.tsv", "panel_c_cols.tsv",
                 hjust = 0, vjust = 0.5, size = SIZE_BASE * 0.62 / .pt,
                 family = FONT_FAMILY, color = "grey15") +
       scale_fill_gradientn(colours = heatmap_diverging(),
-                           limits = c(-0.6, 0.6), oob = scales::squish,   # was +-0.4: saturated (Quinn, 2026-10-05)
+                           limits = c(-0.6, 0.6), oob = scales::squish,
                            name = "Pearson r",
                            breaks = c(-0.6, 0, 0.6)) +
       scale_x_continuous(breaks = seq_len(nrow(c_cols)),
@@ -313,7 +311,6 @@ if (!have_cache("panel_c_matrix.tsv", "panel_c_cols.tsv",
             # c, a plain ggplot, does not. Measured at 400 dpi, c's
             # title sat 54 px (~9.7 pt) above b's. Re-measure with
             # scratch/titletop.R if either panel's wrapper changes.
-            # 12 -> 9.7 pt after COL_W$bc widened c: re-measured b 67 / c 80 px.
             plot.margin     = margin(9.7, 2, 2, 22, "pt")) +
       # 65 deg, not the default 45: at ~4.4 pt per column a 45 deg label
       # has only 3.1 pt of perpendicular pitch -- less than its own cap

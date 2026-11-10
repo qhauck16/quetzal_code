@@ -1,5 +1,5 @@
 # Figure 3, panel a. Sourced by ../compose.R, which supplies the shared
-# setup (theme tokens, FLASHIER path, ROW_H, COL_W, panel_cached).
+# setup (theme tokens, ROW_H, COL_W, panel_cached).
 # Must leave `panel_a` defined.
 #
 # Rebuild just this panel:   Rscript compose.R a
@@ -7,40 +7,14 @@
 # a. Somatic mutations in NKAP, PRPF8, FAM50A and SLU7 are enriched
 #    upon GSP #13. Left: full CDF with the zoom region boxed.
 #    Right: the zoom, with each sample's protein change labelled.
-#    Source: flash_fact_char.Rmd lines 3096-3303.
 #
-# This is figure 2 panel d's pattern. The reference's own version was
-# assembled by hand (titles deleted, legend rebuilt, zoom box drawn in
-# Illustrator); all of that is done in R here.
-#
-# ------------------------------------------------------------------
-# WHY THIS PANEL NO LONGER USES ggrepel
-# ------------------------------------------------------------------
-# 47 labels, four classes, and a 15%-of-panel band (cumulative 85-100%)
-# that on its own wants 23 of them. Measured at 400 dpi the zoom panel
-# is 127.8 x 152.5 pt, so that band is 5 text rows tall and the labels
-# in it are 560 pt of text -- 88% linear occupancy. ggrepel cannot
-# solve that, and it cannot even see why: it only avoids its OWN
-# layer's data, so it has no idea where the markers, the four step
-# staircases or the other repel layer are. What it produced was a knot
-# of six overprinted strings at ~88-93% with the red step line running
-# through "N1881insKN".
-#
-# Everything is placed by `cdf_place_labels()` below instead: an
-# explicit 2-D solver that knows every obstacle and searches a
-# cost-ordered candidate grid (slide out in x AND step in y). The
-# overflow goes into the >100% headroom and into the half-empty
-# 68-85% band, which is exactly the space ggrepel could not reach.
-# The same function, verbatim, places figure 4 panel a -- the two
-# panels are the same idiom and must stay siblings.
-#
-# Things tried here that did NOT work (do not redo):
-#   * loosening ggrepel's force / force_pull, growing ROW_H[["ab"]],
-#     pinning classes to flanks -- all helped, none was enough;
-#   * a deterministic per-flank pre-spread that assigned each label a
-#     y by RANK with a minimum gap. It ignores where the point
-#     actually is, so leaders grew long, crossed into the other
-#     class's column and scrambled the NKAP diagonal.
+# Labels are placed by `cdf_place_labels()` below rather than ggrepel:
+# 47 labels crowd the 85-100% band, and ggrepel only avoids its OWN
+# layer's data, so it cannot see the markers or the step lines. The
+# solver knows every obstacle and searches a cost-ordered candidate grid
+# (slide out in x AND step in y), spilling overflow into the >100%
+# headroom and the sparser 68-85% band. The same function places
+# figure 4 panel a.
 
 source("scripts/nkap_variants.R")
 
@@ -49,8 +23,7 @@ A_INFO <- vt_path("NKAP_full_plus_variants")
 # ==================================================================
 #  Shared "CDF + labelled zoom" label machinery.
 #  KEEP IN SYNC with ../../figure4/panel_a/build.R -- the two copies
-#  are deliberately identical (only these two build.R files may be
-#  edited, so the code cannot live in ../scripts/).
+#  are deliberately identical.
 # ==================================================================
 
 # Exact Helvetica metrics. Widths must come from a *cairo* device:
@@ -181,9 +154,8 @@ cdf_place_labels <- function(labs, pts, segs, xlim, ylim, w_in, h_in,
   # The box has to be as tall as the FONT, not as the measured ink.
   # geom_text(vjust = 0.5) centres each string on its OWN ink box, so
   # "R366Q" (caps only) and "N1881_V1883dup" (underscore below the
-  # baseline) sit differently inside the same nominal row -- and two
-  # stacked boxes sized from cairo's grobHeight printed the upper
-  # string's underscore as a bar through the lower string's digits.
+  # baseline) sit differently inside the same nominal row; ink-sized
+  # boxes let one string's underscore print through its neighbour.
   # 0.94 em spans cap height + descender with a little slack.
   th <- max(m$h, lab_pt * 0.92)
   hw <- (m$w / 2 + pad_x) * ux
@@ -243,10 +215,8 @@ cdf_place_labels <- function(labs, pts, segs, xlim, ylim, w_in, h_in,
       ay <- labs$y[i] + G$d[k] * uy
       cx <- ax + md * hw[i]; cy <- ay
       hv <- if (md < 0) 1 else 0
-      # The text is anchored pad_x INSIDE the box edge. Anchoring it
-      # at the edge itself puts all of pad_x on the far side and
-      # none between the string and its own marker, which is what
-      # printed "Y1506*" flush against its point.
+      # The text is anchored pad_x INSIDE the box edge, so the gap
+      # sits between the string and its own marker.
       lx <- ax + md * pad_x * ux
     } else {
       cx <- labs$x[i]
@@ -270,16 +240,12 @@ cdf_place_labels <- function(labs, pts, segs, xlim, ylim, w_in, h_in,
   # SOFT: a leader crossing another leader (w_cross) and a leader
   # passing within lead_pad of a string without entering it
   # (w_graze -- a hairline 1 pt past the final "I" of "R290I" prints
-  # as "R290Il"). Both were tried as hard constraints and both made
-  # things WORSE: they take slots away from the greedy so early that
-  # later labels end up needing the level-2 escape hatch, and a
-  # leader clean through a string is far uglier than either. As
-  # penalties they simply steer.
+  # as "R290Il"). As hard constraints these take slots away from the
+  # greedy too early and force later labels onto the relaxation ladder.
   #
   # The relaxation ladder is the last resort, one step at a time:
   # level 1 lets a leader cross a string, level 2 lets a step line
-  # cross it. Level 2 is the defect this panel started with and
-  # exists only so a label can never be silently dropped.
+  # cross it. Level 2 exists only so a label is never silently dropped.
   place_once <- function(ord, relax) {
     lx <- ly <- sx <- sy <- ex <- ey <- rep(NA_real_, n)
     hj   <- rep(0, n)
@@ -468,12 +434,9 @@ panel_a <- panel_cached("a", local({
   # Where the two zoom-callout lines END, in the CDF's y units. The
   # zoom panel is taller than the CDF panel (the CDF gives a third of
   # its own cell to the legend below it), so both ends sit OUTSIDE
-  # A_YLIM -- that is the point, the lines have to splay to reach the
-  # zoom's corners. Set by eye against the render, since the two panels
-  # are separate plots and neither knows the other's drawn height.
-  # MEASURED 2026-10-05 with ../../scripts/measure_zoom_connectors.py (box corners
-  # -> zoom panel's left axis line, in this CDF's data units). Re-run it after ANY
-  # layout change to this row; hand-tuned values drifted off the corners.
+  # A_YLIM -- the lines splay to reach the zoom's corners. Measured with
+  # ../../scripts/measure_zoom_connectors.py (box corners -> zoom panel's
+  # left axis line); re-run it after any layout change to this row.
   A_CALL_DX   <- 1.5268
   A_CALL_TOP  <- 107.450
   A_CALL_BOT  <- -94.369
@@ -506,11 +469,10 @@ panel_a <- panel_cached("a", local({
   a_lab  <- filter(a_zoom, nzchar(proteinChange))
 
   # The zoom gets its OWN y range, not the CDF's. Every class is
-  # already past 60% by log = -4, so sharing c(0, 108) squeezed all 47
-  # labelled points into the top third and left the labels nothing to
-  # spread into. The headroom above 100% is where the solver parks the
-  # overflow from the crowded 85-100% band; 114 is the smallest top
-  # that still holds four text rows there (measured, see below).
+  # already past 60% by log = -4, so sharing c(0, 108) would squeeze all
+  # 47 labelled points into the top third. The headroom above 100% is
+  # where the solver parks the overflow from the crowded 85-100% band;
+  # 114 is the smallest top that holds four text rows there.
   A_ZLIM <- c(floor(min(a_zoom$cumulative)) - 2, 110)
 
   # Drawn size of the zoom's PANEL (not its cell), in inches. Every
@@ -523,21 +485,11 @@ panel_a <- panel_cached("a", local({
   #   A_FURN_H  the row height that is NOT panel -- the plot_annotation
   #             title band, the zoom's x tick labels and axis title.
   #
-  # Both measured at 400 dpi on the render (find the horizontal run of
-  # the zoom's x-axis line and the vertical run of its left border,
-  # then subtract from the cell rectangle). With COL_W$ab = c(.52,.48)
-  # and A_SPLIT = c(1, 1.62) the cell was 1768 px, panels 535 + 866 px
-  # => 367 px = 0.9175 in of furniture; the row was 1180 px and the
-  # zoom panel 857 px => 323 px = 0.8075 in.
-  # RE-MEASURE after any change to ROW_H[["ab"]], COL_W$ab, A_SPLIT or the
-  # axis furniture; the formula tracks the first three on its own but
-  # the two constants are measurements, not theory.
-  # 0.9175 -> 0.9475: re-measured at COL_W$ab = c(.60,.40) with the
-  # legend back at SIZE_BASE. NB the left cell is no longer set by
-  # A_SPLIT at all -- the legend's longest entry (2.11 in of text plus
-  # ~0.14 in of key and gap) pins it -- so any further widening of
-  # COL_W$ab[1] goes almost entirely to the ZOOM, which is what Quinn
-  # asked for ("make the zoomed portion of 3a larger (wider)").
+  # Both are measured on the render (zoom x-axis line and left border
+  # against the cell rectangle). Re-measure after any change to
+  # ROW_H[["ab"]], COL_W$ab, A_SPLIT or the axis furniture. The left
+  # cell's CDF width is pinned by the legend's longest entry, so
+  # widening COL_W$ab[1] goes almost entirely to the zoom.
   A_FURN_W  <- 0.9475
   A_FURN_H  <- 0.8075
   A_SPLIT   <- c(1, 1.62)   # CDF panel : zoom panel (patchwork widths)
@@ -547,35 +499,24 @@ panel_a <- panel_cached("a", local({
 
   A_LAB_PT  <- SIZE_BASE * 0.62
   A_PT_SIZE <- 0.9
-  # Legend text size, as a fraction of SIZE_BASE. The long entry
-  # "No PRPF8/NKAP/FAM50A/SLU7 variant" is 2.11 in of Helvetica at
-  # SIZE_BASE, and the left column has to hold it; A_SPLIT is what
-  # buys the room. Quinn's rule is stretch the plot, not shrink the
-  # type, so this stays at 1 unless the column genuinely cannot.
+  # Legend text size, as a fraction of SIZE_BASE. The long legend entry
+  # has to fit the left column; A_SPLIT buys the room rather than
+  # shrinking the type.
   A_LEG_F <- 1
 
   # Gutters in points. The long strings overhang the point cloud
   # rather than pushing the axis out.
-  # 40/16 -> 48/20, found by an offline sweep over the solver (it is
-  # cheap to re-run: the solver is a pure function of these two numbers
-  # plus the panel width). At the drawn width this takes the solution
-  # from 21-22 leaders / 386 pt of total leader to 17 leaders / 303 pt,
-  # with the longest leader down from 45.4 to 34.7 pt.
-  # DO NOT tune `polish` instead: above 80 rounds the leader count gets
-  # WORSE, because the solver minimises total displacement, not leader
-  # count, and more polish just finds a lower-displacement arrangement
-  # that happens to use more leaders.
+  # 48/20 minimises leader count and length in a sweep over the solver.
+  # Raising `polish` above ~80 rounds does not help: the solver minimises
+  # total displacement, not leader count.
   a_lim <- cdf_xlim(a_zoom$logk13, A_ZOOM_W_IN, 48, 20)
 
   # Side preference, SOFT (w_flip) and per class. Only NKAP asks for
   # one: its 20 points are the long lower diagonal with room on both
   # sides, and alternating is what keeps it reading as a DIAGONAL
-  # rather than a column. Pinning the other three to a flank -- which
-  # is what the ggrepel version had to do -- is actively harmful now:
-  # PRPF8's stack sits ~10 pt from the panel's left edge, so "left"
-  # is a flank it does not have, and forcing it there made the solver
-  # buy the flank with 30 pt of vertical travel and a leader across
-  # the panel. Let it choose.
+  # rather than a column. The other three choose freely: PRPF8's stack
+  # sits ~10 pt from the panel's left edge, so pinning it to a flank
+  # would cost long vertical travel and a leader across the panel.
   A_SIDE <- c("NKAP variant"   = 9,    # 9 = alternate
               "PRPF8 variant"  = 0,    # 0 = let the solver choose
               "FAM50A variant" = 0,
@@ -651,15 +592,11 @@ panel_a <- panel_cached("a", local({
     "guide-box-bottom", return_all = TRUE))
 
   # ---- zoom callout ----------------------------------------------
-  # Quinn: "draw lines from the bounding box of the full CDF to the
-  # inset to indicate it is a zoom-in" -- figure 2 panel b's idiom.
-  # The box's right edge already IS the CDF panel's right edge, and the
-  # zoom's y axis is blanked, so the two panels sit only about a tenth
-  # of an inch apart. The lines are therefore SHORT: they leave the
-  # box's two right corners and fan out towards the zoom panel's two
-  # left corners, which sit outside the CDF's own y range because the
-  # zoom is full-cell height while the CDF gives a third of its cell to
-  # the legend.
+  # Lines from the CDF's zoom box to the zoom panel mark it as a
+  # zoom-in. They leave the box's two right corners and fan out towards
+  # the zoom panel's two left corners, which sit outside the CDF's own
+  # y range because the zoom is full-cell height while the CDF gives a
+  # third of its cell to the legend.
   # The x reach is the physical gap pushed through the CDF panel's
   # drawn width, so it tracks COL_W$ab rather than being typed in.
   A_CDF_W_IN <- (A_CELL_W - A_FURN_W) * A_SPLIT[1] / sum(A_SPLIT)
@@ -684,12 +621,12 @@ panel_a <- panel_cached("a", local({
                        "and SLU7 are enriched upon GSP #13")),
         # Zero top margin on both: patchwork stacks a plot_annotation
         # title on its own plot margin, which the labs()-titled panels
-        # do not have. See ../figure2/compose.md.
+        # do not have.
         theme = theme(plot.title = ggtext::element_markdown(halign = 0.5, lineheight = 0.9,
           size = SIZE_TITLE, face = "bold", hjust = 0.5,
           # 2 pt top: panel a is titled via plot_annotation() and panel
-          # b via labs(), which patchwork spaces differently. Measured
-          # at 400 dpi, a's title sat 9 px (1.6 pt) above b's.
+          # b via labs(), which patchwork spaces differently; this levels
+          # the two titles.
           family = FONT_FAMILY, margin = margin(2, 0, 2, 0)),
           plot.margin = margin(0, 0, 0, 0))))
 }))

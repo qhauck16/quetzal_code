@@ -1,7 +1,7 @@
 ## pygenome Snakefile config
 
 # Current flashier RDS (relative to pygenome/)
-rds_path: "../just_for_fun/nmd_investigation/softimpute_flash_300_qc_filtered.RDS"
+rds_path: "../../quetzal_runs/genome_wide/softimpute_flash_300_qc_filtered.RDS"
 
 # TCGA sample metadata (rail_id <-> tcga_barcode <-> project_id)
 tcga_metadata: "../../inputs/tcga_v2_samples.tsv"

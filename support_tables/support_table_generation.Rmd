@@ -245,7 +245,7 @@ process_gene_data <- function(dat_file_path, junction_coverage) {
 # --- Main execution block (PARALLELIZED) ---
 
 # 1. Find all 'dat.tsv' files recursively
-# The path provided by the user: "../251107_filters/chr{1-22, X}/gene_name/dat.tsv"
+# Per-gene junction tables: ../leafcutter_analyses/junction_tables/chr*/<gene>/dat.tsv
 base_path <- "../leafcutter_analyses/junction_tables/"
 all_dat_files <- list.files(
     path = base_path,

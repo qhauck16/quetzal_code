@@ -12,7 +12,7 @@
 !*.smk
 !*.yaml
 !*.yml
-!*.md
+!README.md
 !.gitignore
 !.quetzal_root
 

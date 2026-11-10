@@ -21,8 +21,7 @@ prep_pygenometrack <- function(gene_name, chr, strand, region,
   # Top n_top YLPM1 samples by k30
   set.seed(123)
   YLPM1_full_info <- read_tsv('../figures/figure4/cache/YLPM1_full_plus_variants.tsv',
-         # mutation cols are ~all NA: readr would guess logical and
-         # silently NA every call (2026-10-05)
+         # mutation cols are ~all NA: readr would guess logical and NA every call
          col_types = cols(.default = col_guess(), gene_mutation = col_character(), wxs_mutation = col_character(), rnaseq_mutation = col_character()), show_col_types = FALSE) %>%
     arrange(desc(k30))
 

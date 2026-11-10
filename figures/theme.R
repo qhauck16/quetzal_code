@@ -15,9 +15,9 @@ suppressPackageStartupMessages({
 # ------------------------------------------------------------------
 # Typography
 # ------------------------------------------------------------------
-# Nimbus Sans = URW metric clone of Helvetica. Cairo/fontconfig on midway
-# does NOT alias "Helvetica" to it -- it fell back to DejaVuSans in every
-# PDF until 2026-09-24 -- so name the face directly.
+# Nimbus Sans = URW metric clone of Helvetica. Cairo/fontconfig does NOT
+# alias "Helvetica" to it (it falls back to DejaVuSans), so name the face
+# directly.
 FONT_FAMILY <- "Nimbus Sans"
 
 # Point sizes for on-page text (converts to ggplot2's ~mm via /.pt)
@@ -42,7 +42,7 @@ PAL <- list(
   tcga_other = "grey70",     # pooled "Other TCGA" (gray)
   gtex       = "#3d8f4a",    # GTEx-BLOOD / GTEx-LUNG (green)
   # Factor-index -> arc fill. Keyed by fact_idx used in plot_factor_junctions_static.
-  # BDH1 k4 = red (like the reference); EZH2 k6 = navy; NF1 k1 = pink.
+  # BDH1 k4 = red; EZH2 k6 = navy; NF1 k1 = pink.
   factor = c(
     "1"  = "#d33f6a",         # NF1 k1
     "2"  = "#fc8d62",
@@ -70,7 +70,7 @@ PAL <- list(
   # plot so a class looks identical in both).
   sf3b1_mut = c(
     "SF3B1 hotspot mutation"      = "#C0392B",
-    # Was #A6CEE3: too pale to read as label TEXT on white (QA review).
+    # Darker than the paired-palette blue so it reads as label TEXT on white.
     "Mutation Near SF3B1 Hotspot" = "#5B9BD5",
     "Other SF3B1 Mutation"        = "#2E8B57",
     "No SF3B1 Mutation"           = "#34495E"
@@ -153,8 +153,8 @@ theme_track <- function() {
       axis.text.y    = element_blank(),
       axis.ticks.y   = element_blank(),
       axis.title.y   = element_blank(),
-      # No axis lines at all -- the horizontal x-axis line was reading
-      # visually as a "separator" between the arcs and the gene body.
+      # No axis lines at all -- a horizontal x-axis line reads as a
+      # "separator" between the arcs and the gene body.
       axis.line      = element_blank(),
       axis.ticks.x   = element_line(color = "grey40", linewidth = 0.3)
     )
@@ -181,9 +181,9 @@ plot_annotation_publication <- function() {
 
 # patchwork styles each tag from ITS OWN panel's theme, so the
 # plot_annotation(theme=) above never reaches wrap_elements() panels or
-# nested patchworks -- every "a" rendered plain until 2026-09-24. Set the
-# tag style (and the text family, so no stray DejaVuSans) on the global
-# default theme and geom defaults too; only these elements are touched.
+# nested patchworks. Set the tag style (and the text family, so no stray
+# DejaVuSans) on the global default theme and geom defaults too; only
+# these elements are touched.
 theme_update(text     = element_text(family = FONT_FAMILY),
              plot.tag = element_text(size = SIZE_PANEL_LABEL, face = "bold",
                                      family = FONT_FAMILY))
@@ -191,8 +191,7 @@ for (.g in c("text", "label")) update_geom_defaults(.g, list(family = FONT_FAMIL
 rm(.g)
 
 # ------------------------------------------------------------------
-# Gene symbols in italics (Quinn: "Everywhere we say YLPM1 or NKAP or
-# any gene name should be italicized across all figures").
+# Gene symbols in italics, across all figures.
 #
 # A title like "YLPM1 LoF confers ..." is MIXED roman/italic, which
 # element_text cannot do, so such strings go through gene_md() and are
@@ -206,18 +205,16 @@ rm(.g)
 # literal asterisks ("Q437*") that markdown would read as emphasis.
 # Those are escaped here too.
 #
-# AFTER switching a title to md_title(), RE-MEASURE the row's title
-# alignment (scripts/title_align.R, strip cropped from the row's top
-# edge): gridtext sets line height slightly differently from grid, so
-# a markdown title and a plain one in the same row can drift.
+# After switching a title to md_title(), re-check the row's title
+# alignment (scripts/title_align.R): gridtext sets line height slightly
+# differently from grid, so a markdown title and a plain one in the same
+# row can drift.
 # ------------------------------------------------------------------
 # ggtext must be ATTACHED, not just referenced as ggtext::element_markdown.
-# A panel built fresh loads the namespace as a side effect of that call,
-# but a panel read back from panels/*.rds never calls it -- and without
-# the namespace loaded, ggtext's element_grob method is not registered,
-# so ggplot falls back to plain element_text and prints the raw markup
-# ("<i>NKAP</i>, <br>...") in the title. That is exactly what figure 3
-# panel a's title did after a cached rebuild.
+# A panel read back from panels/*.rds never calls ggtext itself, and
+# without the namespace loaded ggtext's element_grob method is not
+# registered, so ggplot falls back to plain element_text and prints the
+# raw markup ("<i>NKAP</i>, <br>...") in the title.
 suppressPackageStartupMessages(library(ggtext))
 
 GENE_SYMBOLS <- c("NKAP", "PRPF8", "PRP8", "FAM50A", "SLU7", "YLPM1",
@@ -253,9 +250,8 @@ md_text <- function(size = SIZE_BASE, ...)
 # Needed wherever a legend or other grob is extracted up front (e.g.
 # cowplot::get_plot_component) and contains markdown text: gridtext lays
 # out words at build time, and under the default device's narrower AFM
-# metrics the words were placed too close and printed over each other
-# once cairo drew them ("frameshift/early stop" -> "early" and "stop"
-# overlapping in figure 4 panel a's legend).
+# metrics the words are placed too close and overprint once cairo draws
+# them.
 with_cairo_metrics <- function(expr) {
   old <- grDevices::dev.cur()
   tf  <- tempfile(fileext = ".pdf")
@@ -270,9 +266,8 @@ with_cairo_metrics <- function(expr) {
 
 # Plotmath twin of gene_md(), for LEGEND labels. Returns a list of
 # expressions with each gene symbol wrapped in italic(). Legends use
-# this rather than markdown: a gridtext legend label measured its words
-# in one font and drew them in another, so in figure 4 panel a
-# "early" and "stop" printed on top of each other. Plotmath is laid out
+# this rather than markdown: a gridtext legend label can be measured in
+# one font and drawn in another, so words overprint. Plotmath is laid out
 # and drawn by grid itself, so measurement and drawing always agree.
 gene_pm <- function(x, genes = GENE_SYMBOLS) {
   pat <- paste0("(?<![A-Za-z0-9])(",
@@ -308,14 +303,12 @@ cairo_pdf_pub <- function(...) {
     symbolfamily = grDevices::cairoSymbolFont(FONT_FAMILY, usePUA = FALSE))
 }
 
-# Final-output writer for every figure (2026-10-05). cairo_pdf lays text
-# out through pango 1.50, which rounds every glyph position to a whole
-# point: at 6-10 pt that opened visible gaps inside words ("Mutati ons",
-# "Enconuc lease"). svglite writes each text run with its exact position
-# and width and leaves glyph layout to the renderer; cairosvg then draws
-# it through cairo's own text API (no pango, no rounding) and embeds
-# Nimbus Sans. Same page size, fonts, plotmath and Unicode as before.
-# Text MEASUREMENT for layout (with_cairo_metrics) is unchanged.
+# Final-output writer for every figure. cairo_pdf lays text out through
+# pango, which rounds every glyph position to a whole point: at 6-10 pt
+# that opens visible gaps inside words. svglite writes each text run with
+# its exact position and width; cairosvg then draws it through cairo's
+# own text API (no pango, no rounding) and embeds Nimbus Sans.
+# Text MEASUREMENT for layout (with_cairo_metrics) still uses cairo_pdf.
 CAIROSVG <- Sys.getenv("CAIROSVG", unname(Sys.which("cairosvg")))   # cairosvg binary (set CAIROSVG if not on PATH)
 ggsave_pub <- function(filename, plot, width, height, units = "in", ...) {
   svg <- tempfile(fileext = ".svg")

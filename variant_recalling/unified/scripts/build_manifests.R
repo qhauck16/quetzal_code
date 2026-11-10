@@ -50,10 +50,8 @@ key <- key %>%
     )
   )
 
-# Each rail_id is ONE aliquot. Until 2026-09-25 files were joined to
-# rail_ids by 12-char patient ID, so a patient's other sample (another
-# vial, a metastasis/recurrence) could stand in for the rail's own RNA:
-# 2 SF3B1 + 2 NKAP rna_manifest rows were a different aliquot. Now:
+# Each rail_id is ONE aliquot (joining by 12-char patient ID would let a
+# patient's other sample stand in for the rail's own RNA). Files are joined as:
 #   RNA-Seq    -> the rail's exact aliquot barcode (tcga_barcode)
 #   WXS tumour -> same SAMPLE as the rail (first 16 chars, e.g.
 #                 TCGA-44-2665-01A; DNA aliquots differ from RNA ones)

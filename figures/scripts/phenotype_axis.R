@@ -1,18 +1,8 @@
 # Top-N alt-splice-site PSI matrices and the SVM "phenotype axis" score per
 # TCGA sample, for SF3B1 (GSP #10), NKAP (GSP #13) and YLPM1 (GSP #30).
 #
-# Ported 2026-10-06 from tcga/genome_wide/flashier/diff_splicing/
-# {sf3b1,nkap,ylpm1}/top500_alt3_fc_vs_loading.Rmd (chunks "shared inputs",
-# "load <comp> comparison", "assign splice types", "pick top ...", "build
-# PSI matrix over selected junctions", "phenotype axis svm setup / fit",
-# "phenotype axis plots" -> phen_df), so quetzal_code builds every table
-# figures 2f, S13, S17 and S18 read. Logic is the Rmds'; the three copies
-# differed only in gene, comparison, splice types and loading table.
-#
-# One deliberate fix: the YLPM1 Rmd wrote ylpm1_top500_alt3_5_fc5_psi.tsv
-# but trained the SVM on ylpm1_top500_alt3_fc5_psi.tsv, a stale April file
-# (same 467 junctions then, so no difference in the published numbers). Here
-# the SVM always uses the matrix built in the same run.
+# figures 2f, S13, S17 and S18 read these tables. The SVM is always trained
+# on the PSI matrix built in the same run.
 #
 # Drivers (one per figure, each writes its own cache/):
 #   figure2/scripts/build_cache_sf3b1_phenotype.R  (30v90, alt 3'ss, k10)
@@ -28,7 +18,7 @@ select <- dplyr::select; filter <- dplyr::filter; rename <- dplyr::rename
 
 PA_FIG_ROOT <- file.path(QROOT, "figures")
 
-# ---- "shared inputs" -----------------------------------------------------
+# ---- shared inputs -------------------------------------------------------
 pa_annotation <- function() {
   intron_df <- fread(file.path(QROOT, "leafcutter_analyses/diff_splicing/gencode_v46_introns.tsv"), data.table = FALSE)
   mane_transcripts <- fread(file.path(QROOT, "inputs/MANE.GRCh38.v1.4.summary.txt"), data.table = FALSE)
@@ -38,7 +28,7 @@ pa_annotation <- function() {
          select(start, end, strand, gene_name, seqnames) %>% unique())
 }
 
-# ---- "load <comp> comparison" --------------------------------------------
+# ---- load one comparison -------------------------------------------------
 pa_load_comparison <- function(results_dir, A) {
   leaf_sig <- read_tsv(file.path(results_dir, "leafcutter_ds_cluster_significance.txt"),
                        show_col_types = FALSE)
@@ -62,7 +52,7 @@ pa_load_comparison <- function(results_dir, A) {
     filter(p.adjust <= 0.05) %>% unique()
 }
 
-# ---- "assign splice types" (dpsi > 0, FC > 5, MANE-intron classes) --------
+# ---- assign splice types (dpsi > 0, FC > 5, MANE-intron classes) --------
 pa_assign_splice_types <- function(full_leaf_sig, A, dpsi_thresh = 0, fc_thresh = 5) {
   mane_introns <- A$mane_introns
   high_psi_hits <- full_leaf_sig %>% filter(deltapsi > dpsi_thresh, test / control > fc_thresh)
@@ -106,7 +96,7 @@ pa_assign_splice_types <- function(full_leaf_sig, A, dpsi_thresh = 0, fc_thresh 
     group_by(gene_name, start, end) %>% filter(n() < 2) %>% ungroup()
 }
 
-# ---- "pick top ..." + "build PSI matrix over selected junctions" ----------
+# ---- pick top junctions + build PSI matrix over them ---------------------
 pa_top_junctions <- function(df_final, types, n = 500) {
   df_final %>% filter(type %in% types) %>% slice_max(deltapsi, n = n) %>%
     mutate(start = as.integer(start), end = as.integer(end))
@@ -134,7 +124,7 @@ pa_psi_matrix <- function(top) {
   Reduce(function(x, y) merge(x, y, by = "rail_id", all = TRUE), result_list)
 }
 
-# ---- "phenotype axis svm setup / fit / plots" -> phen_df ------------------
+# ---- phenotype axis SVM setup / fit -> phen_df ---------------------------
 pa_extract_scores <- function(fit, X) {
   dv <- predict(fit, X, decisionValues = TRUE)$decisionValues
   useful_col <- which.max(colSums(abs(dv)))

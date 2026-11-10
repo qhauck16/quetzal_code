@@ -1,26 +1,26 @@
 # Panels 1d + 1e pipeline config. Path values here must match the
 # equivalent entries in `quetzal_code/paths.yaml`.
 paths:
-  gencode_granges:    "/project2/yangili1/qhauck/spliceNMF/tcga/hg38_granges.RDS"
-  tcga_metadata:      "/project2/yangili1/qhauck/spliceNMF/tcga/tcga_v2_samples.tsv"
-  gtex_metadata:      "/project2/yangili1/qhauck/spliceNMF/gtexv2_metadata.tsv"
-  mane_transcripts:   "/project2/yangili1/qhauck/spliceNMF/tcga/genome_wide/flashier/diff_splicing/MANE.GRCh38.v1.4.summary.txt"
-  gtex_dat_dir:       "/project2/yangili1/qhauck/spliceNMF/gtex/genome_wide/260120_filters/"
+  gencode_granges:    "../../../inputs/gencode_v46_granges.RDS"
+  tcga_metadata:      "../../../inputs/tcga_v2_samples.tsv"
+  gtex_metadata:      "../../../inputs/gtexv2_metadata.tsv"
+  mane_transcripts:   "../../../inputs/MANE.GRCh38.v1.4.summary.txt"
+  gtex_dat_dir:       "../../../leafcutter_analyses/junction_tables_gtex/"
   # holds chr*/{gene}/{res,de_res,results,dat}
-  tcga_chr_dir:       "/project2/yangili1/qhauck/spliceNMF/tcga/gene_level_poisson"
-  psi_dir:            "/project2/yangili1/qhauck/spliceNMF/tcga/leafcutter/leaf2_try/new_psi_files/"
-  leaf2_class:        "/project2/yangili1/qhauck/spliceNMF/tcga/leafcutter/leafcutter2/clustering/Leaf2_junction_classifications.txt"
-  tcga_bw_dir:        "/project2/yangili1/qhauck/spliceNMF/tcga/recount3_bigwigs/tcga_bws"
-  gtex_bw_dir:        "/project2/yangili1/qhauck/spliceNMF/tcga/recount3_bigwigs/gtex_bws"
+  tcga_chr_dir:       "../../../quetzal_runs/gene_level"
+  psi_dir:            "../../../leafcutter_analyses/psi_files/"
+  leaf2_class:        "../../../leafcutter_analyses/leaf2_classification/clustering/Leaf2_junction_classifications.txt"
+  tcga_bw_dir:        "../../../inputs/bigwigs/tcga"
+  gtex_bw_dir:        "../../../inputs/bigwigs/gtex"
+  # GenometracksByGenotype clone (github.com/bfairkun/GenometracksByGenotype); edit to your clone
   pygenome_aggregator: "~/software/GenometracksByGenotype/AggregateBigwigsForPlotting.py"
   pygenome_bed12:      "~/software/GenometracksByGenotype/PremadeTracks/gencode.v26.FromGTEx.genes.bed12.gz"
   # Filtered to just the EZH2_LAML + NF1_LUSC rows so snakemake only
-  # builds those two samples. The full-cohort version lives at
-  # tcga/gene_level_poisson/plotting_genes/gene_level_poisson_sig_results.tsv.
-  cosmic_sig_tsv:     "gene_level_poisson_sig_results.tsv"
-  cosmic_tier1_tsv:   "../../../data/cosmic_tier_1_11_3_2025.tsv"
+  # builds those two samples.
+  cosmic_sig_tsv:     "../../../gene_level_analysis/gene_level_poisson_sig_results.tsv"
+  cosmic_tier1_tsv:   "../../../inputs/cosmic_tier_1.tsv"
 
-# DE-junction filters (matches updated_single_gene_figures.Rmd defaults)
+# DE-junction filters
 thresholds:
   lfc_thresh:  2
   abs_thresh:  0.01

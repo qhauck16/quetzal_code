@@ -1,12 +1,9 @@
 # Supplementary figure: GSP #13 and #30 characterization.
 #   a, b  splice types of the driving unannotated junctions of the top 250
 #         single-gene junction groups on GSP #13 / #30
-#         (spec_flash_fact.Rmd "plotting information about splice site
-#          selection"; fact_{13,30}_top_junctions.tsv, one row per
-#          snaptron_id).
+#         (fact_{13,30}_top_junctions.tsv, one row per snaptron_id).
 #   c, d  per-sample mean PSI of the top 500 LeafCutter junctions,
 #         as fold change over the global mean, binned by log loading
-#         (diff_splicing/{nkap,ylpm1}/top500_alt3_fc_vs_loading.Rmd).
 if (!exists("QROOT")) QROOT <- local({ d <- normalizePath(getwd())   # quetzal_code root
   while (!file.exists(file.path(d, ".quetzal_root"))) { if (dirname(d) == d) stop("run from inside quetzal_code/"); d <- dirname(d) }
   d })

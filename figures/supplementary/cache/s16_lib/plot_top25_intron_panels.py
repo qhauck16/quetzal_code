@@ -1,5 +1,4 @@
-# Vendored 2026-10-06 from diff_splicing/ylpm1/ (S16 cache dependency); relative paths made absolute,
-# INFO_FILE repointed to the quetzal_code variant table.
+# S16 cache dependency; INFO_FILE points at the quetzal_code variant table.
 #!/usr/bin/env python3
 """Spot-check coverage plot for ONE YLPM1-axis disrupted intron.
 

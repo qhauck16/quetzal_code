@@ -4,10 +4,8 @@
 # the cohort(s) of interest vs matched GTEx tissue for the cohort-specific
 # genes, and a read-length boxplot of the top DE junction for the
 # read-length genes.
-# Source: tcga/gene_level_poisson/showcase_genes/supplementary_plots
-# (Snakefile + scripts/make_{structure_plot,cdf_plot,psi_box}.R +
-# config.yaml); the logic of each script is ported here as a function
-# returning a ggplot, restyled to the paper theme.
+# Inputs: per-gene RDS/PSI files listed in the showcase config; each
+# panel is built by a function returning a ggplot in the paper theme.
 if (!exists("QROOT")) QROOT <- local({ d <- normalizePath(getwd())   # quetzal_code root
   while (!file.exists(file.path(d, ".quetzal_root"))) { if (dirname(d) == d) stop("run from inside quetzal_code/"); d <- dirname(d) }
   d })

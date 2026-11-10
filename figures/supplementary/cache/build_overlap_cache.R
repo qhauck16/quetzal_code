@@ -1,13 +1,7 @@
-# Cache for supplementary figures S6 (Alsafadi 2016) and S7 (GSP vs
-# LeafCutter). Logic is spec_flash_fact.Rmd's ("alsafadi GSP10 overlap",
-# "matched background junctions by RPM and PSI", "4-cell overlap
-# heatmap ...", "venn diagram ...", "flashier-vs-leafcutter GSP
-# comparison panels"), except that the top-250 driving-junction sets are
-# read from fact_{10,13,30}_top_junctions.tsv -- the Rmd's own saved
-# output of build_gsp_top() + assign_types() -- instead of being rebuilt
-# from the 3.7 GB flashier RDS and 250 per-gene fits. Counts check out
-# against the published panels (GSP #10 alt 3'ss n = 168, GSP #13 203,
-# GSP #30 alt 3'/5'ss 188).
+# Cache for supplementary figures S6 (Alsafadi 2016) and S9 (GSP vs
+# LeafCutter). The top-250 driving-junction sets are read from
+# fact_{10,13,30}_top_junctions.tsv rather than rebuilt from the 3.7 GB
+# flashier RDS and 250 per-gene fits.
 if (!exists("QROOT")) QROOT <- local({ d <- normalizePath(getwd())   # quetzal_code root
   while (!file.exists(file.path(d, ".quetzal_root"))) { if (dirname(d) == d) stop("run from inside quetzal_code/"); d <- dirname(d) }
   d })
@@ -95,8 +89,8 @@ load_leaf <- function(gene, comp) {
 }
 specs <- list(list(10, "sf3b1", "alt 3'ss"), list(13, "nkap", "alt 3'ss"),
               list(30, "ylpm1", c("alt 3'ss", "alt 5'ss")))
-# S9 (2026-11-10, Quinn): no matched baseline -- the RPM/PSI-matched MANE introns
-# were not like-for-like with unannotated driving junctions. Each panel reports the
+# S9: no matched baseline -- RPM/PSI-matched MANE introns are not
+# like-for-like with unannotated driving junctions. Each panel reports the
 # driving junctions that are LeafCutter up- and down-regulated hits, and tests
 # direction among the hits: binom.test(up, up + down, p = 0.5).
 gsp_set <- function(fact, types) {

@@ -1,7 +1,6 @@
-# Supplementary Note 2, Figure 1 (was S19): TCGA tumours carrying the NKAP neurodevelopmental-
+# Supplementary Note 2, Figure 1: TCGA tumours carrying the NKAP neurodevelopmental-
 # syndrome substitutions (p.R330C, p.R330H) show the GSP #13 cryptic 3'ss
-# phenotype. Data: note2/cache/psi_long.tsv (note2/build_cache.R; ported from
-# diff_splicing/nkap_rare_disease.Rmd).
+# phenotype. Data: note2/cache/psi_long.tsv (note2/build_cache.R).
 #   a: per-sample ECDFs of PSI over the GSP #13 cryptic 3'ss events (alt 3'ss,
 #      -8..+20 nt; NKAP 20v60, dPSI > 0.05, FC > 2.5): every cohort sample in
 #      grey, the cohort's per-event median in black, the carrier in red.
@@ -45,10 +44,10 @@ cohort_med <- long %>% left_join(car %>% select(cohort, crid = rail_id), by = "c
   summarise(psi = median(psi), .groups = "drop")
 bg <- long %>% filter(!rail_id %in% car$rail_id)
 fg <- long %>% filter(rail_id %in% car$rail_id)
-# Panel a carries only the p-value and the legend (Quinn 2026-10-27); the test
+# Panel a carries only the p-value and the legend; the test
 # (one-sided paired Wilcoxon, carrier vs cohort median) is in the caption.
 ann_a <- stats %>% mutate(lab = sprintf("P = %.1e", p_wilcox))
-# Legend ON the plot (never as a subtitle under the title; Quinn 2026-10-27)
+# Legend ON the plot, not as a subtitle under the title
 KEY <- c(car = "p.R330H / p.R330C tumour", med = "Cohort median per event", oth = "Other tumours in the cohort")
 p_a <- ggplot() +
   stat_ecdf(data = bg, aes(psi, group = rail_id, colour = "oth"), linewidth = 0.15, alpha = 0.6) +

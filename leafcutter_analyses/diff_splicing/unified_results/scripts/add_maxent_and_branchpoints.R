@@ -39,9 +39,8 @@ feats$score_5ss <- read_scores(scored_5ss_path)
 # direction depends on strand:
 #   + strand: branchpoint_position < three_ss; signed distance = three_ss - bp
 #   - strand: branchpoint_position > three_ss; signed distance = bp - three_ss
-# A simple abs(bp - three_ss) used to pick "the nearest branchpoint in
-# either direction", which on minus-strand introns picked the nearest
-# downstream branchpoint (i.e., one belonging to a *different* intron).
+# (A strand-blind abs(bp - three_ss) would pick, on minus-strand introns, a
+# downstream branchpoint belonging to a different intron.)
 bp <- fread(branchpoints_path, data.table = FALSE)
 colnames(bp)[colnames(bp) == "Chromosome"] <- "chromosome"
 colnames(bp)[colnames(bp) == "Strand"]     <- "strand"

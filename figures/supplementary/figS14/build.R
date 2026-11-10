@@ -2,10 +2,7 @@
 # driving GSP #13, across PSI and FC cutoffs. Same as figure 3 panel e
 # (frameshifted vs in-frame alt 3'ss, cryptic site -20..0 nt from the
 # annotated 3'ss, mean scaled RPM in the top 20 samples on GSP #13) for
-# every (dPSI, FC) cell. Source: diff_splicing/combined_expression_
-# analysis.Rmd, plot_faceted_cdf("NKAP", nkap_df, "frameshift",
-# dist_window = c(-20, 0), require_alt3 = TRUE). One-sided Wilcoxon
-# (frameshifted < in-frame).
+# every (dPSI, FC) cell. One-sided Wilcoxon (frameshifted < in-frame).
 # Expression: figure 3 panel e's cache (the 13.4 GB matrix sliced to the
 # same 20 top samples), so the full matrix is never read here.
 # NB the LeafCutter table is the 20v60 dpsi0.01_fc2.5 instance, so every

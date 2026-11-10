@@ -1,7 +1,6 @@
-# Where each per-gene variant table lives (built inside quetzal_code by
+# Where each per-gene variant table lives (built by
 # figure{2,3,4}/scripts/build_cache_*_variants.R from
-# scripts/variant_tables.R; 2026-10-05). Readers call vt_path("<name>")
-# instead of pointing at tcga/genome_wide/flashier/.
+# scripts/variant_tables.R). Readers call vt_path("<name>").
 if (!exists("QROOT")) QROOT <- local({ d <- normalizePath(getwd())   # quetzal_code root
   while (!file.exists(file.path(d, ".quetzal_root"))) { if (dirname(d) == d) stop("run from inside quetzal_code/"); d <- dirname(d) }
   d })
@@ -13,7 +12,7 @@ VT_HOME <- c(SF3B1_full_info          = "figure2",
              YLPM1_full_info          = "figure4",
              YLPM1_full_plus_variants = "figure4",
              # top-500 PSI matrices + SVM phenotype-axis scores
-             # (scripts/phenotype_axis.R; 2026-10-06)
+             # (scripts/phenotype_axis.R)
              sf3b1_top500_alt3_fc5_psi     = "figure2",
              sf3b1_phenotype_axis_scores   = "figure2",
              nkap_top500_alt3_fc5_psi      = "figure3",

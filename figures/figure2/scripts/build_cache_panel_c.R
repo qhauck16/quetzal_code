@@ -6,7 +6,7 @@
 # 536 M. This script runs that expensive chain ONCE and persists only
 # what the plot needs, so compose.R never touches the big files.
 #
-# Source of truth: tcga/genome_wide/flashier/flash_fact_char.Rmd, chunks
+# Source analysis chunks:
 #   "loading re-used files", "correlating flashier factors with mutation
 #   status", "setting up covariates", "pearson correlation heatmap - all
 #   covariates", "correlation heatmap", and "correlation heatmap top 50

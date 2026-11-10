@@ -1,13 +1,11 @@
-# Figure 4f inputs that used to come from
-# diff_splicing/ylpm1/leafcutter_prep_and_analysis.Rmd:
-#   cache/panel_f_high_psi_hits.tsv  chunk "prep high_psi_hits for heatmaps":
+# Figure 4f inputs:
+#   cache/panel_f_high_psi_hits.tsv
 #       YLPM1 20v60 leafcutter, alt 3'ss + alt 5'ss, dPSI > 0.05, FC > 2.5
-#   cache/panel_f_tcga_mat.tsv       chunks "TCGA YLPM1 heatmap" + "parse
-#       through PSI tables" + the matrix chunk: logit(PSI), scaled, over
-#       those junctions, for the top 13 GSP #30 samples + 200 project-
-#       matched controls; NA -> 0, first occurrence per junction, clamp +-5.
-# The control draw is SEEDED here (set.seed(30)); in the Rmd it was an
-# unseeded slice_sample, reproducible only through its on-disk cache.
+#   cache/panel_f_tcga_mat.tsv
+#       logit(PSI), scaled, over those junctions, for the top 13 GSP #30
+#       samples + 200 project-matched controls; NA -> 0, first occurrence
+#       per junction, clamp +-5.
+# The control draw is seeded (set.seed(30)).
 # Logic shared with scripts/phenotype_axis.R (load / classify). Run from
 # figure4/:  Rscript --vanilla scripts/build_cache_panel_f_tcga.R [results_root]
 source("../scripts/phenotype_axis.R")
@@ -18,7 +16,7 @@ TOP_N <- 13; N_CTRL <- 200
 
 A <- pa_annotation()
 fls <- pa_load_comparison(file.path(results_root, "ylpm1_20v60"), A)
-# Alt 3'ss + alt 5'ss only, consistent with the rest of the paper (Quinn, 2026-11-09: briefly all types that day, reverted).
+# Alt 3'ss + alt 5'ss only, consistent with the rest of the paper.
 high_psi_hits <- pa_assign_splice_types(fls, A, dpsi_thresh = 0.05, fc_thresh = 2.5) %>%
   filter(type %in% c("alt 3'ss", "alt 5'ss")) %>%
   mutate(end = as.numeric(end), start = as.numeric(start))

@@ -1,17 +1,17 @@
 # Figure 2 (SF3B1 / genome-wide GSPs) assembly.
 #
-# Panels:
-#   a  genome-wide workflow schematic  -- vector art cropped from the
-#      Illustrator reference (title re-set in R so it matches b-g)
-#   c  GSP #1 neuronal-junction ECDF   -- panel_b/ (cache/panel_b_running_psi.tsv); shown as "c" since 2026-11-09
-#   b  GSP x covariate correlation heatmap -- panel_c/ (cache/panel_c_*.tsv); shown as "b" since 2026-11-09
-#   d  GSP #10 vs SF3B1 hotspot mutations  -- SF3B1_full_info.tsv
-#   e  cryptic 3'ss distance + event-type pie -- fact_10_top_junctions.tsv
-#   f  PSI fold-change vs binned GSP #10   -- sf3b1_top500_alt3_fc5_psi.tsv
-#   g  mutation enrichment scatter     -- cache/panel_g_*.tsv
+# Panels (figure tag <- build directory):
+#   a <- panel_a/  genome-wide workflow schematic (vector art; title set in R)
+#   b <- panel_c/  GSP x covariate correlation heatmap  -- cache/panel_c_*.tsv
+#   c <- panel_b/  GSP #1 neuronal-junction ECDF        -- cache/panel_b_running_psi.tsv
+#   d <- panel_g/  mutation enrichment scatter          -- cache/panel_g_*.tsv
+#   e <- panel_d/  GSP #10 vs SF3B1 hotspot mutations   -- SF3B1_full_info.tsv
+#   f <- panel_e/  cryptic 3'ss distance + event-type pie -- fact_10_top_junctions.tsv
+#   g <- panel_f/  PSI fold-change vs binned GSP #10    -- sf3b1_top500_alt3_fc5_psi.tsv
+# Tags follow citation order; the directories keep their own names.
 #
 # The three cache/ inputs come from scripts/build_cache_panel_{b,c,g}.R,
-# which are expensive (each loads a 3.5 G flashier RDS). Run those once;
+# which are expensive (each loads a 3.5 G factorization RDS). Run those once;
 # this script then rebuilds the figure in seconds.
 #
 #   Rscript compose.R
@@ -53,10 +53,8 @@ have_cache <- function(...) all(file.exists(file.path(CACHE, c(...))))
 # ------------------------------------------------------------------
 # Per-panel build cache.
 #
-# Rebuilding all seven panels takes ~60 s, most of it in panels d/f
-# (which read a 19 M TSV) and the heatmap. When iterating on ONE
-# panel's layout that is wasted time, so each panel's built object is
-# serialised to panels/<name>.rds and reused unless asked for.
+# Each panel's built object is serialised to panels/<name>.rds and
+# reused unless asked for (a full rebuild takes ~60 s).
 #
 #   Rscript compose.R            # reuse every cached panel
 #   Rscript compose.R c a        # rebuild only c and a
@@ -69,34 +67,28 @@ have_cache <- function(...) all(file.exists(file.path(CACHE, c(...))))
 # Row heights, in INCHES (patchwork treats them as relative, but the
 # page height below is their sum, so they are literal). Absolute units
 # matter here because several panels derive text-collision spacing from
-# their own drawn height -- with relative units, growing one row
-# silently rescaled every other row's geometry constants.
+# their own drawn height.
 #
-# ROW_H[1] is tuned so panel a's CELL aspect matches its art's 5.83:1
-# (filling a 4.90:1 cell stretched the schematic's text ~19%).
-# Row 3 is 0.70 in taller than the reference's ink band: panel d's zoom
-# labels 52 hotspot mutations, and every class tops out at the same
-# 100% row, so that band needs vertical room the reference bought in
-# Illustrator by shrinking the type.
+# ROW_H[1] is tuned so panel a's cell aspect matches its art's 5.83:1.
+# Row 3 is tall because the GSP #10 panel's zoom labels 52 hotspot
+# mutations, all topping out at the same 100% row.
 PAGE_W <- 8.5
 ROW_H  <- c(1.5714, 3.9370, 3.2346, 2.9570)
 PAGE_H <- sum(ROW_H)
 
 # Column split within each row, also used by panels that must convert
 # label widths into data units.
-# Row 2 is ordered heatmap | ECDF since 2026-11-09 (the heatmap is cited first, so it is tagged b). Named so
-# each panel's width stays tied to the panel, not to its slot: panel_b/ and panel_c/ index by name.
-# Rows 3-4 reordered 2026-11-09 to follow citation order: row 3 = mutation scatter (panel_g/, tagged d) |
-# GSP #10 CDF (panel_d/, tagged e; width unchanged); row 4 = 3'ss histogram + pie (panel_e/, tagged f; widened,
-# it was cramped) | serial boxplots (panel_f/, tagged g).
+# Named so each width stays tied to its panel, not its slot (panel_b/ and
+# panel_c/ index by name). Row 2 = heatmap (panel_c/) | ECDF (panel_b/);
+# row 3 = mutation scatter (panel_g/) | GSP #10 CDF (panel_d/);
+# row 4 = 3'ss histogram + pie (panel_e/) | serial boxplots (panel_f/).
 COL_W <- list(bc = c(heatmap = 1.50, ecdf = 1.00),
               de = c(scatter = 1, cdf = 1.75),
               fg = c(hist = 1.30, box = 1))
 
-# Panels b and e are drawn at this fraction of their row's height, with the
-# remainder split as whitespace above and below (they read as too tall when
-# filling the row next to c / d). panel_b/build.R reads PANEL_H_SCALE["b"]
-# for its inset geometry, so change it here only.
+# panel_b/ and panel_e/ are drawn at this fraction of their row's height,
+# with the remainder split as whitespace above and below. panel_b/build.R
+# reads PANEL_H_SCALE["b"] for its inset geometry, so change it here only.
 PANEL_H_SCALE <- c(b = 0.85, e = 0.85)
 v_shrink <- function(p, s) {
   wrap_plots(plot_spacer(), p, plot_spacer(), ncol = 1,
@@ -150,8 +142,7 @@ for (.p in c('a', 'd', 'e', 'f', 'b', 'g', 'c')) {
 }
 
 # ------------------------------------------------------------------
-# Compose. Row heights are taken from the reference figure's own ink
-# bands (a 235 px, b/c 547, d/e 296, f/g 412 at 150 dpi).
+# Compose.
 # ------------------------------------------------------------------
 figure2 <- panel_a /
            # heatmap (built in panel_c/) first -> auto-tagged "b"; ECDF + WDR11 inset (panel_b/) -> "c"

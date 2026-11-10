@@ -1,8 +1,7 @@
 # Supplementary Figure S7. SF3B1 p.Y765C mutants.
 # Same CDF as figure 2 panel d's left half (GSP #10, per-class
 # cumulative percentage), with the two p.Y765C carriers labelled.
-# Source: tcga/genome_wide/flashier/cdf_supplements.Rmd (chunk
-# "SF3B1 Y765C"); data SF3B1_full_plus_variants.tsv.
+# Data: SF3B1_full_plus_variants (vt_path()).
 source("common.R")
 
 d <- fread(vt_path("SF3B1_full_plus_variants"), data.table = FALSE)
@@ -23,10 +22,9 @@ cum <- d %>%
   group_by(cls) %>% mutate(cumulative = row_number() / n() * 100) %>% ungroup()
 lab <- cum %>% filter(rail_id %in% y765c) %>%
   mutate(txt = paste0("p.Y765C (", project_id, ")"),
-         # Label anchors placed by hand in empty space (ggrepel had put
-         # the BRCA label on top of the green and blue curves): BRCA
-         # right of the steep rise, below the blue plateau; LUSC above
-         # its point on the blue plateau.
+         # Label anchors placed by hand in empty space, clear of
+         # the curves: BRCA right of the steep rise, below the blue
+         # plateau; LUSC above its point on the blue plateau.
          lx = logk10 + ifelse(project_id == "TCGA-BRCA", 1.4, 0),
          ly = cumulative + ifelse(project_id == "TCGA-BRCA", 9, 11))
 

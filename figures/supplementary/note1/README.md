@@ -1,7 +1,7 @@
 # Supplementary Note 1: IDH1 / SPOP
 
 ## Purpose & context
-Quinn started this note on 2026-10-08. It asks whether non-spliceosome mutations
+This note asks whether non-spliceosome mutations
 associated with a GSP (IDH1 R132 in LGG with GSP #1; SPOP hotspots in PRAD with GSP #12)
 reproduce that GSP's splicing in direct within-cohort mutant-vs-wild-type comparisons.
 This folder groups every Note 1 panel. Outputs go to `out/note1/`.
@@ -22,14 +22,13 @@ Run all of them from `supplementary/`, like the figS builds.
 - **The CDFs use the whole cohort,** not the 20 v 60 LeafCutter selection. Samples are
   flashier tumours with mutation calls, and wild-type means no call anywhere in the gene.
 - **Loadings** come from `shared_cache/gsp_loadings.tsv`, the same normalised L as the
-  main figures. They are NOT from `diff_splicing/flashier_loadings.tsv`, which is on
+  main figures. They are NOT `L_pm` loadings, which are on
   another scale.
-- **Plotted like Fig 3a / 4a** (Quinn, 2026-10-09): x = natural-log GSP loading, labelled
+- **Plotted like Fig 3a / 4a**: x = natural-log GSP loading, labelled
   `log(GSP #N)`, y = cumulative percentage, step curves.
-- **All mutants are pooled into one curve** per gene (Quinn's request). Mutant = any call
+- **All mutants are pooled into one curve** per gene. Mutant = any call
   in the gene.
-- **Per-cohort facet panels were dropped** (Quinn, 2026-10-09: "irrelevant"). Their
-  numbers are still in `note1_cdf_stats.tsv`.
+- **No per-cohort facet panels**; per-cohort numbers are in `note1_cdf_stats.tsv`.
 - **SPOP outside PRAD is 3 labelled points, not a curve:** DLBC F102I, LGG W131C,
   UCEC W131R. That's too few for a CDF; the evidence is weak and is presented as such.
 - **Test:** one-sided Wilcoxon, mutant > wild-type.
@@ -38,8 +37,7 @@ Run all of them from `supplementary/`, like the figS builds.
 - **Signature PCA:** LGG separates by IDH1 status along PC1 (11.7% of variance). PRAD
   does not cluster by SPOP (PC1 6.8%; mutants only slightly shifted). The held-out
   score difference in PRAD is real but small relative to other variation.
-- **Tissue vs mutation (psi_cdf.R).** Panels a/d use all brain / all PRAD, as Quinn
-  asked. The difference panels use wild-type tissue, because 412 of the 660 brain
+- **Tissue vs mutation (psi_cdf.R).** Panels a/d use all brain / all PRAD. The difference panels use wild-type tissue, because 412 of the 660 brain
   tumours are R132.
   - GSP #1: tissue median dPSI +0.006, mutation +0.005. The two are comparable, with
     93% and 86% of junctions up.
@@ -51,11 +49,11 @@ Run all of them from `supplementary/`, like the figS builds.
   fit. One selected F102 sample has no loading.
 - **No "Other IDH1" group in LGG.** Every IDH1-mutant LGG with a call is R132.
 - **Outside the home cohorts, only GBM IDH1 was significant** (7 mutants, all R132,
-  P = 0.004; now excluded as brain). CHOL's 5 R132 tumours are not, and SPOP outside PRAD (almost no hotspots)
+  P = 0.004; excluded as brain). CHOL's 5 R132 tumours are not, and SPOP outside PRAD (almost no hotspots)
   shows nothing.
-- **IDH1 "other cohorts" means non-brain** (Quinn, 2026-10-09): GBM is dropped from panel
+- **IDH1 "other cohorts" means non-brain**: GBM is dropped from panel
   a's other-cohort curves. GSP #1 is brain-associated; with GBM in,
-  the pooled R132 curve was P = 0.005, and without it P = 0.15 (40 R132 vs 8,498).
+  the pooled R132 curve gives P = 0.005, and without it P = 0.15 (40 R132 vs 8,498).
   SPOP has only 3 hotspot carriers outside PRAD.
 - **IDH1 wild-type LGG also loads highly on GSP #1** (median 0.43 vs 0.63). GSP #1 is
   broadly glioma-associated, and R132 shifts it further.

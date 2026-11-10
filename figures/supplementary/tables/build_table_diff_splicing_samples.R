@@ -7,9 +7,9 @@
 # Columns: comparison, gsp, role, rail_id, tcga_barcode, project, GSP loading
 # (normalised flashier L, as in the figures), matching covariates (mean read
 # length, FFPE), GDC file_id / filename / md5, and download_source:
-#   "planned"  -- in download/sample_plan.tsv (the 2026-04-20 selection)
+#   "planned"  -- in download/sample_plan.tsv
 #   "earlier"  -- downloaded in earlier exploratory analyses and matched from the
-#                 on-disk pool (control slots only; see build_table_diff_splicing_samples.md)
+#                 on-disk pool (control slots only)
 # Any cwd.
 if (!exists("QROOT")) QROOT <- local({ d <- normalizePath(getwd())   # quetzal_code root
   while (!file.exists(file.path(d, ".quetzal_root"))) { if (dirname(d) == d) stop("run from inside quetzal_code/"); d <- dirname(d) }
@@ -43,9 +43,9 @@ meta <- fread(file.path(QROOT, "inputs/tcga_v2_samples.tsv"), data.table = FALSE
             mean_read_length = avg_len,
             ffpe = ifelse(is.na(gdc_cases.samples.is_ffpe), FALSE, gdc_cases.samples.is_ffpe))
 # GDC file per sample. used_bams.rail_map.tsv indexes two relabelled BAMs
-# (2026-09-25 aliquot fix) under their OLD rail_id; translate through
-# bam_relabel and use the barcode verified on disk (aliquot_on_disk). BAMs
-# re-downloaded for the 2026-10-05 rerun are in rerun_2026-10-05.rail_map.tsv.
+# under their original rail_id; translate through bam_relabel and use the
+# barcode verified on disk (aliquot_on_disk). Re-downloaded BAMs are in
+# the rerun rail_map.
 relab <- fread(file.path(DS, "download/bam_relabel_2026-09-25.tsv"), data.table = FALSE) %>%
   filter(action == "relabel") %>% transmute(old = as.integer(old_rail_id), new = as.integer(true_rail_id))
 rmap <- fread(file.path(DS, "download/used_bams.rail_map.tsv"), data.table = FALSE) %>%
@@ -63,7 +63,7 @@ tab <- used %>% as_tibble() %>%
   left_join(meta, by = "rail_id") %>%
   left_join(rmap, by = "rail_id") %>%
   mutate(download_source = ifelse(rail_id %in% plan$rail_id, "planned", "earlier"),
-         # ylpm1_6v18: the YLPM1 SVM's junction run (cases = the 6 P samples; 2026-11-09).
+         # ylpm1_6v18: the YLPM1 SVM's junction run (cases = the 6 P samples).
          comparison = factor(comparison, levels = c(paste0(rep(c("sf3b1", "nkap", "ylpm1"), each = 3), "_",
                                                            c("10v30", "20v60", "30v90")), "ylpm1_6v18"))) %>%
   arrange(comparison, desc(role == "test"), desc(gsp_loading)) %>%

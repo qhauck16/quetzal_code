@@ -6,9 +6,8 @@ params:
 ---
 
 Every number the manuscript states about GSP #13 / the C* spliceosome,
-recomputed from quetzal_code inputs. Ported from
-`diff_splicing/paper_stats.Rmd` and `diff_splicing/nkap/top500_alt3_fc_vs_loading.Rmd`
-(same definitions). The last chunk prints text value vs recomputed value.
+recomputed from quetzal_code inputs. The last chunk prints text value vs
+recomputed value.
 
 ```{r setup, include = FALSE}
 if (!exists("QROOT")) QROOT <- local({ d <- normalizePath(getwd())   # quetzal_code root
@@ -76,9 +75,9 @@ for (n in c(50, 60)) {
   cat(sprintf("top %d: %d NKAP C-terminal mutation entries; R368 x%d, R402 x%d\n",
               n, length(p), sum(p == 368), sum(p == 402)))
 }
-# Fig 3b draws the top 60 (Quinn, 2026-10-08: keep 60 -- the rank-51 R366Q
-# sample is phenotype-positive). The text's description of 3b's mutations
-# therefore uses the top 60; the explicit "top 50" claims below stay at 50.
+# Fig 3b draws the top 60 (the rank-51 R366Q sample is phenotype-positive),
+# so the text's description of 3b's mutations uses the top 60; the explicit
+# "top 50" claims below stay at 50.
 p60 <- nkap_ct(head(v, 60))
 r51 <- v[51, ]
 cat(sprintf("rank 51: rail %s, %s, NKAP %s, phenotype-positive: %s\n", r51$rail_id, r51$project_id,
@@ -122,8 +121,7 @@ claim("GSP13", "FAM50A-class samples, top 60 (priority-assigned)", "6",
 
 ## Co-mutated genes in the top 50 without NKAP mutations (CMH)
 
-`supplementary/cache/build_mutation_cache.R` (S12) ports the
-"NKAP finding other mutants along the same axis" chunk of flash_fact_char.Rmd:
+`supplementary/cache/build_mutation_cache.R` (S12) tests for genes mutated along the same axis:
 the top 50 on GSP #13 minus NKAP-mutant samples, AlphaMissense > 0.9 (or
 unscored) calls, one-sided CMH stratified by TCGA cohort, Bonferroni over all genes.
 
@@ -165,7 +163,7 @@ claim("GSP13", "top 50 with a damaging NKAP/PRPF8/FAM50A/SLU7 mutation", "41 (82
       sprintf("%d (%.0f%%)", sum(top50$any_target), 100 * mean(top50$any_target)))
 claim("GSP13", "top 50 with NKAP C-term or PRPF8 RNase H mutation", "32 (64%)",
       sprintf("%d (%.0f%%)", sum(top50$domain_target), 100 * mean(top50$domain_target)))
-# Backgrounds from the AlphaMissense-merged calls (paper_stats.Rmd, chunk 1-4):
+# Backgrounds from the AlphaMissense-merged calls:
 # samples with a damaging call / TCGA samples with any call.
 pos_am <- function(g, lo, hi) am %>% filter(hugoGeneSymbol == g) %>%
   mutate(p = as.integer(str_extract(proteinChange, "\\d+"))) %>%
@@ -179,7 +177,7 @@ claim("GSP13", "highest-loading sample's mutation", "SLU7:R290I", v$gene_mutatio
 
 ## Re-calling in matched controls
 
-The unified calling (`wxs_mut_calling/unified/nkap`) ran the identical pipeline on 65 cases (GSP #13 > 0.01)
+The unified calling (`variant_recalling/unified/nkap`) ran the identical pipeline on 65 cases (GSP #13 > 0.01)
 and 65 cohort-matched controls (GSP #13 < 1e-4; `samples.tsv` role). Every control's calls pass through the
 same `extract_called_variants()` filter as the cases (PASS/multiallelic WXS, MODERATE/HIGH, AF > 0.1,
 depth > 10, NKAP > 300 / PRPF8 1570-1900 / FAM50A / SLU7, AlphaMissense > 0.9) and land in the variant
@@ -270,7 +268,7 @@ claim("GSP13", "cohorts spanned by phenotype-positive samples", "16",
 vp <- v %>% left_join(phen %>% select(rail_id, group, svm = score), by = "rail_id") %>%
   arrange(desc(svm))
 # Annotated (PanCanAtlas / GDC) C* calls only, samples with a WXS / RNA-seq
-# re-call excluded (Quinn, 2026-10-26): re-calling was run only on GSP #13 >
+# re-call excluded: re-calling was run only on GSP #13 >
 # 0.01 samples and matched controls, so counting re-calls would favour the
 # near-boundary set over the rest of TCGA.
 non <- vp %>% filter(!is.na(svm), svm <= 0, is_blank(wxs_mutation), is_blank(rnaseq_mutation))
@@ -283,7 +281,7 @@ print(tab)
 claim("GSP13", "50 intermediates closest to boundary: annotated C*-mutant (vs other non-positive)", "new",
       sprintf("%d of 50 vs %d of %d", tab[1, 1], tab[2, 1], sum(tab[2, ])))
 # One-sided Fisher's exact test: the expected count in the "50 nearest x mutant"
-# cell is ~1, too small for the chi-square approximation (which gave 1.7e-09).
+# cell is ~1, too small for the chi-square approximation.
 claim("GSP13", "50 intermediates closest to boundary enriched for C* mutations, one-sided Fisher P",
       "1.6e-05", fmt_p(fisher.test(tab, alternative = "greater")$p.value))
 ```

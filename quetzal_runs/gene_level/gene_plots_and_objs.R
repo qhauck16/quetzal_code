@@ -225,14 +225,6 @@ if (file.size(input_file) < 100L){
             #a sample only has reads in an unsupported junction
             filtered_intron_cluster <- filtered_intron_cluster[, colSums(filtered_intron_cluster) > 0]
             
-            # NOTE: an earlier K-selection block used to sit here (per-junction
-            # normalization + prcomp(t(.)) + `sum(cumul_var > (1 - elbow_cutoff))`).
-            # It was dead code -- num_factors always gets overwritten below by
-            # the LIVE selection at ~line 308 (per-sample norm, `prcomp(.)`,
-            # `sum(cumul_var > elbow_cutoff)`). Verified 2026-08-12 spot-check
-            # against 99 on-disk fits: agreement 100% with the live block at
-            # elbow_cutoff = 0.99. Removed to avoid confusing future readers.
-
             dat <- t(as.matrix(filtered_intron_cluster[,1:(ncol(filtered_intron_cluster)-1)]))
             dat <- as.data.frame(dat)
             

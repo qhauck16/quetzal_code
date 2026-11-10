@@ -1,17 +1,11 @@
 # ------------------------------------------------------------------
 # Figure 4, panel f -- GIST PSI heatmap + row dendrogram.
 #
-# Source: flashier/diff_splicing/ylpm1/leafcutter_prep_and_analysis.Rmd,
-#         chunk "additional GIST heatmaps" (lines ~504-634).
-#
-# The Rmd draws this with heatmaply(), i.e. a plotly HTML widget; the
-# published PDF is a Safari print of the RStudio Viewer.  A widget
-# cannot go into a patchwork, so everything here is rebuilt natively:
-# geom_tile for the matrix (vector, never blurry), geom_tile strips for the three annotation
-# bars, dendextend::as.ggdend() segments for the dendrogram.  The
-# CLUSTERING is still heatmaply's (euclidean / complete / OLO
-# seriation), reproduced with stats + dendextend so no plotly is needed
-# at render time.  See build.md.
+# Drawn natively so it can sit in the patchwork: geom_tile for the
+# matrix and the three annotation bars, dendextend::as.ggdend()
+# segments for the dendrogram. The clustering follows heatmaply's
+# defaults (euclidean / complete / OLO seriation), reproduced with
+# stats + dendextend so no plotly is needed at render time.
 # ------------------------------------------------------------------
 
 if (!exists("QROOT")) QROOT <- local({ d <- normalizePath(getwd())   # quetzal_code root
@@ -72,17 +66,14 @@ panel_f <- panel_cached("f", local({
                                      show_col_types = FALSE)
 
     # The LeafCutter cluster the PSI denominator is taken over is the
-    # TCGA cluster, not the GIST one (the Rmd drops GIST's cluster_id
-    # and picks the cluster up from the TCGA psi_table headers).  This
-    # MATTERS: using GIST's own clusters changes the matrix just enough
-    # to permute rows 2-9 of the dendrogram.  See build.md.
+    # TCGA cluster, not the GIST one (GIST's cluster_id is dropped and
+    # the cluster is taken from the TCGA psi_table headers). Using GIST's
+    # own clusters changes the matrix enough to permute the dendrogram.
     if (!file.exists(F_CACHE_JUNC)) {
       message("[panel f] building ", F_CACHE_JUNC, " (psi_table.tsv headers)")
       f_pairs <- unique(high_psi_hits[, c("chrom", "gene_name")])
       f_hdr <- function(chr, gene) {
-        # Current TCGA PSI tables (paths.yaml psi_root = leaf2_try/new_psi_files,
-        # post chr10/11/18 fix). Until 2026-10-28 this read the Dec-2025
-        # leaf2_try/psi_files set by mistake.
+        # TCGA PSI tables.
         f <- file.path(file.path(QROOT, "leafcutter_analyses/psi_files"),
                        "tcga", chr, gene, "psi_table.tsv")
         if (!file.exists(f)) return(NULL)
@@ -206,10 +197,9 @@ panel_f <- panel_cached("f", local({
   F_BAND  <- 7.0                          # label + legend band below
   F_YMIN  <- F_HM_Y0 - F_BAND
 
-  # Drawn panel size, measured off a 400 dpi render of the composed
-  # figure (see build.md).  Used ONLY to turn point sizes into data
-  # units, so text metrics drive the leader geometry rather than
-  # hand-picked numbers.  Re-measure if ROW_H[4] or COL_W$fg move.
+  # Drawn panel size, measured from the composed figure. Used ONLY to
+  # turn point sizes into data units, so text metrics drive the leader
+  # geometry. Update if ROW_H[4] or COL_W$fg change.
   F_PANEL_W_IN <- 4.07
   F_PANEL_H_IN <- 2.52
   f_x_per_in <- (F_XMAX - F_HM_X0 + 1) / F_PANEL_W_IN
@@ -218,9 +208,8 @@ panel_f <- panel_cached("f", local({
   # ---- heatmap -----------------------------------------------------
   # as.vector() of a samples x junctions matrix walks DOWN each column,
   # i.e. the sample index varies fastest -- so y must be the `times`
-  # sequence and x the `each` one.  Getting this backwards (or adding a
-  # t()) still renders a plausible-looking texture, it is just the
-  # transpose smeared across the panel, so it will not announce itself.
+  # sequence and x the `each` one (a transpose would still render a
+  # plausible-looking texture).
   f_hm_df <- data.frame(
     x = rep(seq_len(N_COL), each = N_ROW),
     y = rep(N_ROW + 1 - seq_len(N_ROW), times = N_COL),
@@ -236,8 +225,7 @@ panel_f <- panel_cached("f", local({
   # ---- annotation strips ------------------------------------------
   # heatmaply melts all three bars into ONE factor and spreads a single
   # palette across the union of their 18 levels, so the bars SHARE a
-  # palette.  Hardcoded here -- three independent per-bar scales cannot
-  # reproduce it.
+  # palette, hardcoded here.
   F_ANN_COL <- c(
     "104" = "#A6CEE3", "14" = "#1F78B4", "17" = "#B2DF8A", "19" = "#33A02C",
     "35"  = "#FB9A99", "37" = "#E31A1C", "56" = "#FDBF6F", "63" = "#FF7F00",
@@ -285,8 +273,8 @@ panel_f <- panel_cached("f", local({
   # The labels are LEFT-aligned at F_LAB_L, so the longest one has the
   # shortest leader.  Widening the pad alone cannot help it -- it shifts
   # the whole block -- so the block is set back by a minimum horizontal
-  # run as well, which every leader then inherits.  Without it the top
-  # label's leader collapses to a bare riser that reads as disconnected.
+  # run as well, which every leader then inherits, so the top label's
+  # leader is not a bare riser.
   F_PAD_X   <- 0.055 * f_x_per_in                   # text -> leader gap
   F_MIN_RUN <- 0.10  * f_x_per_in                   # shortest leader run
   f_lab_w_x <- f_lab_w_in * f_x_per_in
@@ -294,13 +282,12 @@ panel_f <- panel_cached("f", local({
                max(f_lab_w_x)
 
   F_LINE_Y  <- (SIZE_BASE / 72) * f_y_per_in        # one text line, in y units
-  # First label 0.85 lines below the heatmap, not 0.55: at 0.55 the top
-  # of "YLPM1 mutant status" pressed against the heatmap's bottom edge.
+  # First label 0.85 lines below the heatmap to clear its bottom edge.
   f_lab_y   <- F_HM_Y0 - 0.85 * F_LINE_Y - (seq_along(F_BAR_LAB) - 1) * 1.55 * F_LINE_Y
 
   # ---- colour key for the two categorical bars ---------------------
-  # (QA review: the bars had no key.) "Individual" needs none -- its
-  # colours only mark which rows come from the same patient. Placed in
+  # "Individual" needs no key -- its colours only mark which rows come
+  # from the same patient. Placed in
   # the empty band under the dendrogram, one entry per line.
   F_KEY <- data.frame(
     # The bar records mutant status (YES/NO in the GIST table), so the key
@@ -334,11 +321,9 @@ panel_f <- panel_cached("f", local({
   F_LIM <- range(f_mat)
 
   p <- ggplot() +
-    # geom_TILE, not geom_raster. geom_raster embeds the 512 x 17 matrix
-    # as ONE bitmap image, and every PDF viewer resamples that image
-    # with smoothing when it scales it to the page -- Quinn: "the
-    # heatmap looks weirdly blurry". Tiles are vector rectangles, so
-    # each cell is a crisp edge at any zoom. ~8.7k rects is cheap.
+    # geom_tile, not geom_raster: a raster is one bitmap that PDF
+    # viewers resample with smoothing (blurry); tiles stay crisp vector
+    # rectangles at any zoom.
     # The 1.03 overlap hides the hairline seams viewers anti-alias
     # between exactly-abutting vector rectangles.
     geom_tile(data = f_hm_df, aes(x = x, y = y, fill = z),

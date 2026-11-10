@@ -6,11 +6,9 @@
 # pre-parsed, so both panels have to dig positions and labels out of
 # those strings.
 #
-# Logic transcribed from flash_fact_char.Rmd lines 3101-3222 -- keep it
-# behaviourally identical. The subtle bit (and the reason the Rmd looks
-# over-engineered): only ONE source wins per row in gene_mutation, so a
-# WXS PRPF8 hit can be hidden behind a FAM50A AlphaMissense call.
-# Searching all three columns is what prevents that masking.
+# Only ONE source wins per row in gene_mutation, so a WXS PRPF8 hit can
+# be hidden behind a FAM50A AlphaMissense call. Searching all three
+# columns prevents that masking.
 
 # Every amino-acid position for `gene` in one mutation string.
 extract_all_positions <- function(mutation_string, gene) {
@@ -88,7 +86,7 @@ classify_variants <- function(df) {
 # Legend order = priority order, "Other" last.
 VARIANT_LEVELS <- c(vapply(VARIANT_SPEC, `[[`, character(1), "label"),
                     VARIANT_OTHER)
-# Colours as published (flash_fact_char.Rmd `colors_cumulative`).
+# Variant-class colours.
 VARIANT_COL <- setNames(
   c("#8E44AD", "#E74C3C", "#3498DB", "#27AE60", "grey65"),
   VARIANT_LEVELS)

@@ -1,24 +1,17 @@
 # Figure 4 (YLPM1 / GSP #30) assembly.
 #
-# Panels:
-#   a  YLPM1 LoF enrichment CDF + zoom   -- flash_fact_char.Rmd
-#   b  deep-intronic splice sites, 2 loci -- coverage_tracks/fig4b_tracks (KDM4C, TRIM38)
-#   c  intron-feature beta heatmap        -- diff_splicing/unified_results
-#   d  LeafCutter event-type pie          -- unified_results/ylpm1/20v60/dpsi0.01_fc2.5
-#   e  four mis-spliced tumour suppressors -- pygenome/YLPM1
-#                                            (TP53BP1, PBRM1, MSH6, ASXL1)
-#   f  GIST PSI heatmap + dendrogram      -- diff_splicing/ylpm1/leafcutter_prep_and_analysis.Rmd
-#   g  expression ECDF + bootstrap ribbon -- combined_expression_analysis.Rmd
+# Panels (source folder -> printed tag):
+#   panel_a -> a  YLPM1 LoF enrichment CDF + zoom
+#   panel_b -> b  deep-intronic splice sites, 2 loci (KDM4C, TRIM38)
+#   panel_e -> c  four mis-spliced tumour suppressors (TP53BP1, PBRM1, MSH6, ASXL1)
+#   panel_d -> d  LeafCutter event-type pie
+#   panel_c -> e  intron-feature beta heatmap
+#   panel_f -> f  GIST PSI heatmap + dendrogram
+#   panel_g -> g  expression ECDF + bootstrap ribbon
 #
-# The d/e/g panels reuse patterns already solved in figures 2 and 3
-# (pie-with-leaders, sashimi quadrants, expression ECDF) -- start from
-# those rather than from the Rmds.
+#   Rscript compose.R [--all | <panel names to rebuild>]
 #
-#   Rscript compose.R
-#
-# Same conventions as ../figure2/compose.R -- read ../figure2/compose.md
-# before changing layout, it documents the traps (absolute-inch ROW_H,
-# scale limits vs coord, title alignment by measurement).
+# Same conventions as ../figure2/compose.R.
 
 
 # ------------------------------------------------------------------
@@ -55,17 +48,13 @@ CACHE    <- "cache"
 have_cache <- function(...) all(file.exists(file.path(CACHE, c(...))))
 
 # ------------------------------------------------------------------
-# Row heights in INCHES; PAGE_H is their sum. Relative heights let one
-# row's change silently rescale every other row's derived text
-# geometry -- see ../figure2/compose.md.
-# Measured off the reference render at 100 dpi:
-#   a|b 2.50 in, c|d 2.00 in, e 3.50 in, f|g 3.00 in
+# Row heights in INCHES; PAGE_H is their sum. Absolute heights keep one
+# row's change from rescaling every other row's derived text geometry.
 # ------------------------------------------------------------------
 PAGE_W <- 8.5
-# Row 1 2.50 -> 2.85 in: KDM4C has four arcs sharing one foot, and at 2.50
-# the top two (4.87, 1.92) ran almost together (Quinn: make them distinct).
-# 2026-11-09 (Quinn): citation order. Rows: a|b, panel_e/ (full width, tagged c), panel_d/ | panel_c/
-# (flipped, tagged d | e), f|g. Rows and columns are NAMED by source panel so each keeps its size.
+# Row 1 is 2.85 in so the four KDM4C arcs sharing one foot stay distinct.
+# Rows in citation order: a|b, panel_e/ (full width, tagged c), panel_d/ | panel_c/
+# (tagged d | e), f|g. Rows and columns are NAMED by source panel so each keeps its size.
 ROW_H  <- c(ab = 2.85, cd = 2.00, e = 3.50, fg = 3.00)
 PAGE_H <- sum(ROW_H)
 

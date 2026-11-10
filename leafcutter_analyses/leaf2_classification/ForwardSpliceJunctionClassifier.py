@@ -128,8 +128,8 @@ def nucleotide_rule(failing_juncs, gene_name, transcripts_by_gene, strand, chrom
                 if exlen > exonLcutoff:
                     break
 
-                """Quinn Comment: find start position relative to named start of this exon and translate to protein"""
-                """Quinn Comment: Coordinates from PERIND file and GTF file are exon start and end coordinates, so 
+                """find start position relative to named start of this exon and translate to protein"""
+                """Coordinates from PERIND file and GTF file are exon start and end coordinates, so 
                 we must add 1 to length"""
                 endpos = (len(leftover)+exlen+1)%3
                 if junc not in unique_juncs_pre_ptc:
@@ -241,8 +241,8 @@ def many_junctions(failing_juncs, gene_name, transcripts_by_gene, strand, chrom,
                 if exlen > exonLcutoff:
                     break
 
-                """Quinn Comment: find start position relative to named start of this exon and translate to protein"""
-                """Quinn Comment: Coordinates from PERIND file and GTF file are exon start and end coordinates, so 
+                """find start position relative to named start of this exon and translate to protein"""
+                """Coordinates from PERIND file and GTF file are exon start and end coordinates, so 
                 we must add 1 to length"""
                 endpos = (len(leftover)+exlen+1)%3
 
@@ -350,8 +350,8 @@ def long_exon_finder(failing_juncs, gene_name, transcripts_by_gene, strand, chro
                 if exlen > exonLcutoff:
                     break
 
-                """Quinn Comment: find start position relative to named start of this exon and translate to protein"""
-                """Quinn Comment: Coordinates from PERIND file and GTF file are exon start and end coordinates, so 
+                """find start position relative to named start of this exon and translate to protein"""
+                """Coordinates from PERIND file and GTF file are exon start and end coordinates, so 
                 we must add 1 to length"""
                 endpos = (len(leftover)+exlen+1)%3
 
@@ -443,7 +443,7 @@ def solve_NMD(chrom, strand, junc, start_codons, stop_codons,gene_name, fa,
     if strand == "-":
         junc.reverse()
         
-    """Quinn Comment: Adds all 'start codons' to a nested list called seed""" 
+    """Adds all 'start codons' to a nested list called seed""" 
     ##in an individual transcript    
     for c in start_codons:
         if strand == "-":
@@ -461,7 +461,7 @@ def solve_NMD(chrom, strand, junc, start_codons, stop_codons,gene_name, fa,
     dic_terminus = {}
 
     depth = 0
-    """Quinn Comment: while our seed length is greater than 0 - which means we have charted all possible paths through 
+    """while our seed length is greater than 0 - which means we have charted all possible paths through 
     all junctions ending in a stop codon (or there is an exon longer than 1000 bp and we have no complete paths)"""
     while len(seed) > 0:
         new_seed = []
@@ -478,7 +478,7 @@ def solve_NMD(chrom, strand, junc, start_codons, stop_codons,gene_name, fa,
                 leftover = Seq("")
                 allprot = Seq("")
 
-                """Quinn Comment: loop through the exons, calculating lengths"""
+                """loop through the exons, calculating lengths"""
                 for i in range(0, len(s)-1, 2):
                     exon_coord = s[i:i+2]
                     exon_coord.sort()
@@ -486,8 +486,8 @@ def solve_NMD(chrom, strand, junc, start_codons, stop_codons,gene_name, fa,
                     exlen = exon_coord[1]-exon_coord[0]
 
 
-                    """Quinn Comment: find start position relative to named start of this exon and translate to protein"""
-                    """Quinn Comment: Coordinates from PERIND file and GTF file are exon start and end coordinates, so 
+                    """find start position relative to named start of this exon and translate to protein"""
+                    """Coordinates from PERIND file and GTF file are exon start and end coordinates, so 
                     we must add 1 to length"""
                     endpos = (len(leftover)+exlen+1)%3
                     if strand == '+':
@@ -514,7 +514,7 @@ def solve_NMD(chrom, strand, junc, start_codons, stop_codons,gene_name, fa,
                     #found a PTC in this transcript if any element but the last is a stop codon    
                     bool_ptc = "*" in allprot
 
-            """Quinn Comment: if we found a PTC, add all intron coordinate pairs involved in the transcript to junc_fail"""        
+            """if we found a PTC, add all intron coordinate pairs involved in the transcript to junc_fail"""        
             if bool_ptc:
                 #This transcript failed
                 for i in range(1, len(s)-1, 2):                                                                                                                  
@@ -540,7 +540,7 @@ def solve_NMD(chrom, strand, junc, start_codons, stop_codons,gene_name, fa,
             
             last_pos = s[-1]
             
-        #fix for abnormally long exons Quinn's addition 4/3/2025
+        #fix for abnormally long exons
             next_exon_max = 0
 
             ptc_ahead = False
@@ -566,7 +566,7 @@ def solve_NMD(chrom, strand, junc, start_codons, stop_codons,gene_name, fa,
             
                 ptc_ahead = "*" in prot
             
-            """Quinn Comment: check the last position of our seed to see if it is close to a start codon, within a potential exon's length,
+            """check the last position of our seed to see if it is close to a start codon, within a potential exon's length,
              and add your seed plus this start codon to final_check """
             for stop in stop_codons:                
                 if strand == "+" and last_pos < stop[0] and stop[0]-last_pos < next_exon_max:
@@ -574,14 +574,14 @@ def solve_NMD(chrom, strand, junc, start_codons, stop_codons,gene_name, fa,
                 elif strand == "-" and last_pos > stop[1] and last_pos-stop[1] < next_exon_max:
                     final_check.append(s+[stop[0]]) 
 
-            """Quinn Comment: add all possible places to go from our last_pos to the seed (nested list)"""
+            """add all possible places to go from our last_pos to the seed (nested list)"""
             for j0,j1 in junc:                
                 if strand == "+" and last_pos < j0 and j0-last_pos < next_exon_max:
                     new_seed.append(s+[j0,j1])
                 if strand == "-" and last_pos > j1 and last_pos-j1 < next_exon_max: 
                     new_seed.append(s+[j1,j0])
                     
-        """Quinn Comment: Exited from s in seed loop, now we check our final_checks of the full paths, we do not
+        """Exited from s in seed loop, now we check our final_checks of the full paths, we do not
         eliminate paths based on presence of a PTC, rather we classify full complete paths without PTCs if they exist"""
         # check that the possible final paths are good
         for s in final_check:
@@ -630,7 +630,7 @@ def solve_NMD(chrom, strand, junc, start_codons, stop_codons,gene_name, fa,
         seed = new_seed
     
     
-    """Quinn Comment: OUT OF WHILE LOOP through all possible paths/seeds; 
+    """OUT OF WHILE LOOP through all possible paths/seeds; 
     check all terminus' to see if they are part of a full path that has been classified as passing"""
     while True:
         new_paths = []
@@ -643,7 +643,7 @@ def solve_NMD(chrom, strand, junc, start_codons, stop_codons,gene_name, fa,
                         break
             #print(terminus, terminus_pass)
 
-            """Quinn Comment: if our terminus is part of a passing path, we want to make sure if is reflected in passing paths and
+            """if our terminus is part of a passing path, we want to make sure if is reflected in passing paths and
             add the associate junctions to junc_pass, only if they are not present"""
             if terminus_pass:
                 for path_subset in dic_terminus[terminus]:
@@ -658,7 +658,7 @@ def solve_NMD(chrom, strand, junc, start_codons, stop_codons,gene_name, fa,
                             junc_pass[j_coord] = 0
                             if verbose:
                                 sys.stdout.write("junction %s pass\n"%j_coord)
-        """Quinn Comment: we could have a new path_pass added, so our while loop checks again to see if there are any new paths 
+        """we could have a new path_pass added, so our while loop checks again to see if there are any new paths 
         that are now going to be passing considering our additions"""
         if len(new_paths) == 0:
             break
@@ -722,7 +722,7 @@ def parse_annotation(gtf_annot: str):
             continue 
         if dic['transcript_type'] != "protein_coding" and anntype == "UTR": 
             continue
-        """Quinn: CONVERT TO BED FORMAT IS ERROR"""
+        """CONVERT TO BED FORMAT IS ERROR"""
         start, end = int(dic['start']), int(dic['end']) # GTF format coordinates
         strand = dic['strand']
     

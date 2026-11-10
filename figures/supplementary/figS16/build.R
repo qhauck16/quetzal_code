@@ -1,6 +1,6 @@
 # YLPM1 splice-acceptor variant in TCGA-CJ-4638 (KIRC; rank 2 on GSP #30),
 # chr14:74812626 A>G = the A of MANE exon 11's AG acceptor. One figure in the
-# style of kinnex/fig_zoom/MTIF2/fig_MTIF2_slide.pdf (Quinn, 2026-10-26): no
+# style of an MTIF2 slide figure: no
 # titles or panel letters, track labels on the left, grey tracks, gene model
 # with chevron introns, red only for the variant, and a callout zoom from the
 # exon-11 acceptor to the reference / variant sequence. Top to bottom:

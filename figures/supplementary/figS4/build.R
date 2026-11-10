@@ -4,12 +4,10 @@
 # with mean PSI <= 0.1% in <= 50 bp samples; right: the same for >= 75 bp.
 # Per junction, mean PSI over each cohort's samples in each read-length
 # bucket; cohorts with >= 50 samples in both buckets.
-# Source: flashier/just_for_fun/nmd_investigation/covariate_gsp_figures.Rmd
-# (per_cohort_cdf, per_cohort_cdf_76); cache/build_readlength_cache.R.
+# Inputs: cache/build_readlength_cache.R.
 source("common.R")
 COL <- c(`48 bp` = "#1F77B4", `76 bp` = "#FF7F0E")
-# One row of three cohort CDFs per read-length condition (was two 2x2
-# facet blocks side by side with an empty fourth slot each). Row titles
+# One row of three cohort CDFs per read-length condition. Row titles
 # carry the condition; one shared legend at the bottom.
 mk <- function(f, title) {
   d <- fread(file.path("cache", f), data.table = FALSE) %>%
