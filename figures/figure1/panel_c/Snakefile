@@ -1,0 +1,119 @@
+# Per-showcase plotting pipeline.
+#
+# Samples come from config["showcase"]; each entry specifies a gene, chr,
+# factor (e.g. k4), TCGA cohorts to display, and (optionally) extra regions.
+# For each showcase, produce:
+#   output/{sample}/junctions_classified.tsv
+#   output/{sample}/junction_arcs_mane.pdf
+#   output/{sample}/structure_plot.pdf
+#   output/{sample}/regions/{region}/simple_coverage.pdf
+#   output/{sample}/regions/{region}/sashimi_simple_coverage.pdf
+#   output/{sample}/regions/{region}/mane_gene_model.pdf
+
+import os
+
+configfile: "config.yaml"
+
+PATHS    = config["paths"]
+SHOWCASE = config["showcase"]
+
+
+def regions_for(sample):
+    entry = SHOWCASE[sample]
+    regions = dict(entry.get("regions") or {})
+    regions.setdefault("default", "")
+    return regions
+
+
+SAMPLE_REGION = [(s, r) for s in SHOWCASE for r in regions_for(s)]
+
+
+def all_outputs():
+    files = []
+    for s in SHOWCASE:
+        files += [
+            f"output/{s}/junctions_classified.tsv",
+            f"output/{s}/junction_arcs_mane.pdf",
+            f"output/{s}/structure_plot.pdf",
+        ]
+    for s, r in SAMPLE_REGION:
+        base = f"output/{s}/regions/{r}"
+        files += [
+            f"{base}/simple_coverage.pdf",
+            f"{base}/sashimi_simple_coverage.pdf",
+            f"{base}/mane_gene_model.pdf",
+        ]
+    return files
+
+
+rule all:
+    input: all_outputs()
+
+
+rule gene_outputs:
+    output:
+        junctions = "output/{sample}/junctions_classified.tsv",
+        arcs      = "output/{sample}/junction_arcs_mane.pdf",
+        struct    = "output/{sample}/structure_plot.pdf",
+        gd_rds    = "output/{sample}/gene_data.RDS",
+    params:
+        config_path = "config.yaml",
+    conda: "envs/rscript.yml"
+    resources:
+        mem_mb = 10000
+    shell:
+        r"""
+        Rscript scripts/make_gene_outputs.R \
+            --sample {wildcards.sample} \
+            --config {params.config_path} \
+            --out_dir output/{wildcards.sample}
+        """
+
+
+rule prep_region:
+    input:
+        gd_rds = "output/{sample}/gene_data.RDS",
+    output:
+        bed     = "output/{sample}/regions/{region}/junctions.bed",
+        samples = "output/{sample}/regions/{region}/sample_bigwigs.tsv",
+        groups  = "output/{sample}/regions/{region}/groups_file.txt",
+        region  = "output/{sample}/regions/{region}/region.txt",
+        mane    = "output/{sample}/regions/{region}/mane_gene_model.pdf",
+    params:
+        region_str  = lambda wc: regions_for(wc.sample).get(wc.region, ""),
+        config_path = "config.yaml",
+    conda: "envs/rscript.yml"
+    resources:
+        mem_mb = 10000
+    shell:
+        r"""
+        Rscript scripts/prep_pygenome.R \
+            --gd_rds {input.gd_rds} \
+            --config {params.config_path} \
+            --out_dir output/{wildcards.sample}/regions/{wildcards.region} \
+            --region '{params.region_str}'
+        """
+
+
+rule pygenome_tracks:
+    input:
+        bed     = "output/{sample}/regions/{region}/junctions.bed",
+        samples = "output/{sample}/regions/{region}/sample_bigwigs.tsv",
+        groups  = "output/{sample}/regions/{region}/groups_file.txt",
+        region  = "output/{sample}/regions/{region}/region.txt",
+    output:
+        coverage = "output/{sample}/regions/{region}/simple_coverage.pdf",
+        sashimi  = "output/{sample}/regions/{region}/sashimi_simple_coverage.pdf",
+    params:
+        aggregator = lambda wc: os.path.expanduser(PATHS["pygenome_aggregator"]),
+        bed12      = lambda wc: os.path.expanduser(PATHS["pygenome_bed12"]),
+    conda: "envs/pygenome.yml"
+    resources:
+        mem_mb = 10000
+    shell:
+        r"""
+        bash scripts/run_pygenome.sh \
+            output/{wildcards.sample}/regions/{wildcards.region} \
+            {params.aggregator} \
+            {params.bed12}
+        """

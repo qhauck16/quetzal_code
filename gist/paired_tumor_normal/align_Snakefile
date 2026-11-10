@@ -1,0 +1,150 @@
+import os
+from glob import glob
+
+# Clone of github.com/davidaknowles/leafcutter (export LEAFCUTTER_DIR=...).
+LEAFCUTTER_DIR = os.environ.get("LEAFCUTTER_DIR", os.path.expanduser("~/software/leafcutter"))
+
+# -------------------------------
+# 1. Sample list
+# -------------------------------
+SAMPLES = [os.path.basename(d) for d in sorted(glob("HRS*")) if os.path.isdir(d)]
+
+# -------------------------------
+# 2. Helper function to get fastqs
+# -------------------------------
+def get_fastqs(sample):
+    # Try gzipped files first (unprocessed samples), then plain fq (processed samples)
+    gz_files = sorted(glob(f"{sample}/*.fq.gz"))
+    if gz_files:
+        f1 = [f for f in gz_files if "_f1" in os.path.basename(f).lower()]
+        r2 = [f for f in gz_files if "_r2" in os.path.basename(f).lower()]
+    else:
+        fq_files = sorted(glob(f"{sample}/*.fq"))
+        fq_files = [f for f in fq_files if "combined" not in f and "trimmed" not in f]
+        f1 = [f for f in fq_files if "_f1" in os.path.basename(f).lower()]
+        r2 = [f for f in fq_files if "_r2" in os.path.basename(f).lower()]
+
+    if len(f1) != len(r2):
+        raise ValueError(f"Sample {sample} has mismatched F1 ({len(f1)}) and R2 ({len(r2)}) files")
+
+    return sorted(f1), sorted(r2)
+
+# -------------------------------
+# 3. Rule all
+# -------------------------------
+rule all:
+    input:
+        "ylpm1_perind_numers.counts.gz"
+
+# -------------------------------
+# 4. Concatenate fastqs
+# -------------------------------
+rule concatenate_reads:
+    input:
+        f1=lambda wc: get_fastqs(wc.sample)[0],
+        r2=lambda wc: get_fastqs(wc.sample)[1]
+    output:
+        f1_combined="{sample}/{sample}_f1_combined.fq",
+        r2_combined="{sample}/{sample}_r2_combined.fq"
+    run:
+        import subprocess
+        is_gz = any(f.endswith('.gz') for f in input.f1)
+        cmd = "zcat" if is_gz else "cat"
+        subprocess.check_call(f"{cmd} {' '.join(input.f1)} > {output.f1_combined}", shell=True)
+        subprocess.check_call(f"{cmd} {' '.join(input.r2)} > {output.r2_combined}", shell=True)
+
+# -------------------------------
+# 5. fastp trimming
+# -------------------------------
+rule fastp_trim:
+    input:
+        f1="{sample}/{sample}_f1_combined.fq",
+        r2="{sample}/{sample}_r2_combined.fq"
+    output:
+        f1="{sample}/{sample}_f1_trimmed.fq",
+        r2="{sample}/{sample}_r2_trimmed.fq",
+        html="{sample}/{sample}_fastp.html",
+        json="{sample}/{sample}_fastp.json"
+    conda: "envs/rna-seq.yml"
+    resources:
+        mem_mb=8000,
+        cpu=4
+    shell:
+        """
+        fastp -i {input.f1} -I {input.r2} \
+              -o {output.f1} -O {output.r2} \
+              --html {output.html} --json {output.json} \
+              --thread 4
+        """
+
+# -------------------------------
+# 6. Align
+# -------------------------------
+STAR_INDEX = "../../inputs/star_index/star-2.7.5c_GRCh38.d1.vd1_gencode.v36"   # GDC STAR index (fetch_inputs.sh --only star_index)
+
+rule align:
+    input:
+        f1="{sample}/{sample}_f1_trimmed.fq",
+        r2="{sample}/{sample}_r2_trimmed.fq"
+    output:
+        bam="{sample}_f1_combined.fqAligned.sortedByCoord.out.bam"
+    conda: "envs/rna-seq.yml"
+    resources:
+        mem_mb=50000,
+        cpu=16
+    shell:
+        """
+        STAR --readMapNumber -1 \
+             --outFileNamePrefix {wildcards.sample}_f1_combined.fq \
+             --genomeDir {STAR_INDEX} \
+             --readFilesIn {input.f1} {input.r2} \
+             --outSAMtype BAM SortedByCoordinate \
+             --runThreadN 16 \
+             --outSAMmultNmax 1 \
+             --outSAMstrandField intronMotif
+        """
+
+# -------------------------------
+# 7. Regtools junction extraction
+# -------------------------------
+rule regtools_extract:
+    input:
+        bam="{sample}_f1_combined.fqAligned.sortedByCoord.out.bam"
+    output:
+        junc_file="junc_files/{sample}.txt"
+    resources:
+        mem_mb=10000,
+        cpu=8
+    conda: "envs/rna-seq.yml"
+    shell:
+        """
+        mkdir -p junc_files
+        samtools index -@ 8 {input.bam}
+        regtools junctions extract -a 8 -m 50 -M 500000 -s XS {input.bam} -o junc_files/{wildcards.sample}.junc
+        echo junc_files/{wildcards.sample}.junc > {output.junc_file}
+        """
+
+# -------------------------------
+# 8. Merge all per-sample junction files
+# -------------------------------
+rule merge_file_names:
+    input:
+        expand("junc_files/{sample}.txt", sample=SAMPLES)
+    output:
+        "junc_files/ylpm1_juncfiles.txt"
+    shell:
+        "cat {input} > {output}"
+
+# -------------------------------
+# 9. LeafCutter clustering
+# -------------------------------
+rule leafcutter_cluster:
+    input:
+        junc_file="junc_files/ylpm1_juncfiles.txt"
+    output:
+        "ylpm1_perind_numers.counts.gz"
+    conda: "envs/python2.7.yml"
+    shell:
+        """
+        python {LEAFCUTTER_DIR}/clustering/leafcutter_cluster_regtools.py -j {input.junc_file} -m 0 -o ylpm1 -l 500000
+        """

@@ -1,0 +1,115 @@
+---
+title: "Figure 1 / gene-level Quetzal: manuscript numbers"
+output: html_document
+params:
+  inputs: "current"   # or "pre_rerun" (pre chr10/11/18 PSI fix)
+---
+
+Gene-level numbers: genes processed, the cancer-type-specific junction-group
+search and its COSMIC enrichment, and the EZH2 / NF1 examples. Ported from
+`tcga/gene_level_poisson/plotting_genes/gene_cancer_type_hits.Rmd`
+(same aggregation, same tests). The last chunk prints text vs recomputed.
+
+```{r setup, include = FALSE}
+if (!exists("QROOT")) QROOT <- local({ d <- normalizePath(getwd())   # quetzal_code root
+  while (!file.exists(file.path(d, ".quetzal_root"))) { if (dirname(d) == d) stop("run from inside quetzal_code/"); d <- dirname(d) }
+  d })
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+source(file.path(QROOT, "figures/scripts/paper_stats_common.R"))
+```
+
+## Aggregate per-gene results
+
+Walks `chr*/{gene}/{junction_results,n_bb_tests}.tsv` and `res.RDS` under
+`gene_level_poisson_root` (slow), cached in `cache/paper_stats_glp_<inputs>.rds`;
+delete it to force a re-walk. `pre_rerun` swaps in the per-gene backups of the
+2,114 genes rerun on 2026-10-06 (see `pre_rerun` note in the chunk).
+
+```{r aggregate}
+dir.create("cache", showWarnings = FALSE)
+CF   <- sprintf("cache/paper_stats_glp_%s.rds", ps_inputs())
+ROOT <- file.path(QROOT, "quetzal_runs/gene_level")
+# pre_rerun: the per-gene outputs as they were before the 2026-10-06 rerun =
+# today's tree with the 2,114 rerun genes (chr10/11/18 + ANKIB1) swapped for
+# their backups in pre_chr18fix_2026-10-06/ (every other gene is untouched).
+BK <- file.path(ROOT, "pre_chr18fix_2026-10-06")
+pick <- function(files) {
+  rel <- substring(files, nchar(ROOT) + 2)
+  bk  <- file.path(BK, rel)
+  ifelse(file.exists(bk), bk, files)
+}
+if (file.exists(CF)) {
+  agg <- readRDS(CF)
+} else {
+  jf <- Sys.glob(file.path(ROOT, "chr*", "*", "junction_results.tsv"))
+  if (ps_inputs() == "pre_rerun") jf <- pick(jf)
+  jf <- jf[file.size(jf) > 0]
+  allj <- rbindlist(lapply(jf, function(f) tryCatch(fread(f), error = function(e) NULL)),
+                    fill = TRUE, use.names = TRUE)
+  nb <- Sys.glob(file.path(ROOT, "chr*", "*", "n_bb_tests.tsv"))
+  if (ps_inputs() == "pre_rerun") nb <- pick(nb)
+  n_tests <- sum(vapply(nb, function(f) if (file.size(f) == 0) 0L else
+    as.integer(fread(f, data.table = FALSE)$n_bb_tests[1]), integer(1)))
+  rf <- Sys.glob(file.path(ROOT, "chr*", "*", "res.RDS"))
+  allj[, bb_pvalue_bonf := pmin(bb_pvalue * n_tests, 1)]
+  agg <- list(sig = as.data.frame(allj[bb_pvalue_bonf < 0.05 & bb_beta > 0]),
+              n_tests = n_tests,
+              processed = unique(basename(dirname(rf[file.size(rf) > 100]))))
+  saveRDS(agg, CF)
+}
+cat("BB tests:", agg$n_tests, "| significant TCGA-up junction rows:", nrow(agg$sig), "\n")
+```
+
+## Genes processed, cancer-type-specific junction groups, COSMIC enrichment
+
+```{r enrichment}
+claim("GENE", "genes retained after filtering", "13,665", format(length(agg$processed), big.mark = ","))
+sig_genes <- unique(na.omit(agg$sig$gene_name))
+claim("GENE", "cancer-type-specific junction groups", "4,283",
+      format(n_distinct(paste(agg$sig$gene_name, agg$sig$factor)), big.mark = ","))
+claim("GENE", "  in genes", "3,366", format(length(sig_genes), big.mark = ","))
+
+cos  <- fread(file.path(QROOT, "inputs/cosmic_tier_1.tsv"), data.table = FALSE)
+enrich <- function(set) {
+  in_set <- intersect(agg$processed, set)
+  non    <- setdiff(agg$processed, cos$`Gene Symbol`)
+  a <- length(intersect(sig_genes, in_set)); b <- length(in_set) - a
+  c <- length(intersect(sig_genes, non));    d <- length(non) - c
+  list(n = a, or = (a * d) / (b * c),
+       p = chisq.test(matrix(c(a, b, c, d), 2, byrow = TRUE))$p.value)
+}
+e_all <- enrich(cos$`Gene Symbol`)
+e_tsg <- enrich(cos$`Gene Symbol`[grepl("TSG", cos$`Role in Cancer`)])
+claim("GENE", "COSMIC tier 1 genes among them", "181", e_all$n)
+claim("GENE", "COSMIC enrichment (text: '1.7-fold', hypergeometric) odds ratio", "1.7",
+      sprintf("%.1f", e_all$or))
+claim("GENE", "COSMIC enrichment P (chi-squared)", "6.4e-08", fmt_p(e_all$p))
+claim("GENE", "TSG-only: genes / odds ratio / chi-squared P (new)", "(not in text)",
+      sprintf("%d / %.1f / %s", e_tsg$n, e_tsg$or, fmt_p(e_tsg$p)))
+```
+
+## EZH2 (Fig 1d) and NF1 (Fig 1e)
+
+```{r examples}
+ez <- readRDS(file.path(PS_FIG, "figure1/panel_d_e/output/EZH2_LAML/EZH2/gene_data.RDS"))
+claim("GENE", "EZH2 k6 unique junctions", "5", length(ez$junctions_to_compare))
+nf <- readRDS(file.path(PS_FIG, "figure1/panel_d_e/output/NF1_LUSC/NF1/gene_data.RDS"))
+j  <- nf$junctions_to_compare[1]
+fc <- mean(nf$tcga_norm_dat[, grep(j, colnames(nf$tcga_norm_dat))], na.rm = TRUE) /
+      mean(nf$gtex_norm_dat[, grep(j, colnames(nf$gtex_norm_dat))], na.rm = TRUE)
+claim("GENE", "NF1 LUSC vs GTEx lung inclusion fold (mean PSI)", "> 5-fold", sprintf("%.1f-fold", fc))
+# Beta-binomial Wald P (aod::betabin; lib.R). aod computes 2*(1 - pnorm(|z|)),
+# which rounds to 0 for |z| > ~8.3, so report it from the exact log10 P.
+l10 <- nf$junction_log10p[[j]]; e10 <- floor(l10)
+claim("GENE", "NF1 LUSC vs GTEx lung P (beta-binomial)", "2.1e-66",
+      sprintf("%.1fe%d", 10^(l10 - e10), e10))
+ezp <- ez$junction_log10p; ee <- floor(ezp)
+cat("EZH2 k6 junction P (beta-binomial):", paste(sprintf("%.1fe%d", 10^(ezp - ee), ee), collapse = ", "), "\n")
+```
+
+## Text vs recomputed
+
+```{r claims table}
+knitr::kable(claims_table())
+fwrite(claims_table(), sprintf("paper_stats_%s.tsv", ps_inputs()), sep = "\t")
+```

@@ -1,0 +1,31 @@
+# Leafcutter differential splicing pipeline configuration
+# For each gene × comparison, selects top N samples vs 3N matched controls
+
+metadata: "../../inputs/tcga_v2_samples.tsv"
+flashier_dir: ".."
+junc_dir: "sample_junc_files"
+leafcutter_dir: "~/software/leafcutter"   # clone of github.com/davidaknowles/leafcutter
+
+# factor_num is the column index into out$L_pm of
+# just_for_fun/nmd_investigation/softimpute_flash_300_qc_filtered.RDS
+# (cached into flashier_loadings.tsv by scripts/extract_loadings_from_rds.R).
+loadings_file: "flashier_loadings.tsv"
+
+genes:
+  nkap:
+    factor_num: 13
+    control_threshold: 1e-4
+  ylpm1:
+    factor_num: 30
+    control_threshold: 1e-4
+  sf3b1:
+    factor_num: 10
+    control_threshold: 1e-4
+
+comparisons:
+  - n_test: 10
+    control_ratio: 3
+  - n_test: 20
+    control_ratio: 3
+  - n_test: 30
+    control_ratio: 3

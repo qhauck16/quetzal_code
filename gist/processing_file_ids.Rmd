@@ -1,0 +1,76 @@
+---
+title: "processing_file_ids"
+output: html_document
+date: "2025-09-02"
+---
+```{r setup}
+library(data.table)
+library(tidyverse)
+library(flashier)
+library(ggrepel)
+library(Polychrome)
+library(fastTopics)
+library(readr)
+library(ggbio)
+library(patchwork)
+library(GenomicRanges)
+library(ggforce)
+library(gtable)
+library(gridExtra)
+library(plotly)
+```
+
+
+```{r}
+YLPM1_mutant_status <- read_tsv('YLPM1_mutant_status.txt')
+samp_to_acc <- read_tsv('sample_to_accession.txt')
+acc_to_exp <- read_tsv('accession_to_experiment.txt')
+
+
+experiment_info <- left_join(samp_to_acc, acc_to_exp, by = c('Accession' = 'BioSample accession')) %>%
+  left_join(YLPM1_mutant_status, by = c('Sample Name' = 'Case'))
+
+
+ylpm1_exp <- experiment_info %>%
+  filter(grepl('transcriptomic', `Experiment title`)) %>%
+  mutate(
+    ID = sub("[TN]$", "", `Sample Name`),
+    Type = sub(".*([TN])$", "\\1", `Sample Name`)
+  ) %>%
+  group_by(ID) %>%
+  # keep only IDs where tumor (T) sample has YLPM1 genomic == "YES"
+  filter(any(Type == "T" & `YLPM1 genomic` == "YES")) %>%
+  ungroup()
+```
+
+```{r more samples}
+set.seed(456)
+additional_ylpm1_samples <- experiment_info %>%
+  filter(`YLPM1 genomic` == "YES") %>%
+  filter(as.numeric(str_split_i(`Sample Title`, '[T, N, -]', 1)) < 81) %>%
+  filter(grepl('transcriptomic', `Experiment title`))
+
+additional_controls <- experiment_info %>%
+  filter(`YLPM1 genomic` == "NO" & `YLPM1 protein` == 'Normal') %>%
+  filter(as.numeric(str_split_i(`Sample Title`, '[T, N, -]', 1)) < 81) %>%
+  filter(grepl('transcriptomic', `Experiment title`)) %>%
+  slice_sample(n = 5)
+
+additional_ylpm1_protein_loss <- experiment_info %>%
+  filter(`YLPM1 genomic` == "NO" & `YLPM1 protein` == 'loss') %>%
+  filter(as.numeric(str_split_i(`Sample Title`, '[T, N, -]', 1)) < 81) %>%
+  filter(grepl('transcriptomic', `Experiment title`)) %>%
+  slice_sample(n = 3)
+
+all_additional <- rbind(additional_ylpm1_samples, additional_controls, additional_ylpm1_protein_loss)
+
+all_original <- experiment_info %>%
+  filter(as.numeric(str_split_i(`Sample Title`, '[T, N, -]', 1)) > 86) %>%
+  filter(`Sample Title` %in% ylpm1_exp$`Sample Title`)%>%
+  filter(grepl('transcriptomic', `Experiment title`))
+
+files_to_download <- rbind(all_original, all_additional)
+
+write_tsv(files_to_download, "GIST_files_to_download.tsv")
+
+```

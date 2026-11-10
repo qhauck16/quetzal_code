@@ -1,0 +1,308 @@
+---
+title: "Figure 3 / GSP #13 (C* spliceosome): manuscript numbers"
+output: html_document
+params:
+  inputs: "current"   # or "pre_rerun" (pre-2026-10 diff-splicing + phenotype inputs)
+---
+
+Every number the manuscript states about GSP #13 / the C* spliceosome,
+recomputed from quetzal_code inputs. Ported from
+`diff_splicing/paper_stats.Rmd` and `diff_splicing/nkap/top500_alt3_fc_vs_loading.Rmd`
+(same definitions). The last chunk prints text value vs recomputed value.
+
+```{r setup, include = FALSE}
+if (!exists("QROOT")) QROOT <- local({ d <- normalizePath(getwd())   # quetzal_code root
+  while (!file.exists(file.path(d, ".quetzal_root"))) { if (dirname(d) == d) stop("run from inside quetzal_code/"); d <- dirname(d) }
+  d })
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+source(file.path(QROOT, "figures/scripts/paper_stats_common.R"))
+```
+
+```{r inputs}
+TARGET <- c("NKAP", "PRPF8", "FAM50A", "SLU7")
+v    <- fread(vt_path("NKAP_full_plus_variants"), data.table = FALSE) %>% arrange(desc(k13))
+phen <- fread(phen_path("nkap"), data.table = FALSE)
+meta <- tcga_meta()
+cat("inputs:", ps_inputs(), "| samples:", nrow(v), "\n")
+
+# protein positions for one gene out of "GENE:mut1,mut2;GENE2:..." strings
+extract_positions <- function(s, gene) {
+  if (is_blank(s)) return(integer(0))
+  b <- regmatches(s, gregexpr(paste0(gene, ":[^;]+"), s))[[1]]
+  unlist(lapply(b, function(x) {
+    m <- strsplit(sub(paste0("^", gene, ":"), "", x), ",")[[1]]
+    p <- suppressWarnings(as.integer(regmatches(m, regexpr("\\d+", m))))
+    p[!is.na(p)]
+  }))
+}
+all_cols <- c("gene_mutation", "wxs_mutation", "rnaseq_mutation")
+pos_any  <- function(r, g, cols = all_cols) unlist(lapply(cols, function(cl) extract_positions(r[[cl]], g)))
+v$any_target    <- apply(v, 1, function(r) any(sapply(TARGET, function(g) length(pos_any(r, g)) > 0)))
+v$domain_target <- apply(v, 1, function(r) any(pos_any(r, "NKAP") > 300) ||
+                                            any(pos_any(r, "PRPF8") >= 1570 & pos_any(r, "PRPF8") <= 1900))
+v$annot_nkap    <- grepl("(^|;)NKAP:", v$gene_mutation)
+# gene_mutation already includes the WXS / RNA-seq re-calls. "Annotated"
+# (PanCanAtlas / GDC) = gene_mutation entries that are NOT re-calls.
+recall_set <- function(r) trimws(unlist(strsplit(c(r[["wxs_mutation"]], r[["rnaseq_mutation"]]), ";")))
+annot_only <- function(r) {
+  e <- trimws(unlist(strsplit(r[["gene_mutation"]], ";")))
+  e <- e[!is_blank(e)]
+  paste(setdiff(e, recall_set(r)), collapse = ";")
+}
+v$annot_mutation <- vapply(seq_len(nrow(v)), function(i) annot_only(v[i, ]), character(1))
+```
+
+## Top-loading samples
+
+```{r top samples}
+top10 <- head(v, 10); top50 <- head(v, 50)
+claim("GSP13", "top 10 samples with an annotated NKAP mutation", "7 of 10",
+      sprintf("%d of 10", sum(grepl("(^|;)NKAP:", top10$annot_mutation))))
+
+am_all <- fread(file.path(QROOT, "mutation_processing/merged_grch38_with_am.tsv"), data.table = FALSE)
+am     <- am_all %>% filter(is.na(am_pathogenicity) | am_pathogenicity > 0.9)
+n_mut_samples <- n_distinct(am_all$sampleId)          # TCGA samples with any call
+nkap_rate <- n_distinct(am_all$sampleId[am_all$hugoGeneSymbol == "NKAP"]) / n_mut_samples
+claim("GSP13", "TCGA-wide NKAP mutation rate (any mutation)", "~1%", sprintf("~%.0f%%", 100 * nkap_rate))
+
+# NKAP C-terminal (> 300) mutation entries among top-loading samples
+# (Fig 3b draws the top 60; the text says "high-loading samples").
+nkap_ct <- function(d) {   # annotated (non-re-called) NKAP C-terminal entries
+  p <- unlist(lapply(d$annot_mutation, extract_positions, gene = "NKAP"))
+  p[p > 300]
+}
+for (n in c(50, 60)) {
+  p <- nkap_ct(head(v, n))
+  cat(sprintf("top %d: %d NKAP C-terminal mutation entries; R368 x%d, R402 x%d\n",
+              n, length(p), sum(p == 368), sum(p == 402)))
+}
+# Fig 3b draws the top 60 (Quinn, 2026-10-08: keep 60 -- the rank-51 R366Q
+# sample is phenotype-positive). The text's description of 3b's mutations
+# therefore uses the top 60; the explicit "top 50" claims below stay at 50.
+p60 <- nkap_ct(head(v, 60))
+r51 <- v[51, ]
+cat(sprintf("rank 51: rail %s, %s, NKAP %s, phenotype-positive: %s\n", r51$rail_id, r51$project_id,
+            r51$gene_mutation, r51$rail_id %in% phen_pos(phen)$rail_id))
+
+for (g in c("SLU7", "FAM50A")) {
+  n_s <- sum(sapply(seq_len(50), function(i) length(pos_any(top50[i, ], g)) > 0))
+  cat(sprintf("top 50 samples with a %s mutation: %d\n", g, n_s))
+}
+top60 <- head(v, 60)
+for (n in c(50, 60)) for (g in c("SLU7", "FAM50A"))
+  cat(sprintf("top %d, annotated %s mutations: %d\n", n, g,
+              length(unlist(lapply(head(v, n)$annot_mutation, extract_positions, gene = g)))))
+# One class per sample, using the SAME priority classifier as the Fig 3a CDF
+# (scripts/nkap_variants.R: NKAP 300-413 > PRPF8 1570-1900 > FAM50A > SLU7),
+# so a FAM50A / SLU7 change in a sample already called NKAP or PRPF8 is not
+# counted again.
+source(file.path(PS_FIG, "figure3/scripts/nkap_variants.R"))
+cls60 <- classify_variants(top60)
+print(cls60 %>% filter(variant_class != VARIANT_OTHER) %>%
+        transmute(rank = match(rail_id, v$rail_id), rail_id, variant_class, proteinChange))
+print(table(cls60$variant_class))
+# NKAP: one per sample (class from the CDF classifier), annotated calls only
+# (a sample whose NKAP hit is a re-call only is not counted here).
+nk60 <- cls60 %>% filter(variant_class == "NKAP variant")
+nk60$annot_ct <- vapply(nk60$annot_mutation, function(m) {
+  p <- extract_positions(m, "NKAP"); any(p >= 300 & p <= 413) }, logical(1))
+nk60_pos <- vapply(seq_len(nrow(nk60)), function(i) {
+  p <- extract_positions(nk60$annot_mutation[i], "NKAP"); p <- p[p >= 300 & p <= 413]
+  if (any(p %in% c(368, 402))) p[p %in% c(368, 402)][1] else if (length(p)) p[1] else NA_integer_
+}, integer(1))
+claim("GSP13", "NKAP-class samples with annotated C-terminal mutation, top 60", "18",
+      sum(nk60$annot_ct))
+claim("GSP13", "  of which at p.R368 / p.R402 (samples)", "3 / 5",
+      sprintf("%d / %d", sum(nk60_pos == 368, na.rm = TRUE), sum(nk60_pos == 402, na.rm = TRUE)))
+claim("GSP13", "SLU7-class samples, top 60 (priority-assigned)", "3",
+      sum(cls60$variant_class == "SLU7 variant"))
+claim("GSP13", "FAM50A-class samples, top 60 (priority-assigned)", "6",
+      sum(cls60$variant_class == "FAM50A variant"))
+```
+
+## Co-mutated genes in the top 50 without NKAP mutations (CMH)
+
+`supplementary/cache/build_mutation_cache.R` (S12) ports the
+"NKAP finding other mutants along the same axis" chunk of flash_fact_char.Rmd:
+the top 50 on GSP #13 minus NKAP-mutant samples, AlphaMissense > 0.9 (or
+unscored) calls, one-sided CMH stratified by TCGA cohort, Bonferroni over all genes.
+
+```{r cmh}
+cm <- fread(file.path(PS_FIG, "supplementary/cache/s12_cmh_nkap_excluded.tsv"), data.table = FALSE)
+print(head(cm, 8))
+padj_of <- function(g) fmt_p(cm$padj[cm$gene == g])
+claim("GSP13", "CMH adjusted P, PRPF8", "4.0e-09", padj_of("PRPF8"))
+claim("GSP13", "CMH adjusted P, FAM50A", "2.2e-15", padj_of("FAM50A"))
+claim("GSP13", "CMH adjusted P, SLU7", "6.2e-05", padj_of("SLU7"))
+claim("GSP13", "other genes with adjusted P < 0.05", "2 (co-occurring)",
+      paste(setdiff(cm$gene[cm$padj < 0.05], c("PRPF8", "FAM50A", "SLU7")), collapse = ", "))
+```
+
+## Exome / RNA-seq re-calling and the top 50
+
+```{r recall}
+recalled <- v %>% filter(!is_blank(wxs_mutation) | !is_blank(rnaseq_mutation)) %>%
+  mutate(rank = match(rail_id, v$rail_id))
+cat("samples with a WXS / RNA-seq call (all have GSP #13 > 0.01):\n")
+print(recalled %>% select(rank, rail_id, k13, wxs_mutation, rnaseq_mutation))
+rc <- lapply(seq_len(nrow(recalled)), function(i) {
+  e <- unique(recall_set(recalled[i, ])); e <- e[!is_blank(e)]
+  tibble(rail_id = recalled$rail_id[i], rank = recalled$rank[i], call = e,
+         gene = sub(":.*", "", e),
+         pos = suppressWarnings(as.integer(str_extract(sub("^[^:]+:", "", e), "\\d+"))))
+}) %>% bind_rows()
+annot_pos <- lapply(c("NKAP", "PRPF8"), function(g)
+  unlist(lapply(v$annot_mutation, extract_positions, gene = g))) |> setNames(c("NKAP", "PRPF8"))
+np  <- rc %>% filter(gene %in% c("NKAP", "PRPF8"))
+claim("GSP13", "further NKAP/PRPF8 mutations recovered by re-calling (all)", "7", nrow(np))
+claim("GSP13", "  of those in the top 60", "7", sum(np$rank <= 60))
+claim("GSP13", "  at residues already mutated in other (annotated) samples", "4",
+      sum(mapply(function(g, p) p %in% annot_pos[[g]], np$gene, np$pos)))
+claim("GSP13", "further FAM50A variants recovered", "1 (p.Q33P)",
+      sprintf("%d (%s)", sum(rc$gene == "FAM50A"), paste(rc$call[rc$gene == "FAM50A"], collapse = ",")))
+
+claim("GSP13", "top 50 with a damaging NKAP/PRPF8/FAM50A/SLU7 mutation", "41 (82%)",
+      sprintf("%d (%.0f%%)", sum(top50$any_target), 100 * mean(top50$any_target)))
+claim("GSP13", "top 50 with NKAP C-term or PRPF8 RNase H mutation", "32 (64%)",
+      sprintf("%d (%.0f%%)", sum(top50$domain_target), 100 * mean(top50$domain_target)))
+# Backgrounds from the AlphaMissense-merged calls (paper_stats.Rmd, chunk 1-4):
+# samples with a damaging call / TCGA samples with any call.
+pos_am <- function(g, lo, hi) am %>% filter(hugoGeneSymbol == g) %>%
+  mutate(p = as.integer(str_extract(proteinChange, "\\d+"))) %>%
+  filter(!is.na(p), p >= lo, p <= hi) %>% pull(sampleId)
+claim("GSP13", "TCGA background, any of the four genes", "2.8%",
+      sprintf("%.1f%%", 100 * n_distinct(am$sampleId[am$hugoGeneSymbol %in% TARGET]) / n_mut_samples))
+claim("GSP13", "TCGA background, NKAP C-term or PRPF8 RNase H", "<1%",
+      sprintf("%.2f%%", 100 * n_distinct(c(pos_am("NKAP", 300, 420), pos_am("PRPF8", 1570, 1900))) / n_mut_samples))
+claim("GSP13", "highest-loading sample's mutation", "SLU7:R290I", v$gene_mutation[1])
+```
+
+## Re-calling in matched controls
+
+The unified calling (`wxs_mut_calling/unified/nkap`) ran the identical pipeline on 65 cases (GSP #13 > 0.01)
+and 65 cohort-matched controls (GSP #13 < 1e-4; `samples.tsv` role). Every control's calls pass through the
+same `extract_called_variants()` filter as the cases (PASS/multiallelic WXS, MODERATE/HIGH, AF > 0.1,
+depth > 10, NKAP > 300 / PRPF8 1570-1900 / FAM50A / SLU7, AlphaMissense > 0.9) and land in the variant
+table's `wxs_mutation` / `rnaseq_mutation` columns, so a control "with a mutation" is a non-blank call there.
+
+```{r recall controls}
+UNI <- file.path(QROOT, "variant_recalling/unified")
+roles <- fread(file.path(UNI, "nkap", "samples.tsv"), data.table = FALSE)
+ctrl  <- roles$rail_id[roles$role == "control"]
+has_vep <- function(r, s) file.exists(file.path(UNI, "nkap", "vep", s, paste0(r, ".vep.vcf")))
+cat(sprintf("controls: %d | with WXS calls run: %d | with RNA calls run: %d\n", length(ctrl),
+            sum(sapply(ctrl, has_vep, s = "wxs")), sum(sapply(ctrl, has_vep, s = "rna"))))
+vc <- v %>% filter(rail_id %in% ctrl)
+ctrl_hits <- vc %>% filter(!is_blank(wxs_mutation) | !is_blank(rnaseq_mutation))
+print(ctrl_hits %>% select(rail_id, k13, wxs_mutation, rnaseq_mutation))
+cases <- roles$rail_id[roles$role == "case"]
+case_hits <- v %>% filter(rail_id %in% cases, !is_blank(wxs_mutation) | !is_blank(rnaseq_mutation))
+claim("GSP13", "controls with a re-called C* mutation (same pipeline)", "0 (no mutations among controls)",
+      sprintf("%d of %d controls (cases: %d of %d)", nrow(ctrl_hits), length(ctrl), nrow(case_hits), length(cases)))
+```
+
+## LeafCutter 20v60 phenotype (Fig 3d, e)
+
+```{r ds breakdown}
+ds <- fread(uni_path("nkap", "20v60", "dpsi0.01_fc2.5"), data.table = FALSE)
+up <- ds %>% filter(deltapsi > 0)
+cat("upregulated DS junctions (dPSI >= 1%, FC >= 2.5):", nrow(up), "\n")
+claim("GSP13", "alt 3'ss upregulated junctions (n)", "2,471",
+      format(sum(up$type == "alt 3'ss"), big.mark = ","))
+claim("GSP13", "alt 3'ss share of upregulated", "88%",
+      sprintf("%.0f%%", 100 * mean(up$type == "alt 3'ss")))
+cat("Fig 3d N (all df_final rows):", nrow(ds), "\n")
+alt3  <- up %>% filter(type == "alt 3'ss")
+close <- alt3 %>% filter(!is.na(distance_to_cryptic), distance_to_cryptic < 0, distance_to_cryptic >= -1000)
+cat(sprintf("directly-downstream (<=1 kb) alt 3'ss at 5-12 nt: %.0f%%\n",
+            100 * mean(close$distance_to_cryptic >= -12 & close$distance_to_cryptic <= -5)))
+claim("GSP13", "alt 3'ss 5-12 nt downstream of canonical (of all alt 3'ss)", "87%",
+      sprintf("%.0f%%", 100 * sum(close$distance_to_cryptic >= -12 & close$distance_to_cryptic <= -5) / nrow(alt3)))
+
+mms19 <- ds %>% filter(gene_name == "MMS19", type == "alt 3'ss") %>%
+  mutate(fc = test / control) %>% arrange(desc(deltapsi))
+print(mms19 %>% select(gene_name, type, deltapsi, test, control, fc, distance_to_cryptic))
+claim("GSP13", "MMS19 alt 3'ss fold change (top 20 vs controls)", ">10-fold",
+      sprintf("%.1f-fold", max(mms19$fc)))
+
+cosmic <- unique(fread(file.path(QROOT, "inputs/cosmic_tier_1.tsv"), data.table = FALSE)$`Gene Symbol`)
+g_1_27 <- unique(ds$gene_name[ds$deltapsi > 0 & ds$type == "alt 3'ss" &
+                              !is.na(ds$distance_to_cryptic) &
+                              ds$distance_to_cryptic >= -27 & ds$distance_to_cryptic <= -1])
+claim("GSP13", "COSMIC tier 1 genes with 3'ss displacement 1-27 nt downstream", "85",
+      length(intersect(g_1_27, cosmic)))
+```
+
+```{r frameshift expression}
+# Fig 3e: genes with frameshifting vs in-frame cryptic 3'ss (< 20 nt upstream
+# shift, as panel_e/build.R), mean scaled RPM over the top-20 samples.
+ds_e <- fread(uni_path("nkap", "20v60", "dpsi0.01_fc2.5"))
+read_mat <- function(f) fread(file.path(PS_FIG, "figure3/cache", f), header = TRUE) |>
+  as.data.frame() |> column_to_rownames("gene_name") |> as.matrix()
+em  <- read_mat("panel_e_scaled.tsv")
+top <- readLines(file.path(PS_FIG, "figure3/cache/panel_e_top_ids.txt"))
+hits <- ds_e[deltapsi > 0.01 & test / control > 2.5 & type == "alt 3'ss" &
+             !is.na(distance_to_cryptic) & distance_to_cryptic > -20 & distance_to_cryptic < 0]
+tgt <- intersect(unique(hits[distance_to_cryptic %% 3 != 0]$gene_name), rownames(em))
+cmp <- setdiff(intersect(unique(hits[distance_to_cryptic %% 3 == 0]$gene_name), rownames(em)), tgt)
+mx  <- function(g) { x <- rowMeans(em[g, top, drop = FALSE], na.rm = TRUE); x[is.finite(x)] }
+pe  <- wilcox.test(mx(tgt), mx(cmp), alternative = "less")$p.value
+cat(sprintf("frameshifted n = %d, in-frame n = %d\n", length(tgt), length(cmp)))
+claim("GSP13", "frameshifted vs in-frame expression (Fig 3e) P", "4.2e-07", fmt_p(pe))
+```
+
+## Phenotype prevalence (SVM)
+
+```{r prevalence}
+pos <- phen_pos(phen)
+claim("GSP13", "phenotype-positive samples", "51", nrow(pos))
+claim("GSP13", "  carrying a NKAP/PRPF8/FAM50A/SLU7 mutation", "38",
+      sum(v$any_target[v$rail_id %in% pos$rail_id]))
+bg <- meta %>% filter(rail_id %in% v$rail_id) %>%
+  mutate(in_pos = rail_id %in% pos$rail_id, ucec = project_id == "TCGA-UCEC")
+ft <- fisher.test(table(bg$in_pos, bg$ucec), alternative = "greater")
+claim("GSP13", "UCEC phenotype-positive (n, % of UCEC)", "18 (3.6%)",
+      sprintf("%d (%.1f%%)", sum(bg$in_pos & bg$ucec), 100 * sum(bg$in_pos & bg$ucec) / sum(bg$ucec)))
+claim("GSP13", "UCEC enrichment Fisher P", "2.5e-11", fmt_p(ft$p.value))
+claim("GSP13", "cohorts spanned by phenotype-positive samples", "16",
+      n_distinct(bg$project_id[bg$in_pos]))
+
+vp <- v %>% left_join(phen %>% select(rail_id, group, svm = score), by = "rail_id") %>%
+  arrange(desc(svm))
+# Annotated (PanCanAtlas / GDC) C* calls only, samples with a WXS / RNA-seq
+# re-call excluded (Quinn, 2026-10-26): re-calling was run only on GSP #13 >
+# 0.01 samples and matched controls, so counting re-calls would favour the
+# near-boundary set over the rest of TCGA.
+non <- vp %>% filter(!is.na(svm), svm <= 0, is_blank(wxs_mutation), is_blank(rnaseq_mutation))
+t50 <- non %>% filter(group == "intermediate") %>% slice_head(n = 50)
+rest <- non %>% filter(!rail_id %in% t50$rail_id)
+cstar <- function(gm) grepl(paste0("(^|;)\\s*(", paste(TARGET, collapse = "|"), "):"), gm)
+tab <- matrix(c(sum(cstar(t50$gene_mutation)), 50 - sum(cstar(t50$gene_mutation)),
+                sum(cstar(rest$gene_mutation)), sum(!cstar(rest$gene_mutation))), nrow = 2, byrow = TRUE)
+print(tab)
+claim("GSP13", "50 intermediates closest to boundary: annotated C*-mutant (vs other non-positive)", "new",
+      sprintf("%d of 50 vs %d of %d", tab[1, 1], tab[2, 1], sum(tab[2, ])))
+# One-sided Fisher's exact test: the expected count in the "50 nearest x mutant"
+# cell is ~1, too small for the chi-square approximation (which gave 1.7e-09).
+claim("GSP13", "50 intermediates closest to boundary enriched for C* mutations, one-sided Fisher P",
+      "1.6e-05", fmt_p(fisher.test(tab, alternative = "greater")$p.value))
+```
+
+## NKAP neurodevelopmental-syndrome substitutions (Supplementary Note 2, Fig. 1)
+
+```{r rare disease}
+s19 <- fread(file.path(PS_FIG, "supplementary/note2/cache/stats.tsv"), data.table = FALSE)
+print(s19)
+for (i in seq_len(nrow(s19)))
+  claim("GSP13", sprintf("%s carrier (%s): cohort rank / empirical P / paired Wilcoxon P",
+                         s19$change[i], s19$cohort[i]), "(new)",
+        sprintf("%d of %d / %.3f / %s", s19$rank[i], s19$n_samples[i], s19$p_rank[i],
+                fmt_p(s19$p_wilcox[i])))
+```
+
+## Text vs recomputed
+
+```{r claims table}
+knitr::kable(claims_table())
+fwrite(claims_table(), sprintf("paper_stats_%s.tsv", ps_inputs()), sep = "\t")
+```

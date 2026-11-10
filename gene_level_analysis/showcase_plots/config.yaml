@@ -1,0 +1,131 @@
+# Supplementary structure-plot + DE-junction PSI CDF pipeline.
+# All paths resolved relative to the directory `snakemake` is invoked from
+# (this dir: gene_level_poisson/showcase_genes/supplementary_plots).
+paths:
+  gencode_granges:  "../../inputs/gencode_v46_granges.RDS"
+  tcga_metadata:    "../../inputs/tcga_v2_samples.tsv"
+  gtex_metadata:    "../../inputs/gtexv2_metadata.tsv"
+  mane_transcripts: "../../inputs/MANE.GRCh38.v1.4.summary.txt"
+  tcga_chr_dir:     "../../quetzal_runs/gene_level"     # holds chr*/{gene}/{res,de_res,dat}
+  leaf2_class:      "../../leafcutter_analyses/leaf2_classification/clustering/Leaf2_junction_classifications.txt"
+  tcga_psi_dir:     "../../leafcutter_analyses/psi_files/tcga"
+  gtex_psi_dir:     "../../leafcutter_analyses/psi_files/gtex"
+
+# DE-junction filter thresholds (matches main showcase_genes/config.yaml).
+thresholds:
+  lfc_thresh:  2
+  abs_thresh:  0.01
+  sval_thresh: 0.05
+
+# TCGA cohort -> GTEx tissue mapping (mirrors cancer_specific_factors.R).
+# Used to pick the GTEx control study for a TCGA "cohort_of_interest".
+tcga_to_gtex:
+  TCGA-ACC:  ADRENAL_GLAND
+  TCGA-BLCA: BLADDER
+  TCGA-BRCA: BREAST
+  TCGA-CESC: CERVIX_UTERI
+  TCGA-COAD: COLON
+  TCGA-ESCA: ESOPHAGUS
+  TCGA-GBM:  BRAIN
+  TCGA-KICH: KIDNEY
+  TCGA-KIRC: KIDNEY
+  TCGA-KIRP: KIDNEY
+  TCGA-LAML: BLOOD
+  TCGA-LGG:  BRAIN
+  TCGA-LIHC: LIVER
+  TCGA-LUAD: LUNG
+  TCGA-LUSC: LUNG
+  TCGA-MESO: LUNG
+  TCGA-OV:   OVARY
+  TCGA-PAAD: PANCREAS
+  TCGA-PRAD: PROSTATE
+  TCGA-READ: COLON
+  TCGA-SARC: MUSCLE
+  TCGA-SKCM: SKIN
+  TCGA-STAD: STOMACH
+  TCGA-TGCT: TESTIS
+  TCGA-THCA: THYROID
+  TCGA-UCEC: UTERUS
+  TCGA-UCS:  UTERUS
+
+# ---------------------------------------------------------------------------
+# Read-length showcase: structure plot is faceted by cohort + read-length
+# (e.g. COAD-48bp, COAD-75bp). No PSI CDF for these (no GTEx control).
+# Leave `factor` blank to skip the DE-junction table; fill it in manually
+# once the factor of interest is known and re-run.
+read_length:
+  MAP2K2:
+    chr: chr19
+    factor: "k5"
+    cohorts:
+      [TCGA-COAD, TCGA-READ, TCGA-UCEC, TCGA-OV, TCGA-PRAD, TCGA-TGCT, TCGA-KIRP]
+  KLHDC4:
+    chr: chr16
+    factor: "k6"
+    cohorts:
+      [TCGA-COAD, TCGA-READ, TCGA-UCEC, TCGA-OV, TCGA-PRAD, TCGA-TGCT, TCGA-KIRP]
+
+# ---------------------------------------------------------------------------
+# TCGA-cohort showcase: structure plot faceted by TCGA project_id only.
+# Each entry also gets a DE-junction PSI CDF, comparing the cohort_of_interest
+# in TCGA vs the corresponding GTEx tissue (resolved via tcga_to_gtex above).
+# Leave `factor` and `cohort_of_interest` blank to skip the corresponding
+# downstream outputs; fill them in manually and re-run snakemake.
+tcga_cohort:
+  C2:
+    chr: chr6
+    factor: "k10"
+    cohort_of_interest: "TCGA-PRAD"
+    cohorts: [TCGA-COAD, TCGA-READ, TCGA-UCEC, TCGA-OV, TCGA-PRAD, TCGA-TGCT, TCGA-KIRP]        # specify the TCGA cohorts to show in the structure
+                          # plot (e.g. [TCGA-LGG, TCGA-GBM, TCGA-THCA, ...])
+    
+  MVK:
+    chr: chr12
+    factor: "k6"
+    cohort_of_interest: "TCGA-KIRP"
+    cohorts: [TCGA-COAD, TCGA-READ, TCGA-UCEC, TCGA-OV, TCGA-PRAD, TCGA-TGCT, TCGA-KIRP]
+
+  MGAT5:
+    chr: chr2
+    factor: "k4"
+    cohort_of_interest: "TCGA-COAD, TCGA-READ"
+    cohorts: [TCGA-COAD, TCGA-READ, TCGA-UCEC, TCGA-OV, TCGA-PRAD, TCGA-TGCT, TCGA-KIRP]
+
+  OXR1:
+    chr: chr8
+    factor: "k8"
+    cohort_of_interest: "TCGA-OV"
+    cohorts: [TCGA-COAD, TCGA-READ, TCGA-UCEC, TCGA-OV, TCGA-PRAD, TCGA-TGCT, TCGA-KIRP]
+
+  NHEJ1:                 # colon -- very clean non-target pool
+    chr: chr2
+    factor: "k2"
+    cohort_of_interest: "TCGA-COAD, TCGA-READ"
+    cohorts: [TCGA-COAD, TCGA-READ, TCGA-UCEC, TCGA-OV, TCGA-PRAD, TCGA-TGCT, TCGA-KIRP]
+
+  DAB2IP:                # colon -- strongest target mean among additions
+    chr: chr9
+    factor: "k6"
+    cohort_of_interest: "TCGA-COAD, TCGA-READ"
+    cohorts: [TCGA-COAD, TCGA-READ, TCGA-UCEC, TCGA-OV, TCGA-PRAD, TCGA-TGCT, TCGA-KIRP]
+
+  ADAP1:                 # colon -- lowest read-length correlation
+    chr: chr7
+    factor: "k7"
+    cohort_of_interest: "TCGA-COAD, TCGA-READ"
+    cohorts: [TCGA-COAD, TCGA-READ, TCGA-UCEC, TCGA-OV, TCGA-PRAD, TCGA-TGCT, TCGA-KIRP]
+
+  CCDC24:                # ovarian
+    chr: chr1
+    factor: "k9"
+    cohort_of_interest: "TCGA-OV"
+    cohorts: [TCGA-COAD, TCGA-READ, TCGA-UCEC, TCGA-OV, TCGA-PRAD, TCGA-TGCT, TCGA-KIRP]
+
+  PATZ1:                 # ovarian
+    chr: chr22
+    factor: "k5"
+    cohort_of_interest: "TCGA-OV"
+    cohorts: [TCGA-COAD, TCGA-READ, TCGA-UCEC, TCGA-OV, TCGA-PRAD, TCGA-TGCT, TCGA-KIRP]
+
+
+

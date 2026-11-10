@@ -1,0 +1,311 @@
+---
+title: "Per-gene per-cancer-type Poisson hits"
+output: html_document
+date: "2026-04-30"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+```
+
+```{r libraries}
+suppressPackageStartupMessages({
+  library(data.table)
+  library(tidyverse)
+})
+```
+
+```{r cache load}
+# Re-running the chr*/{gene}/{results,junction_results,n_bb_tests}.tsv +
+# res.RDS walks takes a long time. The chunk at the bottom of this Rmd
+# (`save cache`) dumps every slow-computed object plus the input file
+# lists into a single RDS so we can short-circuit on the next knit.
+# Delete CACHE_FILE to force a full rebuild.
+CACHE_FILE <- "gene_cancer_type_hits_cache.RDS"
+USE_CACHE  <- file.exists(CACHE_FILE)
+
+if (USE_CACHE) {
+  cat("Loading cached objects from", CACHE_FILE, "\n")
+  .cache <- readRDS(CACHE_FILE)
+  for (nm in names(.cache)) assign(nm, .cache[[nm]])
+  rm(.cache)
+  cat("Loaded:", paste(ls(pattern = "^(tsv_files|all_results|junc_files|all_junctions|n_bb_files|n_tests|sig_junctions|res_files|processed_paths|processed_genes)$"),
+                       collapse = ", "), "\n")
+}
+```
+
+## Aggregate per-(gene, cancer_type) Poisson hits
+
+Walks every `chr*/{gene}/results.tsv` produced by the per-gene Poisson
+factor pipeline (one level up, in `gene_level_poisson/`), concatenates
+them, and writes the canonical hit table consumed by the `Snakefile`
+(`config.yaml::paths.cosmic_sig_tsv`).
+
+```{r aggregate sig results}
+# Rmd cwd = gene_level_analysis/. Per-gene chr*/ outputs live in ../quetzal_runs/gene_level/.
+root_dir <- "../quetzal_runs/gene_level"
+
+if (!USE_CACHE) {
+  tsv_files <- Sys.glob(file.path(root_dir, "chr*", "*", "results.tsv"))
+
+  all_results <- rbindlist(
+    lapply(tsv_files, function(f) {
+      if (file.size(f) == 0) return(NULL)
+      tryCatch(fread(f), error = function(e) NULL)
+    }),
+    fill      = TRUE,
+    use.names = TRUE,
+    idcol     = "source_file"
+  )
+
+  colnames(all_results) <- c(
+    "source_file", "gene_name", "cancer_type", "factor",
+    "factor_coefficient", "pvalue", "num_sig_juncs_in_factor",
+    "max_delta_psi", "max_psi_fc", "chr"
+  )
+}
+
+write_tsv(all_results, "gene_level_poisson_sig_results.tsv")
+cat("Wrote gene_level_poisson_sig_results.tsv (",
+    nrow(all_results), "rows,",
+    dplyr::n_distinct(all_results$gene_name), "distinct genes)\n")
+```
+
+## TSG aberrant-splicing candidates
+
+```{r tsg candidates}
+cosmic_tier_1 <- fread("../inputs/cosmic_tier_1.tsv", data.table = FALSE)
+
+to_check_out <- cosmic_tier_1 %>%
+  filter(grepl("TSG", `Role in Cancer`)) %>%
+  inner_join(all_results, by = c("Gene Symbol" = "gene_name")) %>%
+  # Cohort eligibility is decided upstream (cancer_specific_factors.R tests
+  # only cohorts with a matched GTEx tissue); no extra exclusions here.
+  filter(max_delta_psi > 0.1,
+         max_psi_fc    > 2)
+
+just_cancer_types <- to_check_out %>%
+  dplyr::select(`Gene Symbol`,
+                `Tumour Types(Somatic)`,
+                `Tumour Types(Germline)`,
+                cancer_type, chr)
+
+write_tsv(just_cancer_types, "tsg_aberrant_splicing_candidates.tsv")
+cat("Wrote tsg_aberrant_splicing_candidates.tsv (",
+    nrow(just_cancer_types), "rows)\n")
+```
+
+## Aggregate junction-level results
+
+`junction_results.tsv` is written per (gene, factor, cancer_type) hit by
+`cancer_specific_factors.R`. Each row is one junction × hit combination,
+with a beta-binomial GTEx-vs-TCGA test (`bb_beta`, `bb_pvalue`).
+Concatenate them, apply Bonferroni across all tested junctions, and
+keep only those upregulated in TCGA (`bb_beta > 0`).
+
+```{r aggregate junction results}
+if (!USE_CACHE) {
+  junc_files <- Sys.glob(file.path(root_dir, "chr*", "*",
+                                   "junction_results.tsv"))
+  junc_files <- junc_files[file.size(junc_files) > 0]
+
+  all_junctions <- rbindlist(
+    lapply(junc_files, function(f) {
+      tryCatch(fread(f), error = function(e) NULL)
+    }),
+    fill      = TRUE,
+    use.names = TRUE
+  )
+
+  # Bonferroni denominator = total BB tests actually performed across all
+  # (factor, cohort) hits, recorded per-gene by cancer_specific_factors.R.
+  # nrow(all_junctions) under-counted: it only included junctions in hits
+  # that *also* had >=1 significant junction, not the discarded ones.
+  n_bb_files <- Sys.glob(file.path(root_dir, "chr*", "*", "n_bb_tests.tsv"))
+  n_tests <- sum(vapply(n_bb_files, function(f) {
+    if (file.size(f) == 0) return(0L)
+    as.integer(fread(f, data.table = FALSE)$n_bb_tests[1])
+  }, integer(1)))
+
+  all_junctions[, bb_pvalue_bonf := pmin(bb_pvalue * n_tests, 1)]
+
+  sig_junctions <- all_junctions[bb_pvalue_bonf < 0.05 & bb_beta > 0]
+}
+
+cat("Junction-level rows loaded            :", nrow(all_junctions), "\n")
+cat("Total BB tests performed              :", n_tests, "\n")
+cat("Bonferroni-significant:",
+    sum(all_junctions$bb_pvalue_bonf < 0.05, na.rm = TRUE), "\n")
+cat("  of which upregulated in TCGA        :", nrow(sig_junctions), "\n")
+cat("Distinct genes among upregulated hits :",
+    dplyr::n_distinct(sig_junctions$gene_name), "\n")
+
+sig_facts <- sig_junctions %>%
+  mutate(gene_cohort_fact = paste0(gene_name, '-', factor, '-', cancer_type)) %>%
+  pull(gene_cohort_fact) %>%
+  unique() %>%
+  length()
+write_tsv(sig_junctions, "junction_level_sig_upregulated.tsv")
+```
+
+```{r number of unique junction groups ID-ed}
+sig_junctions <- fread("junction_level_sig_upregulated.tsv", data.table = F)
+unique_ks <- unique(paste0(sig_junctions$gene_name, '-', sig_junctions$factor))
+
+```
+## Process counts and COSMIC tier-1 enrichment (junction-level filter)
+
+```{r counts and enrichment}
+# A gene was actually processed if its res.RDS is non-trivial. Empty /
+# tiny res.RDS files come from genes where the Poisson fit didn't run.
+if (!USE_CACHE) {
+  res_files <- Sys.glob(file.path(root_dir, "chr*", "*", "res.RDS"))
+  processed_paths <- res_files[file.size(res_files) > 100]
+  processed_genes <- unique(basename(dirname(processed_paths)))
+}
+n_processed     <- length(processed_genes)
+
+# Significant gene set = genes with >=1 Bonferroni-surviving, TCGA-up junction
+sig_genes <- unique(sig_junctions$gene_name)
+sig_genes <- sig_genes[!is.na(sig_genes)]
+n_sig_genes <- length(sig_genes)
+
+# COSMIC tier 1 overlap
+cosmic_genes        <- cosmic_tier_1$`Gene Symbol`
+processed_in_cosmic <- intersect(processed_genes, cosmic_genes)
+sig_cosmic_genes    <- intersect(sig_genes, cosmic_genes)
+
+cat("Genes processed (res.RDS > 100 bytes)  :", n_processed,            "\n")
+cat("  in COSMIC tier 1                     :", length(processed_in_cosmic), "\n")
+cat("Genes with >=1 Bonferroni-up junction  :", n_sig_genes,            "\n")
+cat("  in COSMIC tier 1                     :", length(sig_cosmic_genes), "\n")
+
+# 2x2 contingency: of all genes processed, do COSMIC tier-1 genes have a
+# higher rate of carrying a Bonferroni-significant TCGA-up junction?
+a <- length(intersect(sig_genes, processed_in_cosmic))            # COSMIC + sig
+b <- length(processed_in_cosmic) - a                              # COSMIC + not sig
+non_cosmic_processed <- setdiff(processed_genes, cosmic_genes)
+c <- length(intersect(sig_genes, non_cosmic_processed))           # non-COSMIC + sig
+d <- length(non_cosmic_processed) - c                             # non-COSMIC + not sig
+
+contingency <- matrix(
+  c(a, b, c, d), nrow = 2, byrow = TRUE,
+  dimnames = list(c("COSMIC tier 1", "non-COSMIC"),
+                  c("up-junc", "no up-junc"))
+)
+print(contingency)
+
+chi <- chisq.test(contingency)
+print(chi)
+
+odds_ratio <- (a * d) / (b * c)
+cat(sprintf("\nOdds ratio (COSMIC up vs non-COSMIC up): %.3f\n",
+            odds_ratio))
+cat(sprintf("Up-junction rate among COSMIC tier 1: %d / %d = %.1f%%\n",
+            a, length(processed_in_cosmic),
+            100 * a / max(1, length(processed_in_cosmic))))
+cat(sprintf("Up-junction rate among non-COSMIC   : %d / %d = %.1f%%\n",
+            c, length(non_cosmic_processed),
+            100 * c / max(1, length(non_cosmic_processed))))
+```
+## COSMIC tier-1 tumour suppressors only
+
+```{r tsg enrichment}
+# Same 2x2 / chi-squared design as above, restricted to COSMIC tier-1 genes
+# whose Role in Cancer includes "TSG" (TSG-only and dual-role genes), and
+# compared against the same non-COSMIC background (other COSMIC genes are
+# left out of both rows so they do not dilute either group).
+tsg_genes           <- cosmic_tier_1$`Gene Symbol`[grepl("TSG", cosmic_tier_1$`Role in Cancer`)]
+processed_tsg       <- intersect(processed_genes, tsg_genes)
+a_t <- length(intersect(sig_genes, processed_tsg))   # TSG + sig
+b_t <- length(processed_tsg) - a_t                   # TSG + not sig
+contingency_tsg <- matrix(
+  c(a_t, b_t, c, d), nrow = 2, byrow = TRUE,
+  dimnames = list(c("COSMIC tier 1 TSG", "non-COSMIC"),
+                  c("up-junc", "no up-junc"))
+)
+print(contingency_tsg)
+chi_tsg        <- chisq.test(contingency_tsg)
+odds_ratio_tsg <- (a_t * d) / (b_t * c)
+print(chi_tsg)
+cat(sprintf("TSG odds ratio: %.3f | up-junction rate %d / %d = %.1f%% (non-COSMIC %.1f%%)\n",
+            odds_ratio_tsg, a_t, length(processed_tsg),
+            100 * a_t / max(1, length(processed_tsg)),
+            100 * c / max(1, length(non_cosmic_processed))))
+```
+
+```{r night science}
+cosmic_sig_junctions <- sig_junctions %>%
+  filter(gene_name %in% sig_cosmic_genes)
+
+
+```
+
+## Manuscript-ready summary
+
+```{r manuscript summary}
+# One block of numbers to plug into the results paragraph:
+#   - junction groups        = unique (gene_name, factor) hits
+#   - genes                  = distinct gene_names carrying any hit
+#   - COSMIC tier 1 overlap  = those genes intersected with COSMIC
+#   - odds ratio             = odds_ratio from the 2x2 in `counts and enrichment`
+#   - p-value                = chi-sq p from the same 2x2
+n_unique_ks  <- dplyr::n_distinct(
+  paste0(sig_junctions$gene_name, "-", sig_junctions$factor))
+n_sig_genes  <- dplyr::n_distinct(sig_junctions$gene_name)
+n_cosmic_hit <- length(sig_cosmic_genes)
+
+cat(sprintf("\n========= Manuscript-ready summary =========\n"))
+cat(sprintf("Unique junction groups (gene-factor pairs)   : %s\n",
+            format(n_unique_ks,  big.mark = ",")))
+cat(sprintf("Distinct genes with >=1 Bonferroni-up junction: %s\n",
+            format(n_sig_genes,  big.mark = ",")))
+cat(sprintf("Of which COSMIC tier 1                        : %s\n",
+            format(n_cosmic_hit, big.mark = ",")))
+cat(sprintf("COSMIC-vs-non-COSMIC odds ratio               : %.2f\n",
+            odds_ratio))
+cat(sprintf("Chi-squared p-value for that enrichment       : %.3g\n",
+            chi$p.value))
+cat(sprintf("============================================\n\n"))
+
+cat(sprintf(
+"Suggested sentence:
+  We identified %s junction groups in %s genes that showed cancer-type-
+  associated splicing independent of the normal tissue variation. These
+  genes were significantly enriched for COSMIC Tier 1 cancer genes
+  (%s genes; odds ratio %.1f, p = %.2g, chi-squared test), including
+  tumour suppressors (%s genes; odds ratio %.1f, p = %.2g).\n",
+  format(n_unique_ks,  big.mark = ","),
+  format(n_sig_genes,  big.mark = ","),
+  format(n_cosmic_hit, big.mark = ","),
+  odds_ratio, chi$p.value,
+  format(a_t, big.mark = ","), odds_ratio_tsg, chi_tsg$p.value))
+```
+
+## Cache everything needed to recreate the numerical analyses
+
+```{r save cache}
+# One RDS holding the slow-to-compute objects + the input file lists they
+# came from. Loaded near the top of this Rmd via `cache load` so the next
+# knit doesn't re-walk thousands of chr*/{gene}/{results,junction_results,
+# n_bb_tests}.tsv files. Delete CACHE_FILE to force a full rebuild.
+cache_objects <- list(
+  # ---- File-list provenance ----
+  tsv_files       = tsv_files,         # chr*/{gene}/results.tsv inputs
+  junc_files      = junc_files,        # chr*/{gene}/junction_results.tsv inputs
+  n_bb_files      = n_bb_files,        # chr*/{gene}/n_bb_tests.tsv inputs
+  res_files       = res_files,         # chr*/{gene}/res.RDS inputs (all)
+  processed_paths = processed_paths,   # subset of res_files with size > 100B
+
+  # ---- Aggregated tables / counts ----
+  all_results      = all_results,      # gene-level Poisson sig table
+  all_junctions    = all_junctions,    # junction-level BB results
+  n_tests          = n_tests,          # total BB tests for Bonferroni denom
+  sig_junctions    = sig_junctions,    # Bonferroni-up, TCGA-up junctions
+  processed_genes  = processed_genes   # unique gene_names with res.RDS > 100B
+)
+
+saveRDS(cache_objects, CACHE_FILE)
+cat("Saved cache to", CACHE_FILE, ":\n")
+str(cache_objects, max.level = 1, give.attr = FALSE)
+```

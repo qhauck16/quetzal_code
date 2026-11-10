@@ -1,0 +1,76 @@
+---
+title: "get_tcga_mutations"
+output: html_document
+date: "2025-09-17"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r library loading}
+library(tidyverse)
+library(cbioportalR)
+library(data.table)
+
+
+```
+
+```{r pancan download}
+set_cbioportal_db(db = "public")
+tcga_avail <- available_studies() %>%
+  filter(grepl('tcga_pan_can_atlas', studyId))
+
+for(study in unique(tcga_avail$studyId)){
+  data <- get_mutations_by_study(study_id = study)
+  cancer_type <- str_split_i(study, '_', 1)
+  write_tsv(data, paste0('mutations/pan_can_atlas/', cancer_type, '.tsv'))
+}
+
+
+```
+
+```{r gdc download}
+set_cbioportal_db(db = "public")
+tcga_avail <- available_studies() %>%
+  filter(grepl('tcga_gdc', studyId))
+
+for(study in unique(tcga_avail$studyId)){
+  data <- get_mutations_by_study(study_id = study)
+  cancer_type <- str_split_i(study, '_', 1)
+  write_tsv(data, paste0('mutations/gdc/', cancer_type, '.tsv'))
+}
+
+
+```
+
+```{r pancan compilation}
+full_mut_data <- fread(list.files('mutations/pan_can_atlas/', full.names = T)[1], data.table = F)
+for (file in list.files('mutations/pan_can_atlas/', full.names = T)[2:length(list.files('mutations/pan_can_atlas/'))]){
+  
+  mut_data <- fread(file, data.table = F) 
+  #remove columns we don't have in all files
+  mut_data <- mut_data %>% 
+    select(-c(colnames(mut_data)[!colnames(mut_data) %in% colnames(full_mut_data)]))
+  
+  full_mut_data <- rbind(full_mut_data, mut_data)
+}
+
+write_tsv(full_mut_data, 'mutations/pan_can_atlas/compiled.tsv')
+```
+
+```{r gdc compilation}
+# Same compilation as above, run on the GDC study downloads (reproduces gdc/compiled.tsv byte-for-byte).
+full_mut_data <- fread(list.files('mutations/gdc/', full.names = T)[1], data.table = F)
+for (file in list.files('mutations/gdc/', full.names = T)[2:length(list.files('mutations/gdc/'))]){
+  
+  mut_data <- fread(file, data.table = F) 
+  #remove columns we don't have in all files
+  mut_data <- mut_data %>% 
+    select(-c(colnames(mut_data)[!colnames(mut_data) %in% colnames(full_mut_data)]))
+  
+  full_mut_data <- rbind(full_mut_data, mut_data)
+}
+
+write_tsv(full_mut_data, 'mutations/gdc/compiled.tsv')
+```

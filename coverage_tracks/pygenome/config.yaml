@@ -1,0 +1,44 @@
+## pygenome Snakefile config
+
+# Current flashier RDS (relative to pygenome/)
+rds_path: "../just_for_fun/nmd_investigation/softimpute_flash_300_qc_filtered.RDS"
+
+# TCGA sample metadata (rail_id <-> tcga_barcode <-> project_id)
+tcga_metadata: "../../inputs/tcga_v2_samples.tsv"
+
+# Bigwig + PSI roots (relative to pygenome/)
+tcga_bw_dir:  "../../inputs/bigwigs/tcga"
+tcga_psi_dir: "../../leafcutter_analyses/psi_files/tcga"
+
+# MANE / gencode for the MANE gene-model panel
+mane_path:   "../../inputs/MANE.GRCh38.v1.4.summary.txt"
+gencode_rds: "../../inputs/gencode_v46_granges.RDS"
+
+# Sample selection
+n_condition:  15
+n_control:    150
+control_seed: 123
+
+# GSP definitions (factor_key per current 260116_softimpute RDS)
+gsps:
+  NKAP:
+    factor_key: k13
+    color:      "#7fc97f"
+  SF3B1:
+    factor_key: k10
+    color:      "#7fc97f"
+  YLPM1:
+    factor_key: k30
+    color:      "#7fc97f"
+
+# Regions table (gsp, gene, chr, strand, region) -- one row per plot
+regions_tsv: "regions.tsv"
+
+# External tools
+genometracks_by_genotype: "~/software/GenometracksByGenotype/AggregateBigwigsForPlotting.py"
+gencode_bed12:            "~/software/GenometracksByGenotype/PremadeTracks/gencode.v26.FromGTEx.genes.bed12.gz"
+
+# Conda envs (yml files in envs/, used via snakemake --use-conda)
+conda_envs:
+  rscript:  "envs/rscript.yml"
+  pygenome: "envs/pygenome.yml"   # pyGenomeTracks (sashimiBigWig fork) + bgzip/tabix

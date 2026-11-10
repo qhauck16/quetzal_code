@@ -1,0 +1,124 @@
+---
+title: "Figure 4 / GSP #30 (YLPM1): manuscript numbers"
+output: html_document
+params:
+  inputs: "current"   # or "pre_rerun"
+---
+
+Every number the manuscript states about GSP #30 / YLPM1, recomputed from
+quetzal_code inputs, plus the cross-GSP stringent-threshold junction counts.
+Ported from `diff_splicing/ylpm1/top500_alt3_fc_vs_loading.Rmd` and
+`diff_splicing/unified_results/ylpm1_stats.Rmd` (same definitions).
+
+```{r setup, include = FALSE}
+if (!exists("QROOT")) QROOT <- local({ d <- normalizePath(getwd())   # quetzal_code root
+  while (!file.exists(file.path(d, ".quetzal_root"))) { if (dirname(d) == d) stop("run from inside quetzal_code/"); d <- dirname(d) }
+  d })
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+source(file.path(QROOT, "figures/scripts/paper_stats_common.R"))
+```
+
+```{r inputs}
+v    <- fread(vt_path("YLPM1_full_plus_variants"), data.table = FALSE) %>% arrange(desc(k30))
+phen <- fread(phen_path("ylpm1"), data.table = FALSE)
+meta <- tcga_meta()
+cat("inputs:", ps_inputs(), "| samples:", nrow(v), "\n")
+lof_pat <- "\\*|fs|[Ss]plice"
+v$annot_lof <- grepl(lof_pat, v$proteinChange)
+v$recalled  <- !is_blank(v$wxs_mutation) | !is_blank(v$rnaseq_mutation)
+v$lof_any   <- v$annot_lof | grepl(lof_pat, v$wxs_mutation) | grepl(lof_pat, v$rnaseq_mutation)
+```
+
+## Top-loading samples
+
+```{r top}
+top10 <- head(v, 10); top13 <- head(v, 13)
+print(top13 %>% select(rail_id, k30, project_id, proteinChange, wxs_mutation, rnaseq_mutation))
+ns_fs <- grepl("\\*|fs", top10$proteinChange) & !top10$recalled
+claim("GSP30", "top 10 with an annotated nonsense/frameshift", "7 of 10",
+      sprintf("%d of 10", sum(ns_fs)))
+claim("GSP30", "  plus annotated splice-site variant", "1",
+      sum(grepl("[Ss]plice", top10$proteinChange) & !ns_fs & !top10$recalled))
+claim("GSP30", "TCGA-wide YLPM1 loss-of-function rate", "1.2%",
+      sprintf("%.1f%%", 100 * mean(v$plot_color == "YLPM1 Frameshift/Stop Gained")))
+claim("GSP30", "further mutants recovered by re-calling (top 13)", "2", sum(top13$recalled))
+claim("GSP30", "top 13 with loss of function after re-calling", "13 of 13",
+      sprintf("%d of 13", sum(top13$lof_any)))
+claim("GSP30", "re-called mutants among controls (GSP #30 < 1e-4)", "0",
+      sum(v$recalled & v$k30 < 1e-4))
+
+kirc13 <- sum(top13$project_id == "TCGA-KIRC")
+ft13 <- fisher.test(matrix(c(kirc13, 13 - kirc13,
+                             sum(v$project_id == "TCGA-KIRC") - kirc13,
+                             nrow(v) - 13 - (sum(v$project_id == "TCGA-KIRC") - kirc13)), 2),
+                    alternative = "greater")
+claim("GSP30", "KIRC among top 13 (n, %)", "5 (38%)", sprintf("%d (%.0f%%)", kirc13, 100 * kirc13 / 13))
+claim("GSP30", "KIRC share of TCGA", "5%", sprintf("%.0f%%", 100 * mean(v$project_id == "TCGA-KIRC")))
+claim("GSP30", "KIRC in top 13 Fisher P", "0.00032", signif(ft13$p.value, 2))
+```
+
+## Disrupted introns (Fig 4e) and stringent-threshold counts
+
+```{r introns}
+jpc <- fread(uni_path("ylpm1", "20v60", "dpsi0.01_fc2.5", "junctions_plus_characteristics.tsv"),
+             data.table = FALSE)
+# The Fig 4c intron set (panel_c/build.R): complete features, branchpoint
+# within 100 nt of the 3'ss, and both members of each matched pair present.
+d2 <- jpc %>%
+  filter(!is.na(gc_content), !is.na(length), !is.na(score_3ss), !is.na(score_5ss),
+         !is.na(downstream_AG_distance), !is.na(upstream_AG_distance),
+         !is.na(Branchpoint_score), !is.na(bp_distance_to_3ss), bp_distance_to_3ss < 100) %>%
+  group_by(subclass) %>% filter(n() == 2) %>% ungroup()
+paired <- d2 %>% select(subclass, condition, length) %>%
+  pivot_wider(names_from = condition, values_from = length)
+wsr <- wilcox.test(log(paired$test), log(paired$background), paired = TRUE)
+claim("GSP30", "disrupted introns with branchpoint data (Fig 4e set)", "738", nrow(paired))
+claim("GSP30", "median length disrupted vs background (kb)", "5.8 vs 1.8",
+      sprintf("%.1f vs %.1f", median(paired$test) / 1000, median(paired$background) / 1000))
+claim("GSP30", "length paired Wilcoxon P", "< 2.2e-16", fmt_p(wsr$p.value))
+
+cnt <- function(g) nrow(fread(uni_path(g, "20v60", "dpsi0.10_fc2.5"), data.table = FALSE))
+claim("GSP30", "YLPM1 junctions at dPSI > 10%, FC > 2.5 (20v60)", "> 240", cnt("ylpm1"))
+claim("GSP30", "SF3B1 junctions, same thresholds", "297", cnt("sf3b1"))
+claim("GSP30", "NKAP junctions, same thresholds", "267", cnt("nkap"))
+
+gm <- readRDS(file.path(PS_FIG, "figure4/cache/panel_g_meta.rds"))
+claim("GSP30", "unproductive-junction gene expression (Fig 4g) P", "1.4e-05", fmt_p(gm$p_value))
+```
+
+## Phenotype prevalence and YLPM1 expression
+
+```{r prevalence}
+pos <- phen_pos(phen) %>% select(-k30) %>% left_join(v, by = "rail_id")
+claim("GSP30", "phenotype-positive samples", "25", nrow(pos))
+claim("GSP30", "  as % of TCGA", "0.26%", sprintf("%.2f%%", 100 * nrow(pos) / nrow(v)))
+claim("GSP30", "  carrying a detectable YLPM1 LoF", "15", sum(pos$lof_any))
+bg  <- v %>% mutate(in_pos = rail_id %in% pos$rail_id)
+coh <- bg %>% group_by(project_id) %>%
+  summarise(n_pos = sum(in_pos), pct = 100 * n_pos / n(), .groups = "drop") %>% arrange(desc(n_pos))
+print(head(coh, 8))
+fmt_c <- function(p) { r <- coh[coh$project_id == p, ]; sprintf("%d (%.1f%%)", r$n_pos, r$pct) }
+claim("GSP30", "KIRC phenotype-positive", "8 (1.6%)", fmt_c("TCGA-KIRC"))
+claim("GSP30", "BRCA phenotype-positive", "4 (0.4%)", fmt_c("TCGA-BRCA"))
+claim("GSP30", "SKCM phenotype-positive", "3 (0.6%)", fmt_c("TCGA-SKCM"))
+claim("GSP30", "LGG phenotype-positive",  "3 (0.6%)", fmt_c("TCGA-LGG"))
+ftk <- fisher.test(table(bg$in_pos, bg$project_id == "TCGA-KIRC"), alternative = "greater")
+claim("GSP30", "KIRC enrichment Fisher P", "2.3e-05", fmt_p(ftk$p.value))
+
+# YLPM1 expression (scaled RPM): the row S17 uses
+er <- fread(file.path(PS_FIG, "supplementary/cache/ylpm1_expression_row.tsv"), data.table = FALSE, header = TRUE)
+ex <- tibble(rail_id = as.numeric(colnames(er)[-1]), expr = as.numeric(er[1, -1]))
+ej <- phen %>% inner_join(ex, by = "rail_id") %>% filter(!is.na(expr))
+n25 <- ej %>% filter(group == "intermediate", score <= 0) %>% arrange(desc(score)) %>%
+  slice_head(n = 25) %>% pull(rail_id)
+rest <- ej %>% filter(score <= 0, !rail_id %in% n25)
+claim("GSP30", "25 intermediates nearest the boundary, lower YLPM1 expression P", "0.0004",
+      signif(wilcox.test(ej$expr[ej$rail_id %in% n25], rest$expr)$p.value, 1))
+```
+
+## Text vs recomputed
+
+```{r claims table}
+knitr::kable(claims_table())
+fwrite(claims_table(), sprintf("paper_stats_%s.tsv", ps_inputs()), sep = "\t")
+```

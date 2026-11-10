@@ -1,0 +1,111 @@
+---
+title: "Figure 2 / GSP #10 (SF3B1): manuscript numbers"
+output: html_document
+params:
+  inputs: "current"   # or "pre_rerun"
+---
+
+Every number the manuscript states about the genome-wide GSPs and GSP #10 /
+SF3B1, recomputed from quetzal_code inputs. Ported from
+`diff_splicing/sf3b1/top500_alt3_fc_vs_loading.Rmd` (phenotype-positive
+variant breakdown). The last chunk prints text value vs recomputed value.
+
+```{r setup, include = FALSE}
+if (!exists("QROOT")) QROOT <- local({ d <- normalizePath(getwd())   # quetzal_code root
+  while (!file.exists(file.path(d, ".quetzal_root"))) { if (dirname(d) == d) stop("run from inside quetzal_code/"); d <- dirname(d) }
+  d })
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+source(file.path(QROOT, "figures/scripts/paper_stats_common.R"))
+```
+
+```{r inputs}
+v    <- fread(vt_path("SF3B1_full_plus_variants"), data.table = FALSE) %>% arrange(desc(k10))
+phen <- fread(phen_path("sf3b1"), data.table = FALSE)
+cat("inputs:", ps_inputs(), "| samples:", nrow(v), "\n")
+```
+
+## Mutation association (Fig 2g)
+
+```{r association}
+both <- fread(file.path(PS_FIG, "figure2/cache/panel_g_both_tests.tsv"), data.table = FALSE)
+print(both %>% filter(gsp_num %in% c(1, 10, 12, 13, 30)))
+s <- both %>% filter(gene_name == "SF3B1", gsp_num == 10)
+# 2.225074e-308 is .Machine$double.xmin: the p-value underflowed, i.e. it is
+# smaller than the smallest representable double. Report it as "< 1e-300".
+cat(sprintf("SF3B1 linear-model P on GSP #10: %.6g (double.xmin = %.6g); CMH P = %.3g\n",
+            s$linear_pval, .Machine$double.xmin, s$cmh_pval))
+claim("GSP10", "SF3B1 association with GSP #10 (linear model P)", "< 1e-100",
+      if (s$linear_pval <= .Machine$double.xmin) "< 1e-300 (underflow)" else fmt_p(s$linear_pval))
+```
+
+## Phenotype-positive samples (SVM)
+
+```{r prevalence}
+pos <- phen_pos(phen) %>% select(-k10) %>% left_join(v, by = "rail_id")
+claim("GSP10", "phenotype-positive samples", "99", nrow(pos))
+claim("GSP10", "  as % of processed samples", "~1%", sprintf("~%.0f%%", 100 * nrow(pos) / nrow(v)))
+claim("GSP10", "annotated SF3B1 hotspot mutants called positive", "52 of 53",
+      sprintf("%d of %d", sum(pos$hotspot %in% TRUE), sum(v$hotspot %in% TRUE)))
+claim("GSP10", "near-hotspot mutants called positive", "12",
+      sum(pos$plot_color == "Mutation Near SF3B1 Hotspot", na.rm = TRUE))
+r549 <- grepl("R549C", v$gene_mutation)
+claim("GSP10", "R549C samples called positive", "2 of 2",
+      sprintf("%d of %d", sum(r549 & v$rail_id %in% pos$rail_id), sum(r549)))
+
+# bucket by gene_mutation exactly as the original Rmd
+classify <- function(gm) {
+  if (is_blank(gm)) return("none")
+  pos_sf <- integer(0); sugp1 <- FALSE
+  for (p in trimws(strsplit(gm, ";\\s*")[[1]])) {
+    if (startsWith(p, "SF3B1:")) {
+      x <- suppressWarnings(as.integer(sub(".*?(\\d+).*", "\\1", sub("^SF3B1:", "", p))))
+      if (!is.na(x)) pos_sf <- c(pos_sf, x)
+    } else if (startsWith(p, "SUGP1:")) sugp1 <- TRUE
+  }
+  if (any(pos_sf >= 549 & pos_sf <= 800)) "SF3B1 549-800"
+  else if (sugp1) "SUGP1" else if (length(pos_sf)) "SF3B1 elsewhere" else "none"
+}
+pos$bucket <- vapply(pos$gene_mutation, classify, character(1))
+print(table(pos$bucket))
+claim("GSP10", "phenotype-positive with SF3B1 (aa 549-800) or SUGP1 mutation", "77 of 99",
+      sprintf("%d of %d", sum(pos$bucket %in% c("SF3B1 549-800", "SUGP1")), nrow(pos)))
+rec <- v %>% filter(!is_blank(wxs_mutation) | !is_blank(rnaseq_mutation))
+print(rec %>% select(rail_id, k10, gene_mutation, wxs_mutation, rnaseq_mutation))
+claim("GSP10", "phenotype-positive samples with SF3B1/SUGP1 recovered by re-calling", "2",
+      sum(rec$rail_id %in% pos$rail_id))
+cat("re-called calls in controls (GSP #10 < 1e-4):",
+    paste(rec$gene_mutation[rec$k10 < 1e-4], collapse = ", "), "\n")
+```
+
+## Samples just below the SVM boundary
+
+Same test as GSP #13's "50 intermediates closest to the boundary"
+(figure3/paper_stats.Rmd): among samples NOT called phenotype-positive
+(SVM score <= 0) and without WXS/RNA re-calls, the 50 intermediate-group
+samples with the highest SVM score vs all other non-positive samples, for an
+annotated SF3B1 mutation; one-sided Fisher's exact test. None of these 50 were
+SVM training positives (group P = GSP #10 >= 0.1).
+
+```{r boundary}
+vp <- v %>% left_join(phen %>% select(rail_id, group, svm = score), by = "rail_id") %>% arrange(desc(svm))
+non  <- vp %>% filter(!is.na(svm), svm <= 0, is_blank(wxs_mutation), is_blank(rnaseq_mutation))
+t50  <- non %>% filter(group == "intermediate") %>% slice_head(n = 50)
+rest <- non %>% filter(!rail_id %in% t50$rail_id)
+has_sf <- function(gm) grepl("(^|;)\\s*SF3B1:", gm)
+tab <- matrix(c(sum(has_sf(t50$gene_mutation)), 50 - sum(has_sf(t50$gene_mutation)),
+                sum(has_sf(rest$gene_mutation)), sum(!has_sf(rest$gene_mutation))), nrow = 2, byrow = TRUE,
+              dimnames = list(c("50 below boundary", "other non-positive"), c("SF3B1", "no SF3B1")))
+print(tab)
+print(t50 %>% filter(has_sf(gene_mutation)) %>% select(rail_id, k10, svm, gene_mutation))
+claim("GSP10", "50 intermediates closest to boundary: SF3B1-mutant (vs other non-positive)",
+      "new", sprintf("%d of 50 (%.0f%%) vs %d of %d (%.1f%%)", tab[1, 1], 100 * tab[1, 1] / 50,
+                     tab[2, 1], sum(tab[2, ]), 100 * tab[2, 1] / sum(tab[2, ])))
+claim("GSP10", "  one-sided Fisher P", "new", fmt_p(fisher.test(tab, alternative = "greater")$p.value))
+```
+
+## Text vs recomputed
+
+```{r claims table}
+knitr::kable(claims_table())
+fwrite(claims_table(), sprintf("paper_stats_%s.tsv", ps_inputs()), sep = "\t")
+```

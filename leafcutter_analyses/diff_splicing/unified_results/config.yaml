@@ -1,0 +1,49 @@
+# Unified downstream analysis config
+
+genes: [nkap, sf3b1, ylpm1]
+comparisons: ["10v30", "20v60", "30v90"]
+
+dpsi_values: ["0.01", "0.05", "0.10"]
+fc_values:   ["1", "1.5", "2.5", "5"]
+
+# Per-gene factor (column index for k{factor} loading)
+factors:
+  nkap: 13
+  sf3b1: 10
+  ylpm1: 30
+
+# Genes for which the 3'ss distance barplot is produced
+ss_barplot_genes: [nkap, sf3b1]
+
+# Splice types kept in the test set when matching backgrounds (and
+# downstream betas / logos). NKAP/SF3B1 are 3'ss disruptors; YLPM1
+# affects both 3'ss and 5'ss.
+match_splice_types:
+  nkap:  ["alt 3'ss"]
+  sf3b1: ["alt 3'ss"]
+  ylpm1: ["alt 3'ss", "alt 5'ss"]
+
+# ----- shared inputs (relative to this Snakefile unless absolute) -----
+paths:
+  introns:          "../gencode_v46_introns.tsv"
+  mane:             "../../../inputs/MANE.GRCh38.v1.4.summary.txt"
+  gencode_rds:      "../../../inputs/gencode_v46_granges.RDS"
+  branchpoints:     "../../../inputs/cola_seq_branchpoints.csv"
+  agg_psi_medians:  "../../../support_tables/aggregated_psi_medians.tsv"
+  agg_rpm_medians:  "../../../support_tables/aggregated_junction_rpms.tsv"
+  genome_fa:        "../../../inputs/GRCh38.primary_assembly.genome.fa"
+  results_dir:      "../results"
+
+# ----- 3'ss barplot zoom limits -----
+# Wide: fixed for both nkap and sf3b1
+# Zoom: current bounds per gene (from existing Rmds)
+barplot_wide:
+  x_min: -200
+  x_max: 200
+
+barplot_zoom:
+  nkap:  { x_min: -8,  x_max: 20 }
+  sf3b1: { x_min: -50, x_max: 50 }
+
+# ----- GLM feature vars and beta-plot color limits -----
+beta_limits: [-2, 2]

@@ -1,0 +1,69 @@
+import os
+from glob import glob
+
+# -------------------------------------------------
+# Define chromosome list
+# -------------------------------------------------
+chroms = [f"chr{i}" for i in range(1, 23)] + ["chrX"]
+
+# -------------------------------------------------
+# Gene discovery helpers
+# -------------------------------------------------
+def get_genes_tcga(chrom):
+    pattern = f"../junction_tables/{chrom}/*/dat.tsv"
+    files = glob(pattern)
+    return [os.path.basename(os.path.dirname(f)) for f in files]
+
+def get_genes_gtex(chrom):
+    pattern = f"../junction_tables_gtex/{chrom}/FastTopics_output/*/dat.tsv"
+    files = glob(pattern)
+    return [os.path.basename(os.path.dirname(f)) for f in files]
+
+# -------------------------------------------------
+# Collect gene sets
+# -------------------------------------------------
+genes_tcga = {chrom: get_genes_tcga(chrom) for chrom in chroms}
+genes_gtex = {chrom: get_genes_gtex(chrom) for chrom in chroms}
+
+# -------------------------------------------------
+# Build explicit target list
+# -------------------------------------------------
+tcga_targets = [
+    f"../psi_files/tcga/{chrom}/{gene}/psi_table.tsv"
+    for chrom in chroms
+    for gene in genes_tcga[chrom]
+]
+
+gtex_targets = [
+    f"../psi_files/gtex/{chrom}/{gene}/psi_table.tsv"
+    for chrom in chroms
+    for gene in genes_gtex[chrom]
+]
+
+all_targets = tcga_targets + gtex_targets
+
+# -------------------------------------------------
+# Rules
+# -------------------------------------------------
+rule all:
+    input:
+        all_targets
+
+rule compute_psi:
+    input:
+        dat=lambda wildcards: (
+            f"../junction_tables/{wildcards.chrom}/{wildcards.gene}/dat.tsv"
+            if wildcards.dataset == "tcga"
+            else f"../junction_tables_gtex/{wildcards.chrom}/FastTopics_output/{wildcards.gene}/dat.tsv"
+        )
+    resources:
+        mem_mb=30000
+    conda:
+        'envs/r_only.yml'
+    output:
+        "../psi_files/{dataset}/{chrom}/{gene}/psi_table.tsv"
+    shell:
+        """
+        mkdir -p $(dirname {output})
+        Rscript reg_dat_to_PSI.R {input.dat} {output}
+        """

@@ -1,0 +1,283 @@
+import yaml
+import os
+import shlex
+
+with open("config.yaml") as f:
+    config = yaml.safe_load(f)
+
+GENES          = config["genes"]
+COMPARISONS    = config["comparisons"]
+DPSI_VALUES    = config["dpsi_values"]
+FC_VALUES      = config["fc_values"]
+FACTORS        = config["factors"]
+SS_BARPLOT_GN  = config["ss_barplot_genes"]
+MATCH_TYPES    = config["match_splice_types"]
+PATHS          = config["paths"]
+
+RSCRIPT_ENV  = "../envs/rscript.yml"
+MAXENT_ENV   = "../envs/maxentscan.yml"
+
+wildcard_constraints:
+    gene       = "|".join(GENES),
+    comparison = "|".join(COMPARISONS),
+    dpsi       = "|".join(DPSI_VALUES),
+    fc         = "|".join(FC_VALUES)
+
+def all_targets():
+    targets = []
+    for g in GENES:
+        for c in COMPARISONS:
+            for d in DPSI_VALUES:
+                for f in FC_VALUES:
+                    base = f"{g}/{c}/dpsi{d}_fc{f}"
+                    targets += [
+                        f"{base}/proportions_pie.pdf",
+                        f"{base}/betas_no_bp.pdf",
+                        f"{base}/betas_with_bp.pdf",
+                        f"{base}/logos_disrupted.pdf",
+                        f"{base}/logos_mane.pdf",
+                    ]
+                    if g in SS_BARPLOT_GN:
+                        targets += [
+                            f"{base}/3ss_barplot_wide.pdf",
+                            f"{base}/3ss_barplot_zoom.pdf",
+                        ]
+    return targets
+
+rule all:
+    input:
+        all_targets()
+
+# -------------------------------------------------------------------
+# Shared background set from aggregated PSI / RPM medians
+# -------------------------------------------------------------------
+rule build_background_pool:
+    input:
+        psi = PATHS["agg_psi_medians"],
+        rpm = PATHS["agg_rpm_medians"]
+    output:
+        "shared/all_junction_rpm_and_psi.tsv"
+    resources:
+        mem_mb = 10000, runtime = 60
+    conda: RSCRIPT_ENV
+    shell:
+        "Rscript scripts/build_background_pool.R {input.psi} {input.rpm} {output}"
+
+# -------------------------------------------------------------------
+# Per (gene, comparison): load leafcutter_ds output once
+# -------------------------------------------------------------------
+rule load_comparison:
+    input:
+        cluster_sig = lambda wc: f"{PATHS['results_dir']}/{wc.gene}_{wc.comparison}/leafcutter_ds_cluster_significance.txt",
+        effect_size = lambda wc: f"{PATHS['results_dir']}/{wc.gene}_{wc.comparison}/leafcutter_ds_effect_sizes.txt",
+        introns     = PATHS["introns"]
+    output:
+        "{gene}/{comparison}/full_leaf_sig.tsv"
+    resources:
+        mem_mb = 10000, runtime = 30
+    conda: RSCRIPT_ENV
+    shell:
+        "Rscript scripts/load_comparison.R "
+        "{input.cluster_sig} {input.effect_size} {input.introns} {output}"
+
+# -------------------------------------------------------------------
+# Per (gene, comparison, dpsi, fc): assign splice types -> df_final
+# -------------------------------------------------------------------
+rule assign_splice_types:
+    input:
+        full_leaf_sig = "{gene}/{comparison}/full_leaf_sig.tsv",
+        introns       = PATHS["introns"],
+        mane          = PATHS["mane"]
+    output:
+        "{gene}/{comparison}/dpsi{dpsi}_fc{fc}/df_final.tsv"
+    resources:
+        mem_mb = 10000, runtime = 30
+    conda: RSCRIPT_ENV
+    shell:
+        "Rscript scripts/assign_splice_types.R "
+        "{input.full_leaf_sig} {input.introns} {input.mane} "
+        "{wildcards.dpsi} {wildcards.fc} {output}"
+
+# -------------------------------------------------------------------
+# Plots: proportions pie
+# -------------------------------------------------------------------
+rule plot_proportions:
+    input:
+        df_final = "{gene}/{comparison}/dpsi{dpsi}_fc{fc}/df_final.tsv"
+    output:
+        "{gene}/{comparison}/dpsi{dpsi}_fc{fc}/proportions_pie.pdf"
+    params:
+        tag = lambda wc: f"{wc.comparison}_dpsi{wc.dpsi}_fc{wc.fc}"
+    resources:
+        mem_mb = 10000, runtime = 15
+    conda: RSCRIPT_ENV
+    shell:
+        "Rscript scripts/plot_proportions.R "
+        "{input.df_final} {wildcards.gene} {params.tag} {output}"
+
+# -------------------------------------------------------------------
+# Plots: 3'ss distance barplots (nkap, sf3b1 only)
+# -------------------------------------------------------------------
+rule plot_3ss_barplots:
+    input:
+        df_final = "{gene}/{comparison}/dpsi{dpsi}_fc{fc}/df_final.tsv"
+    output:
+        wide = "{gene}/{comparison}/dpsi{dpsi}_fc{fc}/3ss_barplot_wide.pdf",
+        zoom = "{gene}/{comparison}/dpsi{dpsi}_fc{fc}/3ss_barplot_zoom.pdf"
+    params:
+        tag         = lambda wc: f"{wc.comparison}_dpsi{wc.dpsi}_fc{wc.fc}",
+        wide_xmin   = config["barplot_wide"]["x_min"],
+        wide_xmax   = config["barplot_wide"]["x_max"],
+        zoom_xmin   = lambda wc: config["barplot_zoom"][wc.gene]["x_min"],
+        zoom_xmax   = lambda wc: config["barplot_zoom"][wc.gene]["x_max"]
+    resources:
+        mem_mb = 10000, runtime = 15
+    conda: RSCRIPT_ENV
+    shell:
+        "Rscript scripts/plot_3ss_barplots.R "
+        "{input.df_final} {wildcards.gene} {params.tag} "
+        "{params.wide_xmin} {params.wide_xmax} "
+        "{params.zoom_xmin} {params.zoom_xmax} "
+        "{output.wide} {output.zoom}"
+
+# -------------------------------------------------------------------
+# Match disrupted (test) introns with background via
+# nearest-neighbor mahalanobis on (median_psi, median_rpm).
+# -------------------------------------------------------------------
+rule match_background:
+    input:
+        df_final = "{gene}/{comparison}/dpsi{dpsi}_fc{fc}/df_final.tsv",
+        psi      = PATHS["agg_psi_medians"],
+        rpm      = PATHS["agg_rpm_medians"],
+        pool     = "shared/all_junction_rpm_and_psi.tsv",
+        gencode  = PATHS["gencode_rds"]
+    output:
+        "{gene}/{comparison}/dpsi{dpsi}_fc{fc}/test_and_background.tsv"
+    params:
+        splice_types = lambda wc: shlex.quote(",".join(MATCH_TYPES[wc.gene]))
+    resources:
+        mem_mb = 30000, runtime = 60
+    conda: RSCRIPT_ENV
+    shell:
+        "Rscript scripts/match_background.R "
+        "{input.df_final} {input.psi} {input.rpm} {input.pool} {input.gencode} "
+        "{output} {params.splice_types}"
+
+# -------------------------------------------------------------------
+# Compute per-intron features (GC, length, splice-site seqs, AG distances)
+# and write one-seq-per-line inputs for MaxEntScan.
+# -------------------------------------------------------------------
+rule compute_features:
+    input:
+        matched  = "{gene}/{comparison}/dpsi{dpsi}_fc{fc}/test_and_background.tsv",
+        genome   = PATHS["genome_fa"]
+    output:
+        features = "{gene}/{comparison}/dpsi{dpsi}_fc{fc}/features.tsv",
+        seq3     = "{gene}/{comparison}/dpsi{dpsi}_fc{fc}/seq_3ss.txt",
+        seq5     = "{gene}/{comparison}/dpsi{dpsi}_fc{fc}/seq_5ss.txt"
+    resources:
+        mem_mb = 10000, runtime = 30
+    conda: RSCRIPT_ENV
+    shell:
+        "Rscript scripts/compute_features.R "
+        "{input.matched} {input.genome} "
+        "{output.features} {output.seq3} {output.seq5}"
+
+# -------------------------------------------------------------------
+# Run MaxEntScan (one sequence per line; output: "seq\tscore")
+# -------------------------------------------------------------------
+rule run_maxent_3ss:
+    input:
+        seq = "{gene}/{comparison}/dpsi{dpsi}_fc{fc}/seq_3ss.txt"
+    output:
+        scored = "{gene}/{comparison}/dpsi{dpsi}_fc{fc}/scored_3ss.tsv"
+    resources:
+        mem_mb = 4000, runtime = 20
+    conda: MAXENT_ENV
+    shell:
+        """
+        if [ -s {input.seq} ]; then
+            maxentscan_score3.pl {input.seq} > {output.scored}
+        else
+            : > {output.scored}
+        fi
+        """
+
+rule run_maxent_5ss:
+    input:
+        seq = "{gene}/{comparison}/dpsi{dpsi}_fc{fc}/seq_5ss.txt"
+    output:
+        scored = "{gene}/{comparison}/dpsi{dpsi}_fc{fc}/scored_5ss.tsv"
+    resources:
+        mem_mb = 4000, runtime = 20
+    conda: MAXENT_ENV
+    shell:
+        """
+        if [ -s {input.seq} ]; then
+            maxentscan_score5.pl {input.seq} > {output.scored}
+        else
+            : > {output.scored}
+        fi
+        """
+
+# -------------------------------------------------------------------
+# Join MaxEnt scores and branchpoint info into one table
+# -------------------------------------------------------------------
+rule add_maxent_and_branchpoints:
+    input:
+        features     = "{gene}/{comparison}/dpsi{dpsi}_fc{fc}/features.tsv",
+        scored_3ss   = "{gene}/{comparison}/dpsi{dpsi}_fc{fc}/scored_3ss.tsv",
+        scored_5ss   = "{gene}/{comparison}/dpsi{dpsi}_fc{fc}/scored_5ss.tsv",
+        branchpoints = PATHS["branchpoints"]
+    output:
+        "{gene}/{comparison}/dpsi{dpsi}_fc{fc}/junctions_plus_characteristics.tsv"
+    resources:
+        mem_mb = 30000, runtime = 60
+    conda: RSCRIPT_ENV
+    shell:
+        "Rscript scripts/add_maxent_and_branchpoints.R "
+        "{input.features} {input.scored_3ss} {input.scored_5ss} "
+        "{input.branchpoints} {output}"
+
+# -------------------------------------------------------------------
+# Fit logistic-regression betas (two models: w/o and w/ branchpoint)
+# -------------------------------------------------------------------
+rule fit_betas:
+    input:
+        feats = "{gene}/{comparison}/dpsi{dpsi}_fc{fc}/junctions_plus_characteristics.tsv"
+    output:
+        no_bp   = "{gene}/{comparison}/dpsi{dpsi}_fc{fc}/betas_no_bp.pdf",
+        with_bp = "{gene}/{comparison}/dpsi{dpsi}_fc{fc}/betas_with_bp.pdf"
+    params:
+        tag      = lambda wc: f"{wc.comparison}_dpsi{wc.dpsi}_fc{wc.fc}",
+        lim_low  = config["beta_limits"][0],
+        lim_high = config["beta_limits"][1]
+    resources:
+        mem_mb = 10000, runtime = 20
+    conda: RSCRIPT_ENV
+    shell:
+        "Rscript scripts/fit_betas.R "
+        "{input.feats} {wildcards.gene} {params.tag} "
+        "{params.lim_low} {params.lim_high} "
+        "{output.no_bp} {output.with_bp}"
+
+# -------------------------------------------------------------------
+# Sequence logos: disrupted splice sites and the MANE splice sites
+# being disrupted (for alt-3'ss / alt-5'ss events).
+# -------------------------------------------------------------------
+rule make_logos:
+    input:
+        df_final = "{gene}/{comparison}/dpsi{dpsi}_fc{fc}/df_final.tsv",
+        genome   = PATHS["genome_fa"]
+    output:
+        disrupted = "{gene}/{comparison}/dpsi{dpsi}_fc{fc}/logos_disrupted.pdf",
+        mane      = "{gene}/{comparison}/dpsi{dpsi}_fc{fc}/logos_mane.pdf"
+    params:
+        tag = lambda wc: f"{wc.comparison}_dpsi{wc.dpsi}_fc{wc.fc}"
+    resources:
+        mem_mb = 10000, runtime = 20
+    conda: RSCRIPT_ENV
+    shell:
+        "Rscript scripts/make_logos.R "
+        "{input.df_final} {input.genome} {wildcards.gene} {params.tag} "
+        "{output.disrupted} {output.mane}"

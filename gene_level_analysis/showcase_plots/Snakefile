@@ -1,0 +1,146 @@
+# Supplementary plots (structure plot + DE-junction PSI CDF) for the
+# read-length-driven gene set and the regular TCGA-cohort gene set.
+#
+# Read-length genes (RAB11FIP3, NOMO2, MAP2K2, KLHDC4):
+#   - structure plot faceted by TCGA cohort + read length (e.g. COAD-48bp).
+#   - no PSI CDF (no GTEx control for read-length comparisons).
+#
+# TCGA-cohort genes (CAPZA1, CHI3L2, TMEM61, TBX15):
+#   - structure plot faceted by TCGA cohort.
+#   - PSI CDF over DE junctions, comparing the chosen cohort_of_interest
+#     in TCGA vs the matched GTEx tissue.
+#
+# `factor` and `cohort_of_interest` are intentionally left blank in
+# config.yaml so the user can fill them in after inspecting the
+# structure plot. Outputs that depend on those fields are only declared
+# in `rule all` when the relevant config values are set.
+
+import os
+
+configfile: "config.yaml"
+
+PATHS              = config["paths"]
+THRESHOLDS         = config["thresholds"]
+TCGA_TO_GTEX       = config["tcga_to_gtex"]
+READ_LENGTH_GENES  = config.get("read_length",  {}) or {}
+TCGA_COHORT_GENES  = config.get("tcga_cohort",  {}) or {}
+
+
+def has_factor(entry):
+    f = entry.get("factor") or ""
+    return bool(str(f).strip())
+
+
+def has_coi(entry):
+    c = entry.get("cohort_of_interest") or ""
+    return bool(str(c).strip())
+
+
+def all_outputs():
+    files = []
+    # Structure plots: always producible (factor only affects the title).
+    for g in list(READ_LENGTH_GENES) + list(TCGA_COHORT_GENES):
+        files.append(f"output/{g}/structure_plot.pdf")
+    # DE-junction tables + MANE-arc plots: need a factor.
+    for g, e in {**READ_LENGTH_GENES, **TCGA_COHORT_GENES}.items():
+        if has_factor(e):
+            files.append(f"output/{g}/junctions_classified.tsv")
+            files.append(f"output/{g}/arcs_mane.pdf")
+    # PSI CDFs: TCGA-cohort group only, need factor + cohort_of_interest.
+    for g, e in TCGA_COHORT_GENES.items():
+        if has_factor(e) and has_coi(e):
+            files.append(f"output/{g}/cdf_psi.pdf")
+    # Read-length PSI box plots: read_length group only, need factor.
+    for g, e in READ_LENGTH_GENES.items():
+        if has_factor(e):
+            files.append(f"output/{g}/psi_box_48_vs_76.pdf")
+    return files
+
+
+rule all:
+    input: all_outputs()
+
+
+# ---------------------------------------------------------------------------
+# Per-gene structure plot. Faceted by cohort + read length for the
+# read-length group, or by cohort only for the TCGA-cohort group.
+
+rule structure_plot:
+    input:
+        cfg = "config.yaml"
+    output:
+        pdf = "output/{gene}/structure_plot.pdf"
+    resources:
+        mem_mb = 10000
+    conda: "envs/rscript.yml"
+    shell:
+        "Rscript scripts/make_structure_plot.R "
+        "{wildcards.gene} {input.cfg} {output.pdf}"
+
+
+# ---------------------------------------------------------------------------
+# DE-junction classification table. Always written under the gene's
+# output dir when a factor is supplied in config.
+
+rule de_junctions:
+    input:
+        cfg = "config.yaml"
+    output:
+        tsv = "output/{gene}/junctions_classified.tsv"
+    resources:
+        mem_mb = 10000
+    conda: "envs/rscript.yml"
+    shell:
+        "Rscript scripts/make_de_junctions.R "
+        "{wildcards.gene} {input.cfg} {output.tsv}"
+
+
+# ---------------------------------------------------------------------------
+# DE-junction arcs over the MANE gene body. Reuses the parent showcase_genes
+# plotter so the figure matches the main pipeline's style.
+
+rule arcs_mane:
+    input:
+        cfg = "config.yaml"
+    output:
+        pdf = "output/{gene}/arcs_mane.pdf"
+    resources:
+        mem_mb = 10000
+    conda: "envs/rscript.yml"
+    shell:
+        "Rscript scripts/make_arcs_mane.R "
+        "{wildcards.gene} {input.cfg} {output.pdf}"
+
+
+# ---------------------------------------------------------------------------
+# Read-length PSI box plot: top DE junction's PSI in <=50 bp vs >=75 bp
+# samples for the read_length group.
+
+rule psi_box:
+    input:
+        cfg = "config.yaml"
+    output:
+        pdf = "output/{gene}/psi_box_48_vs_76.pdf"
+    resources:
+        mem_mb = 10000
+    conda: "envs/rscript.yml"
+    shell:
+        "Rscript scripts/make_psi_box.R "
+        "{wildcards.gene} {input.cfg} {output.pdf}"
+
+
+# ---------------------------------------------------------------------------
+# PSI CDF: TCGA cohort_of_interest vs corresponding GTEx tissue, over
+# the DE junctions of the gene's factor.
+
+rule psi_cdf:
+    input:
+        cfg = "config.yaml"
+    output:
+        pdf = "output/{gene}/cdf_psi.pdf"
+    resources:
+        mem_mb = 10000
+    conda: "envs/rscript.yml"
+    shell:
+        "Rscript scripts/make_cdf_plot.R "
+        "{wildcards.gene} {input.cfg} {output.pdf}"

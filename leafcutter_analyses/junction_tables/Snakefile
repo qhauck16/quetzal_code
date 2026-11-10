@@ -1,0 +1,100 @@
+import os
+from glob import glob
+
+############################################
+# --------------- CONFIG -------------------
+############################################
+
+SNAPTRON_BASE = "../../inputs/snaptron/tcga"
+
+SCRIPT = "make_dat.R"
+
+GENCODE = "../../inputs/gencode_v46_granges.RDS"
+TCGA_METADATA = "../../inputs/tcga_v2_samples.tsv"
+
+MIN_JUNCTIONS_FOR_PCA = 3
+GENE_RANGE_BOUND = 2000
+AVG_CLUST_READ_COUNT_MIN = 0
+MIN_SAMPLES_PER_JUNC = 10
+AVG_SAMPLE_READS_PER_CLUSTER = 5
+
+
+############################################
+# -------- SNAPTRON DISCOVERY --------------
+############################################
+
+def get_genes():
+    genes = []
+    for chr_dir in sorted(glob(os.path.join(SNAPTRON_BASE, "chr*"))):
+        chr_name = os.path.basename(chr_dir)
+        snaptron_dir = os.path.join(chr_dir, "snaptron_output")
+
+        if not os.path.isdir(snaptron_dir):
+            continue
+
+        for snaptron_file in sorted(glob(os.path.join(snaptron_dir, "*_snaptron.tsv"))):
+            if os.path.getsize(snaptron_file) < 100:
+                continue
+
+            gene_name = os.path.basename(snaptron_file).replace("_snaptron.tsv", "")
+            genes.append((chr_name, gene_name))
+
+    return genes
+
+
+GENE_INFO = get_genes()
+
+DAT_OUTPUTS = [
+    f"{chr}/{gene}/dat.tsv"
+    for chr, gene in GENE_INFO
+]
+
+
+############################################
+# ---------------- RULES -------------------
+############################################
+
+rule all:
+    input:
+        DAT_OUTPUTS
+
+
+############################################
+# Generate dat.tsv
+############################################
+
+rule make_dat:
+    input:
+        snaptron = SNAPTRON_BASE + "/{chr}/snaptron_output/{gene}_snaptron.tsv",
+        gencode = GENCODE,
+        tcga_metadata = TCGA_METADATA
+    output:
+        dat = "{chr}/{gene}/dat.tsv"
+    params:
+        min_junctions_for_pca = MIN_JUNCTIONS_FOR_PCA,
+        gene_range_bound = GENE_RANGE_BOUND,
+        avg_clust_read_count_min = AVG_CLUST_READ_COUNT_MIN,
+        min_samples_per_junc = MIN_SAMPLES_PER_JUNC,
+        avg_sample_reads_per_cluster = AVG_SAMPLE_READS_PER_CLUSTER,
+        script = SCRIPT
+    conda:
+        "envs/rscript.yml"
+    resources:
+        mem_mb = 20000
+    shell:
+        r"""
+        set -euo pipefail
+        mkdir -p {wildcards.chr}/{wildcards.gene}
+
+        Rscript {params.script} \
+            {params.min_junctions_for_pca} \
+            {params.gene_range_bound} \
+            {params.avg_clust_read_count_min} \
+            {input.snaptron} \
+            {params.min_samples_per_junc} \
+            {params.avg_sample_reads_per_cluster} \
+            {wildcards.gene} \
+            {wildcards.chr} \
+            {input.gencode} \
+            {input.tcga_metadata}
+        """

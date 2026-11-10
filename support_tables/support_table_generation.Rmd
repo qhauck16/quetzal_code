@@ -1,0 +1,313 @@
+---
+title: "support_table_generation"
+output: html_document
+date: "2025-12-05"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+
+```{r aggregated psi medians}
+# 1. Install and load necessary packages
+# The 'parallel' package is usually pre-installed with R
+library(data.table)
+library(parallel) 
+library(tidyverse)# For parallel processing
+
+# --- Define the function to process a single file (no change needed here) ---
+process_psi_file <- function(file_path) {
+    # 1. Extract the gene name from the directory path
+    # Assuming the structure is: /path/to/gene_name/psi_table.tsv
+    gene_name <- basename(dirname(file_path))
+
+    # 2. Read the file efficiently (fread is very fast)
+    # The first column is sample_id, which we don't need for the calculation
+    # We specify sep="\t" and skip empty files check
+    psi_dt <- tryCatch(
+        fread(file_path, data.table = T) %>%
+          column_to_rownames('V1'),
+        error = function(e) {
+            # Return NULL if there's an error (e.g., file exists but is corrupted or truly empty)
+            return(NULL)
+        }
+    )
+
+    # 3. Check if the file was read successfully and is not effectively empty
+    if (is.null(psi_dt) || ncol(psi_dt) <= 1 || nrow(psi_dt) == 0) {
+        message(paste("Skipping empty or malformed file:", file_path))
+        return(NULL)
+    }
+
+
+    # 5. Calculate the median PSI for each column (junction)
+    # The 'apply' function is efficient for column-wise operations on data.tables/matrices.
+    # We ignore NAs automatically using na.rm = TRUE.
+    median_psis <- apply(psi_dt, 2, median, na.rm = TRUE)
+
+    # 6. Extract the junction details from the column names
+    # Column names are in the format: clu_id:start-end
+    junction_names <- names(psi_dt)
+    
+    # Split the names to get start and end
+    # Example: "CLU0001:100-200" -> split on ":" -> second part "100-200"
+    start_end_parts <- sub(".*:", "", junction_names)
+    
+    # Split the start-end part on "-"
+    split_coords <- tstrsplit(start_end_parts, split = "-", fixed = TRUE)
+    start_coords <- as.integer(split_coords[[1]])
+    end_coords <- as.integer(split_coords[[2]])
+
+    # 7. Create the final output data.table for this gene
+    result_dt <- data.table(
+        gene_name = gene_name,
+        start = start_coords,
+        end = end_coords,
+        median_psi = median_psis
+    )
+
+    return(result_dt)
+}
+
+# --- Main execution block (PARALLELIZED) ---
+
+# 1. Find all 'psi_table.tsv' files
+all_files <- list.files(
+    path = "../leafcutter_analyses/psi_files/tcga",
+    pattern = "psi_table.tsv",
+    recursive = TRUE,
+    full.names = TRUE
+)
+
+message(paste("Found", length(all_files), "files to process."))
+
+# 2. Setup the parallel environment
+# Detect the number of available CPU cores
+num_cores <- detectCores()
+# Use one less core than detected to leave one core free for system tasks
+use_cores <- max(1, num_cores - 1) 
+message(paste("Starting cluster with", use_cores, "cores."))
+
+# Create a cluster (a set of R processes)
+cl <- makeCluster(use_cores)
+
+# Load the 'data.table' package on each worker node
+clusterEvalQ(cl, {
+    library(data.table)
+    library(tidyverse)
+})
+
+# Export the processing function to each worker node
+clusterExport(cl, "process_psi_file")
+
+# 3. Process all files using parLapply (parallel version of lapply)
+# This is where the file reading and processing happens in parallel
+final_output_list <- parLapply(cl, all_files, process_psi_file)
+
+# Stop the cluster when done
+stopCluster(cl)
+message("Cluster stopped.")
+
+# 4. Combine the results efficiently
+final_output_dt <- rbindlist(final_output_list, use.names = TRUE, fill = TRUE)
+
+# 5. Write the final data.table to a file
+output_file_name <- "aggregated_psi_medians.tsv"
+
+if (nrow(final_output_dt) > 0) {
+    fwrite(
+        final_output_dt,
+        file = output_file_name,
+        sep = "\t",
+        quote = FALSE,
+        row.names = FALSE
+    )
+    message(paste("✅ Successfully created the output file:", output_file_name))
+} else {
+    message("❌ No valid data was processed. Output file was not created.")
+}
+```
+
+
+```{r junction rpm medians}
+gene_table <- fread('../inputs/snaptron/tcga/chr1/snaptron_output/ABCA4_snaptron.tsv')
+tcga_metadata <- fread('../inputs/tcga_v2_samples.tsv', data.table = F)
+
+junction_coverage <- select(tcga_metadata, c(rail_id, junction_coverage))
+junction_coverage$rail_id <- as.character(junction_coverage$rail_id)
+
+
+# --- IMPORTANT: Placeholder for your existing junction_coverage data ---
+# This script ASSUMES a global data.table named 'junction_coverage' exists
+# with columns 'rail_id' (character) and 'junction_coverage' (numeric).
+# Example structure (replace this with your actual data):
+# set.seed(42)
+# junction_coverage <- data.table(
+#     rail_id = paste0("rail_", 1001:1005),
+#     junction_coverage = runif(5, 500000, 1000000)
+# )
+# ---------------------------------------------------------------------
+
+# --- Define the function to process a single gene directory ---
+process_gene_data <- function(dat_file_path, junction_coverage) {
+    # 1. Extract the gene name from the directory path
+    gene_dir <- dirname(dat_file_path)
+    gene_name <- basename(gene_dir)
+    
+    message(paste("Processing gene:", gene_name))
+
+
+    # 3. Read sample IDs (rail_ids) from res.RDS
+    rail_ids <- tryCatch({
+        as.character(fread(dat_file_path, data.table = F) %>%
+            .$V1)
+    }, error = function(e) {
+        message(paste("Skipping gene:", gene_name, "- Failed to read valid rail_ids from dat.tsv. Error:", e$message))
+        return(NULL)
+    })
+    if (is.null(rail_ids)) return(NULL)
+
+    # 4. Read the junction reads data from dat.tsv
+    reads_dt <- tryCatch(
+        # Note: dat.tsv has no header for the first column (which is V1 in fread)
+        fread(dat_file_path, data.table = TRUE),
+        error = function(e) {
+            message(paste("Skipping gene:", gene_name, "- Failed to read dat.tsv. Error:", e$message))
+            return(NULL)
+        }
+    )
+    
+    # 5. Validate the reads data and assign rail_ids
+    if (is.null(reads_dt) || ncol(reads_dt) < 1 || nrow(reads_dt) != length(rail_ids)) {
+        message(paste("Skipping gene:", gene_name, "- Reads data mismatch (rows:", nrow(reads_dt), ", expected:", length(rail_ids), ")."))
+        return(NULL)
+    }
+
+    # Assign rail_ids as the first column (the sample identifier)
+    reads_dt <- dplyr::select(reads_dt, -V1)
+    reads_dt[, rail_id := rail_ids]
+    
+    # 6. Merge reads data with global coverage data
+    # Ensure correct join key order to keep rail_id as the first column
+    setcolorder(reads_dt, c("rail_id", setdiff(names(reads_dt), "rail_id")))
+
+    # Merge reads with coverage data on 'rail_id'
+    merged_dt <- merge(reads_dt, junction_coverage, by = "rail_id", all.x = FALSE)
+
+    # Check for successful merge (i.e., we have the necessary coverage column)
+    if (!"junction_coverage" %in% names(merged_dt)) {
+        message(paste("Skipping gene:", gene_name, "- Failed to find junction_coverage column after merge."))
+        return(NULL)
+    }
+    
+    # Identify junction columns (all columns except rail_id and junction_coverage)
+    junction_cols <- setdiff(names(merged_dt), c("rail_id", "junction_coverage"))
+    if (length(junction_cols) == 0) {
+        message(paste("Skipping gene:", gene_name, "- No junction columns found in dat.tsv."))
+        return(NULL)
+    }
+
+    # 7. Calculate Junction RPM efficiently using data.table (vectorized division)
+    # Perform division: Reads / Coverage * 1e6
+    for (j in junction_cols) {
+        # Using := operator for in-place calculation, avoids copying large data
+        merged_dt[, (j) := get(j) / merged_dt[["junction_coverage"]] * 1e6]
+    }
+    
+    # Remove the rail_id and junction_coverage columns to keep only RPM values
+    rpm_dt <- merged_dt[, c("rail_id", "junction_coverage") := NULL]
+
+    # 8. Calculate the median RPM for each junction (column)
+    # Using 'apply' on the matrix form of the data.table for maximum speed
+    median_rpms <- apply(as.matrix(rpm_dt), 2, median, na.rm = TRUE)
+
+    # 9. Extract junction details from column names
+    junction_names <- names(rpm_dt)
+    
+    # Column names are in the format: start-end
+    split_coords <- tstrsplit(junction_names, split = "-", fixed = TRUE)
+    start_coords <- as.integer(split_coords[[1]])
+    end_coords <- as.integer(split_coords[[2]])
+
+    # 10. Create the final output data.table for this gene
+    result_dt <- data.table(
+        gene_name = gene_name,
+        start = start_coords,
+        end = end_coords,
+        median_rpm = median_rpms
+    )
+
+    return(result_dt)
+}
+
+# --- Main execution block (PARALLELIZED) ---
+
+# 1. Find all 'dat.tsv' files recursively
+# The path provided by the user: "../251107_filters/chr{1-22, X}/gene_name/dat.tsv"
+base_path <- "../leafcutter_analyses/junction_tables/"
+all_dat_files <- list.files(
+    path = base_path,
+    pattern = "^dat\\.tsv$",
+    recursive = TRUE,
+    full.names = TRUE
+)
+
+message(paste("Found", length(all_dat_files), "files to potentially process."))
+
+# 2. Setup the parallel environment
+num_cores <- detectCores()
+# Use one less core than detected to leave one core free for system tasks
+use_cores <- max(1, num_cores - 1) 
+message(paste("Starting cluster with", use_cores, "cores."))
+
+cl <- makeCluster(use_cores)
+
+# 3. Distribute necessary objects and libraries to all worker nodes
+clusterEvalQ(cl, {
+    library(data.table)
+    library(tidyverse)
+})
+# Export the processing function AND the global 'junction_coverage' data
+clusterExport(cl, c("process_gene_data", "junction_coverage"))
+
+# 4. Process all files using parLapply (parallel execution)
+# Each core processes a subset of the files simultaneously
+final_output_list <- parLapply(cl, all_dat_files, function(file_path) {
+    # Call the processing function within the worker context
+    process_gene_data(file_path, junction_coverage)
+})
+
+# Stop the cluster when done
+stopCluster(cl)
+message("Cluster stopped.")
+
+# 5. Combine the results efficiently
+# Remove NULL entries from the list (files that were skipped)
+final_output_list <- final_output_list[!sapply(final_output_list, is.null)]
+final_output_dt <- rbindlist(final_output_list, use.names = TRUE, fill = TRUE)
+
+# 6. Write the final data.table to a file
+output_file_name <- "aggregated_junction_rpms.tsv"
+
+if (nrow(final_output_dt) > 0) {
+    fwrite(
+        final_output_dt,
+        file = output_file_name,
+        sep = "\t",
+        quote = FALSE,
+        row.names = FALSE
+    )
+    message(paste("✅ Successfully created the output file:", output_file_name))
+} else {
+    message("❌ No valid data was processed. Output file was not created.")
+}
+
+```
+
+
+
+
+
+

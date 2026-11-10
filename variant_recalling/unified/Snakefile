@@ -1,0 +1,354 @@
+import os
+"""
+Unified WXS + RNA-seq variant-calling pipeline.
+
+Three phases (each with its own Snakemake target so the user can stop /
+inspect / fetch GDC data in between):
+
+  1. snakemake plan_samples
+        -> {gene}/samples.tsv
+           {gene}/barcodes_to_request.txt
+        (user uses barcodes_to_request.txt to download from GDC portal a
+         BAM manifest + cohort metadata covering BOTH WXS and RNA-Seq;
+         dropped at {gene}/gdc_manifest.txt + {gene}/metadata.cohort.json)
+
+  2. snakemake build_manifests
+        -> {gene}/wxs_manifest.tsv
+           {gene}/rna_manifest.tsv
+           {gene}/to_download.tsv  + to_download.manifest.tsv
+           plus symlinks of any BAMs already present in
+           ../diff_splicing/{gene}_bams/ or the legacy
+           ../{gene}/rnaseq_calling/bams/ into {gene}/bams/.
+        (user runs gdc-client on to_download.manifest.tsv into
+         {gene}/download/, then `snakemake import_bams` to rename them
+         into {gene}/bams/{rail_id}_{Tumor,Normal}.{wxs,rna}.bam)
+
+  3. snakemake all
+        -> per-rail_id Mutect2 (paired) + bcftools mpileup +
+           VEP annotation + per-(gene,source) flat TSV.
+"""
+
+import yaml
+
+with open("config.yaml") as f:
+    cfg = yaml.safe_load(f)
+
+GENES        = list(cfg["genes"].keys())
+FACTOR_KEYS  = {g: cfg["genes"][g]["factor_key"] for g in GENES}
+EXCL_MUT     = {g: cfg["genes"][g].get("exclude_mut_genes", "") for g in GENES}
+SEL_MODE     = {g: cfg["genes"][g].get("selection_mode", "loading_threshold")
+                for g in GENES}
+MUT_PATHS    = cfg.get("mut_data_paths", [])
+RDS_PATH     = cfg["rds_path"]
+LOAD_THRESH  = cfg["loading_thresh"]
+CTRL_CUTOFF  = cfg["control_cutoff"]
+SEED_VAL     = cfg["control_seed"]
+TCGA_META    = cfg["tcga_metadata"]
+EXIST_RNA    = cfg["existing_rna_bam_dirs"]
+REF_FA       = cfg["ref_fasta"]
+TARGET_BEDS  = cfg["target_beds"]
+VEP_CACHE    = cfg["vep_cache"]
+GATK_BIN     = cfg["gatk_bin"]
+ENVS         = cfg["conda_envs"]
+
+wildcard_constraints:
+    gene    = "|".join(GENES),
+    rail_id = r"\d+",
+    source  = "wxs|rna"
+
+# ---------------------------------------------------------------------
+# Phase 1
+# ---------------------------------------------------------------------
+rule plan_samples:
+    input:
+        expand("{gene}/samples.tsv", gene=GENES),
+        expand("{gene}/barcodes_to_request.txt", gene=GENES)
+
+rule select_samples:
+    input:
+        rds       = RDS_PATH,
+        meta      = TCGA_META,
+        mut_data  = MUT_PATHS
+    output:
+        samples  = "{gene}/samples.tsv",
+        barcodes = "{gene}/barcodes_to_request.txt"
+    params:
+        mode       = lambda wc: SEL_MODE[wc.gene],
+        factor_key = lambda wc: FACTOR_KEYS[wc.gene],
+        load_thr   = LOAD_THRESH,
+        ctrl_cut   = CTRL_CUTOFF,
+        seed_val   = SEED_VAL,
+        excl_mut   = lambda wc: EXCL_MUT.get(wc.gene, "") or '""'
+    conda:
+        ENVS["rscript"]
+    shell:
+        r"""
+        if [ "{params.mode}" = "sf3b1_other_mutants" ]; then
+            Rscript scripts/select_samples_sf3b1.R \
+                {wildcards.gene} {params.factor_key} \
+                {input.rds} {input.meta} \
+                {params.load_thr} {params.ctrl_cut} {params.seed_val} \
+                {wildcards.gene} \
+                {input.mut_data}
+        else
+            Rscript scripts/select_samples.R \
+                {wildcards.gene} {params.factor_key} \
+                {input.rds} {input.meta} \
+                {params.load_thr} {params.ctrl_cut} {params.seed_val} \
+                {wildcards.gene} \
+                {params.excl_mut} \
+                {input.mut_data}
+        fi
+        """
+
+# ---------------------------------------------------------------------
+# Phase 2
+# ---------------------------------------------------------------------
+rule build_manifests:
+    input:
+        expand("{gene}/wxs_manifest.tsv", gene=GENES),
+        expand("{gene}/rna_manifest.tsv", gene=GENES),
+        expand("{gene}/to_download.tsv",  gene=GENES)
+
+checkpoint build_manifests_one:
+    input:
+        samples  = "{gene}/samples.tsv",
+        manifest = "{gene}/gdc_manifest.txt",
+        metadata = "{gene}/metadata.cohort.json"
+    output:
+        wxs   = "{gene}/wxs_manifest.tsv",
+        rna   = "{gene}/rna_manifest.tsv",
+        to_dl = "{gene}/to_download.tsv",
+        flag  = "{gene}/.manifests_built"
+    params:
+        rna_dir = lambda wc: EXIST_RNA.get(wc.gene, "NA")
+    conda:
+        ENVS["rscript"]
+    shell:
+        r"""
+        Rscript scripts/build_manifests.R \
+            {wildcards.gene} {params.rna_dir}
+        """
+
+# ---------------------------------------------------------------------
+# Phase 2.5 (stand-alone target, run after gdc-client)
+# ---------------------------------------------------------------------
+rule import_bams:
+    input:
+        expand("{gene}/.bams_imported", gene=GENES)
+
+rule import_bams_one:
+    input:
+        to_dl = "{gene}/to_download.tsv"
+    output:
+        flag  = "{gene}/.bams_imported"
+    conda:
+        ENVS["rscript"]
+    shell:
+        r"""
+        Rscript scripts/import_downloaded.R {wildcards.gene}
+        touch {output.flag}
+        """
+
+# ---------------------------------------------------------------------
+# Phase 3 — per-rail_id calls
+# ---------------------------------------------------------------------
+# Some GDC bundles ship without an index; create one on demand.  Output
+# name matches the .bai already alongside most existing BAMs (so legacy
+# symlinks keep working). GATK accepts either {prefix}.bai or
+# {prefix}.bam.bai.
+rule samtools_index:
+    input:
+        bam = "{path}.bam"
+    output:
+        bai = "{path}.bai"
+    threads: 1
+    resources:
+        mem_mb = 4000
+    conda:
+        ENVS["bcftools"]
+    shell:
+        r"""
+        samtools index -b {input.bam} {output.bai}
+        """
+
+def _normal_sm(wc):
+    # Look up the Normal entity_submitter_id (TCGA barcode = BAM @RG SM)
+    # from the wxs manifest.  Matches what the prior low_thresh_mutect2.sh
+    # did with `awk '$6 == "Normal" {print $1}' samples_and_rail_ids.tsv`.
+    import csv
+    path = f"{wc.gene}/wxs_manifest.tsv"
+    with open(path) as f:
+        for row in csv.DictReader(f, delimiter="\t"):
+            if row["rail_id"] == wc.rail_id and row["sample_type"] == "Normal":
+                return row["entity_submitter_id"]
+    raise ValueError(f"No Normal row for rail_id {wc.rail_id} in {path}")
+
+def _bams_unless_done(out_pattern, **bams):
+    # TCGA BAMs are deleted once a sample is called (dbGaP, 2026-09-25).
+    # If this rule's output already exists, require no BAMs, so the DAG
+    # for calls_*.tsv doesn't fail on the reused samples' missing inputs.
+    def f(wc):
+        if os.path.exists(out_pattern.format(**wc)):
+            return {}
+        return {k: v.format(**wc) for k, v in bams.items()}
+    return f
+
+rule mutect2:
+    input:
+        unpack(_bams_unless_done("{gene}/mutect2/{rail_id}.filtered.vcf",
+            tumor     = "{gene}/bams/{rail_id}_Tumor.wxs.bam",
+            tumor_bai = "{gene}/bams/{rail_id}_Tumor.wxs.bai",
+            normal    = "{gene}/bams/{rail_id}_Normal.wxs.bam",
+            normal_bai= "{gene}/bams/{rail_id}_Normal.wxs.bai")),
+        bed       = lambda wc: TARGET_BEDS[wc.gene],
+        ref       = REF_FA
+        # wxs_manifest.tsv is NOT an input (only read by _normal_sm): it
+        # was rewritten 2026-10-05 and its new mtime would re-run every
+        # reused sample, whose BAMs are deleted.
+    output:
+        raw      = "{gene}/mutect2/{rail_id}.raw.vcf",
+        filtered = "{gene}/mutect2/{rail_id}.filtered.vcf"
+    threads: 2
+    resources:
+        mem_mb = 16000
+    params:
+        gatk      = GATK_BIN,
+        normal_sm = _normal_sm
+    conda:
+        ENVS["gatk"]
+    shell:
+        r"""
+        mkdir -p {wildcards.gene}/mutect2
+        echo "normal SM = {params.normal_sm}"
+        {params.gatk} Mutect2 \
+            -R {input.ref} \
+            -I {input.tumor} \
+            -I {input.normal} \
+            -normal '{params.normal_sm}' \
+            -L {input.bed} \
+            --max-reads-per-alignment-start 0 \
+            --disable-adaptive-pruning true \
+            --pruning-lod-threshold -100 \
+            --initial-tumor-lod 0 \
+            --tumor-lod-to-emit 0 \
+            --active-probability-threshold 0.001 \
+            -O {output.raw}
+        {params.gatk} FilterMutectCalls \
+            -R {input.ref} \
+            -V {output.raw} \
+            -O {output.filtered}
+        """
+
+rule bcftools_call:
+    input:
+        unpack(_bams_unless_done("{gene}/mpileup/{rail_id}.vcf",
+            bam = "{gene}/bams/{rail_id}_Tumor.rna.bam",
+            bai = "{gene}/bams/{rail_id}_Tumor.rna.bai")),
+        bed = lambda wc: TARGET_BEDS[wc.gene],
+        ref = REF_FA
+    output:
+        vcf = "{gene}/mpileup/{rail_id}.vcf"
+    threads: 1
+    resources:
+        mem_mb = 8000
+    conda:
+        ENVS["bcftools"]
+    shell:
+        r"""
+        mkdir -p {wildcards.gene}/mpileup
+        bcftools mpileup \
+            -R {input.bed} \
+            -f {input.ref} \
+            -Q 20 -q 20 \
+            {input.bam} \
+        | bcftools call -mv -Ov -o {output.vcf}
+        """
+
+rule vep_wxs:
+    input:
+        vcf = "{gene}/mutect2/{rail_id}.filtered.vcf"
+    output:
+        vcf = "{gene}/vep/wxs/{rail_id}.vep.vcf"
+    params:
+        cache = VEP_CACHE
+    conda:
+        ENVS["vep"]
+    shell:
+        r"""
+        mkdir -p {wildcards.gene}/vep/wxs
+        vep -i {input.vcf} \
+            -o {output.vcf} \
+            --cache --offline --dir_cache {params.cache} \
+            --refseq --use_given_ref --format vcf \
+            --force_overwrite --vcf
+        """
+
+rule vep_rna:
+    input:
+        vcf = "{gene}/mpileup/{rail_id}.vcf"
+    output:
+        vcf = "{gene}/vep/rna/{rail_id}.vep.vcf"
+    params:
+        cache = VEP_CACHE
+    conda:
+        ENVS["vep"]
+    shell:
+        r"""
+        mkdir -p {wildcards.gene}/vep/rna
+        vep -i {input.vcf} \
+            -o {output.vcf} \
+            --cache --offline --dir_cache {params.cache} \
+            --refseq --use_given_ref --format vcf \
+            --force_overwrite --vcf
+        """
+
+# ---------------------------------------------------------------------
+# Aggregation
+# ---------------------------------------------------------------------
+def _rail_ids_from(tsv_path):
+    import csv
+    ids = set()
+    with open(tsv_path) as f:
+        r = csv.DictReader(f, delimiter="\t")
+        for row in r:
+            ids.add(row["rail_id"])
+    return sorted(ids)
+
+def vep_targets(wc):
+    out = checkpoints.build_manifests_one.get(gene=wc.gene).output
+    src_tsv = out.wxs if wc.source == "wxs" else out.rna
+    return [f"{wc.gene}/vep/{wc.source}/{rid}.vep.vcf"
+            for rid in _rail_ids_from(src_tsv)]
+
+rule aggregate_vep:
+    input:
+        vep_targets
+    output:
+        "{gene}/calls_{source}.tsv"
+    conda:
+        ENVS["rscript"]
+    shell:
+        r"""
+        Rscript scripts/aggregate_vep.R \
+            {wildcards.gene} {wildcards.source} \
+            {wildcards.gene}/vep/{wildcards.source} \
+            {output}
+        """
+
+rule merge_calls:
+    input:
+        "{gene}/calls_wxs.tsv",
+        "{gene}/calls_rna.tsv"
+    output:
+        "{gene}/calls_combined.tsv"
+    conda:
+        ENVS["rscript"]
+    shell:
+        r"""
+        Rscript scripts/merge_calls.R {input} {output}
+        """
+
+rule all:
+    input:
+        expand("{gene}/calls_combined.tsv", gene=GENES)

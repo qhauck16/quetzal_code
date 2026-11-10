@@ -1,0 +1,134 @@
+# Supplementary Note (IDH1 / SPOP): LeafCutter differential splicing of
+# mutation-defined groups (samples/<comparison>.tsv, from select_samples.R).
+# Same steps and settings as the GSP comparisons
+# (tcga/genome_wide/flashier/diff_splicing/Snakefile):
+#   regtools -a 8 -m 50 -M 500000 -s XS -> leafcutter_cluster_regtools.py
+#   -m 10 -l 500000 -p 0.0001 -> leafcutter_ds.R --num_threads 4.
+# Runs on midway2 (leafcutter_ds conda env and ~/software/leafcutter live there).
+# Conda envs are the ones already built for the GSP comparisons, called by
+# absolute path, so nothing is rebuilt. Run from this directory:
+#   snakemake --executor slurm --default-resources slurm_partition=broadwl slurm_account=pi-yangili1 --jobs 90
+import csv, glob, os
+
+BASE_DIR = os.path.abspath(".")
+DS_DIR   = "/project2/yangili1/qhauck/spliceNMF/tcga/genome_wide/flashier/diff_splicing"
+OLD_JUNC = os.path.join(DS_DIR, "junc_files")          # .junc kept from the GSP runs
+ENV_RNA  = os.path.join(DS_DIR, ".snakemake/conda/8959f668a328615b7157df5baf2aa57e_/bin")  # regtools, samtools
+ENV_PY2  = os.path.join(DS_DIR, ".snakemake/conda/0adddc1f015610e6320bf053d3796950_/bin")  # python2.7
+LEAFCUTTER_DIR = os.path.expanduser("~/software/leafcutter")
+
+COMPS = sorted(os.path.basename(p)[:-4] for p in glob.glob("samples/*.tsv")
+               if not os.path.basename(p).startswith("download_list"))
+SHEET = {c: list(csv.DictReader(open(f"samples/{c}.tsv"), delimiter="\t")) for c in COMPS}
+BAM = {}                                                # rail_id -> downloaded BAM
+for rm in sorted(glob.glob("download/rail_map*.tsv")):    # rail_map.tsv + rail_map_null.tsv
+    with open(rm) as fh:
+        for r in csv.DictReader(fh, delimiter="\t"):
+            BAM[r["rail_id"]] = os.path.join(BASE_DIR, "download/bams", r["file_id"], r["filename"])
+
+wildcard_constraints:
+    comp="[A-Za-z0-9_]+",
+    rail="[0-9]+"
+
+rule all:
+    input:
+        expand("results/{comp}/leafcutter_ds_cluster_significance.txt", comp=COMPS)
+
+# 1. Sample sheet -> LeafCutter phenotype file and junc list.
+rule setup:
+    input:
+        sheet="samples/{comp}.tsv"
+    output:
+        pheno="results/{comp}/leaf_pheno_data.txt",
+        juncs="results/{comp}/juncfiles.txt"
+    run:
+        # Controls first: leafcutter_ds.R encodes the first group it sees as 0
+        # and reports deltapsi = second - first, so this gives mutant - control
+        # (the order the GSP comparisons used).
+        rows = sorted(SHEET[wildcards.comp], key=lambda r: r["role"] == "test")
+        with open(output.pheno, "w") as p, open(output.juncs, "w") as j:
+            for r in rows:
+                p.write(f"{r['rail_id']}.junc {'test' if r['role'] == 'test' else 'control'}\n")
+                j.write(os.path.join(BASE_DIR, "junc_files", f"{r['rail_id']}.junc") + "\n")
+
+# 2. .junc per sample: link the GSP-run file when it exists, else regtools.
+rule junc:
+    input:
+        bam=lambda wc: [] if os.path.exists(f"{OLD_JUNC}/{wc.rail}.junc") else BAM[wc.rail]
+    output:
+        junc="junc_files/{rail}.junc"
+    params:
+        old=lambda wc: f"{OLD_JUNC}/{wc.rail}.junc"
+    resources:
+        mem_mb=8000,
+        runtime=60,
+        cpu=4,
+        slurm_extra="'--exclude=midway2-0318'"
+    shell:
+        """
+        mkdir -p junc_files
+        if [ -z "{input.bam}" ]; then
+            ln -s {params.old} {output.junc}
+        else
+            [ -s {input.bam}.bai ] || {ENV_RNA}/samtools index -@ 4 {input.bam}
+            {ENV_RNA}/regtools junctions extract -a 8 -m 50 -M 500000 \
+                {input.bam} -o {output.junc} -s XS
+        fi
+        """
+
+# 3. LeafCutter clustering.
+rule leafcutter_cluster:
+    input:
+        juncfiles="results/{comp}/juncfiles.txt",
+        junc_files=lambda wc: [f"junc_files/{r['rail_id']}.junc" for r in SHEET[wc.comp]]
+    output:
+        counts="results/{comp}/leafcutter_perind_numers.counts.gz"
+    params:
+        abs_out=lambda wc: os.path.join(BASE_DIR, f"results/{wc.comp}"),
+        abs_junc_dir=os.path.join(BASE_DIR, "junc_files")
+    resources:
+        mem_mb=16000,
+        runtime=120,
+        slurm_extra="'--exclude=midway2-0318'"
+    shell:
+        """
+        cd {params.abs_out}
+        {ENV_PY2}/python {LEAFCUTTER_DIR}/clustering/leafcutter_cluster_regtools.py \
+            -j {params.abs_out}/juncfiles.txt \
+            -m 10 -o {wildcards.comp} -l 500000 -p 0.0001
+
+        zcat {wildcards.comp}_perind_numers.counts.gz | \
+            awk 'NR==1 {{for(i=1;i<=NF;i++) $i=$i".junc"}}1' | \
+            gzip > leafcutter_perind_numers.counts.gz
+
+        rm -f {params.abs_junc_dir}/*.junc.{wildcards.comp}.sorted.gz
+        """
+
+# 4. leafcutter_ds (differential splicing).
+rule leafcutter_ds:
+    input:
+        counts="results/{comp}/leafcutter_perind_numers.counts.gz",
+        pheno ="results/{comp}/leaf_pheno_data.txt"
+    output:
+        sig   ="results/{comp}/leafcutter_ds_cluster_significance.txt",
+        effect="results/{comp}/leafcutter_ds_effect_sizes.txt"
+    params:
+        abs_out=lambda wc: os.path.join(BASE_DIR, f"results/{wc.comp}")
+    resources:
+        mem_mb=16000,
+        runtime=240,
+        cpu=4,
+        slurm_extra="'--exclude=midway2-0318'"
+    shell:
+        """
+        set +u
+        source $HOME/.bashrc
+        conda activate leafcutter_ds
+        set -u
+        cd {params.abs_out}
+        Rscript {LEAFCUTTER_DIR}/scripts/leafcutter_ds.R \
+            --num_threads 4 \
+            leafcutter_perind_numers.counts.gz \
+            leaf_pheno_data.txt \
+            -o leafcutter_ds
+        """

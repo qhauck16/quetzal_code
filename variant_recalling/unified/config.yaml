@@ -1,0 +1,65 @@
+## Unified WXS + RNA-seq variant-calling pipeline config
+
+# Genes to process. Two `selection_mode`s:
+#   - `loading_threshold`: cases = samples with norm_L[, factor_key] > loading_thresh,
+#       optionally minus those carrying any variant in `exclude_mut_genes`.
+#       Used for NKAP / YLPM1.
+#   - `sf3b1_other_mutants`: cases = samples with an SF3B1 mutation that is
+#       NOT a hotspot, NOT near a hotspot (positions 620-800), NOT R549C,
+#       AND that have no SUGP1 mutation. Controls = per-project matched
+#       samples with no SF3B1 and no SUGP1 mutation.
+genes:
+  nkap:
+    selection_mode: loading_threshold
+    factor_key: k13
+    exclude_mut_genes: "NKAP,PRPF8,FAM50A,SLU7"
+  ylpm1:
+    selection_mode: loading_threshold
+    factor_key: k30
+    exclude_mut_genes: "YLPM1"
+  sf3b1:
+    selection_mode: sf3b1_other_mutants
+    factor_key: k10              # only used for tagging output
+    exclude_mut_genes: ""        # handled by the SF3B1-specific logic instead
+
+# Pan-cancer-atlas + GDC compiled mutation tables (used to build the
+# per-sample mutation matrix that drives `exclude_mut_genes`).
+mut_data_paths:
+  - "../../mutation_processing/mutations/pan_can_atlas/compiled.tsv"
+  - "../../mutation_processing/mutations/gdc/compiled.tsv"
+
+# Path to current flashier RDS (relative to unified/)
+rds_path: "../../quetzal_runs/genome_wide/softimpute_flash_300_qc_filtered.RDS"
+
+# Sample selection
+loading_thresh: 0.01     # cases: norm_L[, k] > loading_thresh
+control_cutoff: 1e-4     # controls drawn from norm_L[, k] < control_cutoff
+control_seed:    123     # set.seed for reproducible control sampling
+
+# Reference + BED
+ref_fasta:    "../../inputs/GRCh38.d1.vd1.fa"   # GDC reference (fetch_inputs.sh)
+target_beds:
+  nkap:  "../targets/nkap.target_exons.merged.bed"     # make_target_beds.sh
+  ylpm1: "../targets/ylpm1.target_exons.merged.bed"
+  sf3b1: "../targets/sf3b1.target_exons.merged.bed"
+
+# TCGA metadata + diff_splicing BAM dirs (for symlinking)
+tcga_metadata: "../../inputs/tcga_v2_samples.tsv"
+existing_rna_bam_dirs:
+  # TCGA RNA-seq BAMs from the differential-splicing download (controlled access; GDC/dbGaP)
+  nkap:  "../../leafcutter_analyses/diff_splicing/nkap_bams"
+  ylpm1: "../../leafcutter_analyses/diff_splicing/ylpm1_bams"
+  sf3b1: "../../leafcutter_analyses/diff_splicing/sf3b1_bams"
+
+# VEP cache
+vep_cache: "../../inputs/vep_cache/"   # Ensembl VEP RefSeq cache, release 115, GRCh38 (fetch_inputs.sh)
+
+# GATK binary (Mutect2)
+gatk_bin: "~/software/gatk-4.6.2.0/gatk"   # GATK 4.6.2.0
+
+# Conda envs (yml files in envs/, used via snakemake --use-conda)
+conda_envs:
+  rscript:  "envs/rscript.yml"
+  gatk:     "envs/gatk.yml"
+  bcftools: "envs/bcftools.yml"
+  vep:      "envs/vep.yml"

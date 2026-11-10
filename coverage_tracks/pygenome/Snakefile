@@ -1,0 +1,189 @@
+"""
+Snakemake pipeline preparing the coverage / sashimi track inputs (originally the pyGenomeTracks panels) from
+flashier/pygenome_from_GSPs.Rmd.
+
+  Phase 1: per-GSP sample selection straight from the current flashier
+           RDS (no _full_info dependency).
+              top n_condition rail_ids by norm_L[, factor_key] +
+              n_control per-project proportion-matched controls
+           ->  {gsp}/samples.tsv
+
+  Phase 2: per-(gsp, plot_gene, region) tracks
+              sample_bigwigs.tsv + groups_file.txt + junctions.bed[.gz/.tbi]
+           ->  AggregateBigwigsForPlotting.py -> per-group mean .bw + MeanPSI .links
+               (read by ../../figures, which draw the tracks with their own ggplot code;
+               the pyGenomeTracks rendering steps of the original pipeline are not needed)
+
+Region rows are read from regions.tsv (gsp, gene, chr, strand, region).
+"""
+
+import yaml
+import csv
+import re
+
+with open("config.yaml") as f:
+    cfg = yaml.safe_load(f)
+
+GSPS         = cfg["gsps"]
+RDS_PATH     = cfg["rds_path"]
+TCGA_META    = cfg["tcga_metadata"]
+TCGA_BW_DIR  = cfg["tcga_bw_dir"]
+TCGA_PSI_DIR = cfg["tcga_psi_dir"]
+MANE_PATH    = cfg["mane_path"]
+GENCODE_RDS  = cfg["gencode_rds"]
+N_CONDITION  = cfg["n_condition"]
+N_CONTROL    = cfg["n_control"]
+SEED_VAL     = cfg["control_seed"]
+REGIONS_TSV  = cfg["regions_tsv"]
+GBG_PY       = cfg["genometracks_by_genotype"]
+GENCODE_BED  = cfg["gencode_bed12"]
+ENVS         = cfg["conda_envs"]
+
+# ---- read the regions table and derive output target lists ---------
+def _region_clean(region):
+    return region.replace(",", "").replace(":", "_")
+
+REGIONS = []
+with open(REGIONS_TSV) as f:
+    for row in csv.DictReader(f, delimiter="\t"):
+        if not row["gsp"].strip():
+            continue
+        row["region_clean"] = _region_clean(row["region"])
+        REGIONS.append(row)
+
+GSP_NAMES   = sorted({r["gsp"] for r in REGIONS})
+PLOT_GENES  = sorted({r["gene"] for r in REGIONS})
+REGION_KEYS = sorted({r["region_clean"] for r in REGIONS})
+
+wildcard_constraints:
+    gsp          = "|".join(re.escape(g) for g in GSP_NAMES) if GSP_NAMES else ".+",
+    plot_gene    = "|".join(re.escape(g) for g in PLOT_GENES) if PLOT_GENES else ".+",
+    region_clean = r"chr[0-9XYM]+_\d+-\d+"
+
+# Each region row -> three final PDFs
+def _all_targets():
+    out = []
+    for r in REGIONS:
+        base = f"{r['gsp']}/{r['gene']}/{r['region_clean']}"
+        out.append(f"{base}/tracks.ini")   # aggregate_bigwigs also writes the per-group .bw and MeanPSI .links
+    return out
+
+rule all:
+    input:
+        _all_targets()
+
+# Helper: lookup chr/strand/region for a (gsp, plot_gene, region_clean) triple
+def _lookup(wc):
+    for r in REGIONS:
+        if (r["gsp"]          == wc.gsp and
+            r["gene"]         == wc.plot_gene and
+            r["region_clean"] == wc.region_clean):
+            return r
+    raise ValueError(f"No region row for {wc.gsp}/{wc.plot_gene}/{wc.region_clean}")
+
+# ---------------------------------------------------------------------
+# Phase 1: per-GSP sample selection
+# ---------------------------------------------------------------------
+rule select_samples:
+    input:
+        rds  = RDS_PATH,
+        meta = TCGA_META
+    output:
+        samples = "{gsp}/samples.tsv"
+    params:
+        factor_key  = lambda wc: GSPS[wc.gsp]["factor_key"],
+        n_condition = N_CONDITION,
+        n_control   = N_CONTROL,
+        seed_val    = SEED_VAL
+    resources:
+        mem_mb = 16000
+    conda:
+        ENVS["rscript"]
+    shell:
+        r"""
+        Rscript scripts/select_samples.R \
+            {wildcards.gsp} {params.factor_key} \
+            {input.rds} {input.meta} \
+            {params.n_condition} {params.n_control} {params.seed_val} \
+            {output.samples}
+        """
+
+# ---------------------------------------------------------------------
+# Phase 2: per-region inputs to pyGenomeTracks
+# ---------------------------------------------------------------------
+rule make_bed_and_groups:
+    input:
+        samples = "{gsp}/samples.tsv"
+    output:
+        bigwigs = "{gsp}/{plot_gene}/{region_clean}/{plot_gene}_sample_bigwigs.tsv",
+        groups  = "{gsp}/{plot_gene}/{region_clean}/{plot_gene}_groups_file.txt",
+        junc    = "{gsp}/{plot_gene}/{region_clean}/junctions.bed"
+    params:
+        chr             = lambda wc: _lookup(wc)["chr"],
+        strand          = lambda wc: _lookup(wc)["strand"],
+        condition_label = lambda wc: f"High_{GSPS[wc.gsp]['factor_key']}",
+        condition_color = lambda wc: GSPS[wc.gsp]["color"],
+        bw_dir          = TCGA_BW_DIR,
+        psi_dir         = TCGA_PSI_DIR
+    resources:
+        mem_mb = 10000
+    conda:
+        ENVS["rscript"]
+    shell:
+        r"""
+        Rscript scripts/make_bed_and_groups.R \
+            {input.samples} \
+            {wildcards.plot_gene} {params.chr} '{params.strand}' \
+            '{params.condition_label}' '{params.condition_color}' \
+            {params.bw_dir} {params.psi_dir} \
+            {output.bigwigs} {output.groups} {output.junc}
+        """
+
+rule bgzip_tabix_bed:
+    input:
+        bed = "{gsp}/{plot_gene}/{region_clean}/junctions.bed"
+    output:
+        gz  = "{gsp}/{plot_gene}/{region_clean}/junctions.bed.gz",
+        tbi = "{gsp}/{plot_gene}/{region_clean}/junctions.bed.gz.tbi"
+    resources:
+        mem_mb = 4000
+    conda:
+        ENVS["pygenome"]
+    shell:
+        r"""
+        ( head -n 1 {input.bed} && tail -n +2 {input.bed} | sort -k1,1 -k2,2n ) \
+            | bgzip -c > {output.gz}
+        tabix -f -p bed {output.gz}
+        """
+
+rule aggregate_bigwigs:
+    input:
+        bigwigs = "{gsp}/{plot_gene}/{region_clean}/{plot_gene}_sample_bigwigs.tsv",
+        groups  = "{gsp}/{plot_gene}/{region_clean}/{plot_gene}_groups_file.txt",
+        junc_gz = "{gsp}/{plot_gene}/{region_clean}/junctions.bed.gz",
+        junc_tbi= "{gsp}/{plot_gene}/{region_clean}/junctions.bed.gz.tbi"
+    output:
+        ini = "{gsp}/{plot_gene}/{region_clean}/tracks.ini"
+    params:
+        region    = lambda wc: _lookup(wc)["region"],
+        outprefix = "{gsp}/{plot_gene}/{region_clean}/",
+        gbg_py    = GBG_PY,
+        gbed12    = GENCODE_BED
+    resources:
+        mem_mb = 32000
+    conda:
+        ENVS["pygenome"]
+    shell:
+        r"""
+        PYBIN="${{CONDA_PREFIX:-}}/bin/python"
+        [ -x "$PYBIN" ] || PYBIN=python
+        "$PYBIN" {params.gbg_py} \
+            --BigwigList {input.bigwigs} \
+            --BigwigListType KeyFile \
+            --OutputPrefix {params.outprefix} \
+            --Region {params.region} \
+            --GroupSettingsFile {input.groups} \
+            --Bed12GenesToIni {params.gbed12} \
+            --Normalization WholeGenome \
+            --BedfileForSashimiLinks {input.junc_gz}
+        """

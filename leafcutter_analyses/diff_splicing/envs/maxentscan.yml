@@ -1,0 +1,13 @@
+name: maxentscan
+channels:
+  - bioconda
+  - conda-forge
+dependencies:
+  - _libgcc_mutex=0.1=conda_forge
+  - _openmp_mutex=4.5=2_gnu
+  - libgcc=15.2.0=he0feb66_15
+  - libgcc-ng=15.2.0=h69a702a_15
+  - libgomp=15.2.0=he0feb66_15
+  - libxcrypt=4.4.36=hd590300_1
+  - maxentscan=0_2004.04.21=pl5321hdfd78af_4
+  - perl=5.32.1=7_hd590300_perl5

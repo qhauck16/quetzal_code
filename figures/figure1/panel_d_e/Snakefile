@@ -1,0 +1,182 @@
+# Per-gene plotting pipeline.
+#
+# Sample list comes from cosmic_res (top_hits.R logic): rows of
+# gene_level_poisson_sig_results.tsv that hit a COSMIC Tier 1 gene with
+# max_delta_psi > 0.1, max_psi_fc > 2.5, and cancer_type not in
+# {TCGA-PCPG, TCGA-SARC, TCGA-DLBC}. (DLBC is excluded because its matched
+# GTEx tissue is SPLEEN, which is not a useful control here.) One sample
+# per (gene, cancer_type) pair, named "{gene}_{cancer_short}" (e.g.
+# NF1_LUSC).
+#
+# For each sample, produce:
+#   output/{sample}/{gene}/junctions_classified.tsv
+#   output/{sample}/{gene}/junction_arcs_mane.pdf
+#   output/{sample}/{gene}/psi_cdfs_tcga_vs_gtex.pdf
+#   output/{sample}/{gene}/regions/{region}/simple_coverage.pdf
+#   output/{sample}/{gene}/regions/{region}/sashimi_simple_coverage.pdf
+#
+# regions: always at least {"default": <auto>}, plus anything in
+# config["extra_regions"][sample] (named region -> "chr:start-end" string).
+
+import os
+import csv
+
+configfile: "config.yaml"
+
+PATHS  = config["paths"]
+EXTRAS = config.get("extra_regions") or {}
+
+
+def load_cosmic_res(sig_tsv, cosmic_tsv):
+    with open(cosmic_tsv) as fh:
+        cosmic_genes = {r["Gene Symbol"]
+                        for r in csv.DictReader(fh, delimiter="\t")}
+    rows = []
+    with open(sig_tsv) as fh:
+        for r in csv.DictReader(fh, delimiter="\t"):
+            try:
+                d_psi = float(r["max_delta_psi"])
+                psi_fc = float(r["max_psi_fc"])
+            except (ValueError, KeyError):
+                continue
+            if (r["gene_name"] in cosmic_genes
+                    and d_psi  > 0.1
+                    and psi_fc > 2.5
+                    and r["cancer_type"] not in ("TCGA-PCPG", "TCGA-SARC", "TCGA-DLBC")):
+                rows.append(r)
+    return rows
+
+
+def build_samples():
+    cosmic = load_cosmic_res(PATHS["cosmic_sig_tsv"],
+                             PATHS["cosmic_tier1_tsv"])
+    samples = {}
+    for r in cosmic:
+        gene   = r["gene_name"]
+        cancer = r["cancer_type"]
+        name   = f"{gene}_{cancer.replace('TCGA-', '')}"
+        if name in samples:
+            continue                       # first row per (gene, cancer) wins
+        samples[name] = {
+            "gene":        gene,
+            "chr":         r["chr"],
+            "factor":      r["factor"],
+            "cancer_type": cancer,
+        }
+    return samples
+
+
+SAMPLES = build_samples()
+
+
+def regions_for(sample):
+    out = {"default": ""}                  # "" -> auto-compute in prep_pygenome.R
+    out.update(EXTRAS.get(sample) or {})
+    return out
+
+
+SAMPLE_GENE = [(s, info["gene"]) for s, info in SAMPLES.items()]
+SAMPLE_GENE_REGION = [
+    (s, info["gene"], r)
+    for s, info in SAMPLES.items()
+    for r in regions_for(s)
+]
+
+
+def all_outputs():
+    files = []
+    for s, g in SAMPLE_GENE:
+        files += [
+            f"output/{s}/{g}/junctions_classified.tsv",
+            f"output/{s}/{g}/junction_arcs_mane.pdf",
+            f"output/{s}/{g}/psi_cdfs_tcga_vs_gtex.pdf",
+            f"output/{s}/{g}/loading_violin.pdf",
+        ]
+    for s, g, r in SAMPLE_GENE_REGION:
+        base = f"output/{s}/{g}/regions/{r}"
+        files += [
+            f"{base}/simple_coverage.pdf",
+            f"{base}/sashimi_simple_coverage.pdf",
+            f"{base}/mane_gene_model.pdf",
+        ]
+    return files
+
+
+rule all:
+    input: all_outputs()
+
+
+rule gene_outputs:
+    output:
+        junctions = "output/{sample}/{gene}/junctions_classified.tsv",
+        arcs      = "output/{sample}/{gene}/junction_arcs_mane.pdf",
+        cdfs      = "output/{sample}/{gene}/psi_cdfs_tcga_vs_gtex.pdf",
+        violin    = "output/{sample}/{gene}/loading_violin.pdf",
+        gd_rds    = "output/{sample}/{gene}/gene_data.RDS",
+    params:
+        chr         = lambda wc: SAMPLES[wc.sample]["chr"],
+        factor      = lambda wc: SAMPLES[wc.sample]["factor"],
+        cancer_type = lambda wc: SAMPLES[wc.sample]["cancer_type"],
+        config_path = "config.yaml",
+    conda: "envs/rscript.yml"
+    resources:
+        mem_mb = 10000
+    shell:
+        r"""
+        Rscript scripts/make_gene_outputs.R \
+            --gene {wildcards.gene} \
+            --chr {params.chr} \
+            --factor {params.factor} \
+            --cancer_type {params.cancer_type} \
+            --config {params.config_path} \
+            --out_dir output/{wildcards.sample}/{wildcards.gene}
+        """
+
+
+rule prep_region:
+    input:
+        gd_rds = "output/{sample}/{gene}/gene_data.RDS",
+    output:
+        bed     = "output/{sample}/{gene}/regions/{region}/junctions.bed",
+        samples = "output/{sample}/{gene}/regions/{region}/sample_bigwigs.tsv",
+        groups  = "output/{sample}/{gene}/regions/{region}/groups_file.txt",
+        region  = "output/{sample}/{gene}/regions/{region}/region.txt",
+        mane    = "output/{sample}/{gene}/regions/{region}/mane_gene_model.pdf",
+    params:
+        region_str  = lambda wc: regions_for(wc.sample).get(wc.region, ""),
+        config_path = "config.yaml",
+    conda: "envs/rscript.yml"
+    resources:
+        mem_mb = 10000
+    shell:
+        r"""
+        Rscript scripts/prep_pygenome.R \
+            --gd_rds {input.gd_rds} \
+            --config {params.config_path} \
+            --out_dir output/{wildcards.sample}/{wildcards.gene}/regions/{wildcards.region} \
+            --region '{params.region_str}'
+        """
+
+
+rule pygenome_tracks:
+    input:
+        bed     = "output/{sample}/{gene}/regions/{region}/junctions.bed",
+        samples = "output/{sample}/{gene}/regions/{region}/sample_bigwigs.tsv",
+        groups  = "output/{sample}/{gene}/regions/{region}/groups_file.txt",
+        region  = "output/{sample}/{gene}/regions/{region}/region.txt",
+    output:
+        coverage = "output/{sample}/{gene}/regions/{region}/simple_coverage.pdf",
+        sashimi  = "output/{sample}/{gene}/regions/{region}/sashimi_simple_coverage.pdf",
+    params:
+        aggregator = lambda wc: os.path.expanduser(PATHS["pygenome_aggregator"]),
+        bed12      = lambda wc: os.path.expanduser(PATHS["pygenome_bed12"]),
+    conda: "envs/pygenome.yml"
+    resources:
+        mem_mb = 10000
+    shell:
+        r"""
+        bash scripts/run_pygenome.sh \
+            output/{wildcards.sample}/{wildcards.gene}/regions/{wildcards.region} \
+            {params.aggregator} \
+            {params.bed12}
+        """

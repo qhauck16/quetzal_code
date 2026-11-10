@@ -1,0 +1,33 @@
+import os
+DIR = os.path.basename(os.getcwd())
+
+GENES, = glob_wildcards("../../../inputs/snaptron/gtex/" + DIR + "/snaptron_output/{gene}_snaptron.tsv")
+
+rule all:
+    input:
+        expand("FastTopics_output/{gene}/dat.tsv", gene=GENES)
+
+rule output_dat:
+    input:
+        gtex_snaptron="../../../inputs/snaptron/gtex/" + DIR + "/snaptron_output/{gene}_snaptron.tsv",
+        gtex_metadata="../../../inputs/gtexv2_metadata.tsv",
+        gencode_object="../../../inputs/gencode_v46_granges.RDS"
+    output:
+        "FastTopics_output/{gene}/dat.tsv"
+    conda: 
+        "../envs/fasttopics.yml"
+    threads: 24
+    resources:
+        mem_mb=50000
+    params:
+        min_samples_per_junc=0,
+        elbow_cutoff = 0.0001,
+        avg_clust_read_count_min = 0,
+        avg_sample_reads_per_cluster = 0,
+        max_factors=32, 
+        gene_range_bound=2000
+    shell:
+        """
+        Rscript ../gtex_LF_saving.R {input.gtex_snaptron} {input.gtex_metadata} {threads} {params.min_samples_per_junc} FastTopics_output/ {wildcards.gene} {params.elbow_cutoff} \
+        {params.max_factors} {params.avg_clust_read_count_min} {input.gencode_object} {params.avg_sample_reads_per_cluster} {params.gene_range_bound} 
+        """

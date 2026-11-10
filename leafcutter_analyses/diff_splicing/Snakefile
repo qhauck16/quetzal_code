@@ -1,0 +1,209 @@
+import yaml
+import os
+
+with open("config.yaml") as f:
+    config = yaml.safe_load(f)
+
+GENES         = config["genes"]
+COMPARISONS   = config["comparisons"]
+METADATA      = config["metadata"]
+LOADINGS      = config["loadings_file"]
+LEAFCUTTER_DIR = os.path.expanduser(config["leafcutter_dir"])
+BASE_DIR      = os.path.abspath(".")
+INVENTORY     = "download/bam_inventory.tsv"
+JUNC_DIR      = os.path.join(BASE_DIR, "junc_files")
+
+# Test/control runs for every (gene, comparison) combination
+RUNS = []
+for gene in GENES:
+    for comp in COMPARISONS:
+        n_test = comp["n_test"]
+        n_ctrl = n_test * comp["control_ratio"]
+        RUNS.append(f"{gene}_{n_test}v{n_ctrl}")
+
+RESULTS_DIRS = ["results", "control_results"]
+
+wildcard_constraints:
+    results_dir="results|control_results",
+    gene="[A-Za-z0-9]+",
+    n_test="[0-9]+",
+    n_ctrl="[0-9]+",
+    rail="[0-9]+"
+
+# Helper: look up a sample's BAM path from the inventory at planning time.
+# Reads inventory once (lazy-loaded per Snakemake invocation).
+_INV = None
+def bam_for(rail_id):
+    global _INV
+    if _INV is None:
+        _INV = {}
+        if os.path.exists(INVENTORY):
+            with open(INVENTORY) as fh:
+                header = fh.readline().rstrip("\n").split("\t")
+                ix_id   = header.index("rail_id")
+                ix_path = header.index("home_bam")
+                for line in fh:
+                    f = line.rstrip("\n").split("\t")
+                    _INV[int(f[ix_id])] = f[ix_path]
+    return _INV.get(int(rail_id))
+
+rule all:
+    input:
+        expand("{rdir}/{run}/leafcutter_ds_cluster_significance.txt",
+               rdir=RESULTS_DIRS, run=RUNS)
+
+# ---------------------------------------------------------------------------
+# 1. Select test/control samples for a given (gene, comparison) and write
+#    leaf_pheno_data.txt + juncfiles.txt + bams_used.tsv
+# ---------------------------------------------------------------------------
+checkpoint select_and_match:
+    input:
+        inventory=INVENTORY,
+        loadings=LOADINGS
+    output:
+        rail_ids="{results_dir}/{gene}_{n_test}v{n_ctrl}/leaf_final_rail_ids.tsv",
+        pheno   ="{results_dir}/{gene}_{n_test}v{n_ctrl}/leaf_pheno_data.txt",
+        juncs   ="{results_dir}/{gene}_{n_test}v{n_ctrl}/juncfiles.txt",
+        bams    ="{results_dir}/{gene}_{n_test}v{n_ctrl}/bams_used.tsv"
+    params:
+        factor_num=lambda wc: GENES[wc.gene]["factor_num"],
+        threshold=lambda wc: GENES[wc.gene]["control_threshold"],
+        out_dir=lambda wc: f"{wc.results_dir}/{wc.gene}_{wc.n_test}v{wc.n_ctrl}",
+        control_flag=lambda wc: "--control_mode" if wc.results_dir == "control_results" else "",
+        ratio=lambda wc: int(wc.n_ctrl) // int(wc.n_test)
+    resources:
+        mem_mb=8000,
+        runtime=30,
+        slurm_extra="'--exclude=midway2-0318'"
+    conda: "envs/rscript.yml"
+    shell:
+        """
+        Rscript scripts/select_and_match_bam.R \
+            --loadings {input.loadings} \
+            --factor_num {params.factor_num} \
+            --control_threshold {params.threshold} \
+            --n_test {wildcards.n_test} \
+            --control_ratio {params.ratio} \
+            --metadata {METADATA} \
+            --inventory {input.inventory} \
+            --gene {wildcards.gene} \
+            --out_dir {params.out_dir} \
+            {params.control_flag}
+        """
+
+# ---------------------------------------------------------------------------
+# 2. BAM -> .junc via regtools (one rule per rail_id; cached across runs)
+#    The BAM path is looked up dynamically from bam_inventory.tsv.
+# ---------------------------------------------------------------------------
+rule regtools_extract:
+    input:
+        # No BAM needed once the .junc exists: TCGA BAMs are deleted after
+        # extraction (dbGaP, 2026-09-25), and requiring them made every
+        # existing .junc a missing-input error.
+        bam=lambda wc: [] if os.path.exists(f"junc_files/{wc.rail}.junc") else (
+            bam_for(wc.rail) or (_ for _ in ()).throw(
+            ValueError(f"rail_id {wc.rail} not in bam_inventory.tsv")))
+    output:
+        junc="junc_files/{rail}.junc"
+    resources:
+        mem_mb=8000,
+        runtime=60,
+        cpu=4,
+        slurm_extra="'--exclude=midway2-0318'"
+    conda: "envs/rna-seq.yml"
+    shell:
+        """
+        mkdir -p junc_files
+        bai_std={input.bam}.bai
+        bai_picard=$(dirname {input.bam})/$(basename {input.bam} .bam).bai
+        valid_bai() {{ [ -s "$1" ] && [ "$(head -c 4 "$1" | od -An -tx1 | tr -d ' ')" = "42414901" ]; }}
+        if ! valid_bai "$bai_std"; then
+            rm -f "$bai_std"
+            if valid_bai "$bai_picard"; then
+                ln -sf "$(basename $bai_picard)" "$bai_std"
+            else
+                rm -f "$bai_picard"
+                samtools index -@ 4 {input.bam}
+            fi
+        fi
+        regtools junctions extract -a 8 -m 50 -M 500000 \
+            {input.bam} -o {output.junc} -s XS
+        """
+
+# ---------------------------------------------------------------------------
+# 3. leafcutter clustering
+# ---------------------------------------------------------------------------
+def junc_inputs(wc):
+    # Force Snakemake to wait for the select_and_match checkpoint before
+    # reading juncfiles.txt, so the regtools rule is triggered for every
+    # rail_id in the run.
+    # Return RELATIVE paths so snakemake can match them against the
+    # regtools_extract rule's relative output pattern. juncfiles.txt itself
+    # keeps absolute paths because leafcutter_cluster cd's into the run dir.
+    juncfiles_path = checkpoints.select_and_match.get(
+        results_dir=wc.results_dir, gene=wc.gene,
+        n_test=wc.n_test, n_ctrl=wc.n_ctrl
+    ).output.juncs
+    with open(juncfiles_path) as fh:
+        return [f"junc_files/{os.path.basename(l.strip())}"
+                for l in fh if l.strip()]
+
+rule leafcutter_cluster:
+    input:
+        juncfiles="{results_dir}/{gene}_{n_test}v{n_ctrl}/juncfiles.txt",
+        junc_files=junc_inputs
+    output:
+        counts="{results_dir}/{gene}_{n_test}v{n_ctrl}/leafcutter_perind_numers.counts.gz"
+    params:
+        abs_out=lambda wc: os.path.join(BASE_DIR, f"{wc.results_dir}/{wc.gene}_{wc.n_test}v{wc.n_ctrl}"),
+        prefix=lambda wc: f"{wc.gene}_{wc.n_test}v{wc.n_ctrl}",
+        abs_junc_dir=JUNC_DIR
+    resources:
+        mem_mb=16000,
+        runtime=120,
+        slurm_extra="'--exclude=midway2-0318'"
+    conda: "envs/python2.7.yml"
+    shell:
+        """
+        cd {params.abs_out}
+        python {LEAFCUTTER_DIR}/clustering/leafcutter_cluster_regtools.py \
+            -j {params.abs_out}/juncfiles.txt \
+            -m 5 -o {params.prefix} -l 500000 -p 0.0001   # -m 10 -> 5 on 2026-10-28: at 10, one swapped control (2 reads) split PBRM1 clu_50155 and dropped it
+
+        zcat {params.prefix}_perind_numers.counts.gz | \
+            awk 'NR==1 {{for(i=1;i<=NF;i++) $i=$i".junc"}}1' | \
+            gzip > leafcutter_perind_numers.counts.gz
+
+        rm -f {params.abs_junc_dir}/*.junc.{params.prefix}.sorted.gz
+        """
+
+# ---------------------------------------------------------------------------
+# 4. leafcutter_ds (differential splicing)
+# ---------------------------------------------------------------------------
+rule leafcutter_ds:
+    input:
+        counts="{results_dir}/{gene}_{n_test}v{n_ctrl}/leafcutter_perind_numers.counts.gz",
+        pheno ="{results_dir}/{gene}_{n_test}v{n_ctrl}/leaf_pheno_data.txt"
+    output:
+        sig   ="{results_dir}/{gene}_{n_test}v{n_ctrl}/leafcutter_ds_cluster_significance.txt",
+        effect="{results_dir}/{gene}_{n_test}v{n_ctrl}/leafcutter_ds_effect_sizes.txt"
+    params:
+        abs_out=lambda wc: os.path.join(BASE_DIR, f"{wc.results_dir}/{wc.gene}_{wc.n_test}v{wc.n_ctrl}")
+    resources:
+        mem_mb=16000,
+        runtime=240,
+        cpu=4,
+        slurm_extra="'--exclude=midway2-0318'"
+    shell:
+        """
+        set +u
+        source $HOME/.bashrc
+        conda activate leafcutter_ds
+        set -u
+        cd {params.abs_out}
+        Rscript {LEAFCUTTER_DIR}/scripts/leafcutter_ds.R \
+            --num_threads 4 \
+            leafcutter_perind_numers.counts.gz \
+            leaf_pheno_data.txt \
+            -o leafcutter_ds
+        """
