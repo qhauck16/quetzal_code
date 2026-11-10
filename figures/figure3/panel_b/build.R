@@ -376,7 +376,12 @@ panel_b <- panel_cached("b", local({
         # 0.85*lh is white space, and it is LARGER than the drawn line
         # pitch inside a label -- without that ordering two adjacent
         # labels read as one string ("insQ" + "P1880_..." run together).
-        need <- (st$nlines[ix][i - 1] + st$nlines[ix][i]) / 2 * lh + 0.85 * lh
+        # Two one-line labels cannot run together that way, so they get a
+        # smaller white gap (0.40*lh); otherwise a run of one-line
+        # mutations (PRPF8 R1832H..L1872P/R) spreads far wider than the
+        # ~40 residues it covers and crowds the stack before it.
+        ws   <- if (st$nlines[ix][i - 1] == 1 && st$nlines[ix][i] == 1) 0.40 else 0.85
+        need <- (st$nlines[ix][i - 1] + st$nlines[ix][i]) / 2 * lh + ws * lh
         dy   <- yA[i] - yA[i - 1]
         gapmin[i] <- max(cd, (need + dy * B_COS) / B_SIN)
         x[i] <- max(x[i], x[i - 1] + gapmin[i])
@@ -431,6 +436,13 @@ panel_b <- panel_cached("b", local({
         x     <- x - shift
         xover <- max(xover, over - shift)
       }
+      # (e) Relax back toward the true residue positions: the slide above moves every
+      #     stack, but only the right-hand ones needed it. Moving right-to-left, let each
+      #     stack return toward its nominal x as far as the gap to its right-hand
+      #     neighbour allows (stacks only move right, so no new collisions).
+      x0 <- B_MAP[[g]](st$pos[ix])
+      if (n > 1) for (i in (n - 1):1)
+        if (x[i] < x0[i]) x[i] <- max(x[i], min(x0[i], x[i + 1] - gapmin[i + 1], ub[i]))
       st$x[ix] <- x
     }
 
