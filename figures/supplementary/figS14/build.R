@@ -5,9 +5,8 @@
 # every (dPSI, FC) cell. One-sided Wilcoxon (frameshifted < in-frame).
 # Expression: figure 3 panel e's cache (the 13.4 GB matrix sliced to the
 # same 20 top samples), so the full matrix is never read here.
-# NB the LeafCutter table is the 20v60 dpsi0.01_fc2.5 instance, so every
-# junction already has FC > 2.5 -- the FC > 1 row necessarily equals the
-# FC > 2.5 row, exactly as in the original figure.
+# The LeafCutter table is the 20v60 dpsi0.01_fc1 instance (no fold-change
+# prefilter), so every FC row is a real cut; the expression cache holds all genes.
 if (!exists("QROOT")) QROOT <- local({ d <- normalizePath(getwd())   # quetzal_code root
   while (!file.exists(file.path(d, ".quetzal_root"))) { if (dirname(d) == d) stop("run from inside quetzal_code/"); d <- dirname(d) }
   d })
@@ -18,7 +17,7 @@ source("common.R")
 em <- fread(file.path(FIG_ROOT, "figure3", "cache", "panel_e_scaled.tsv"),
             data.table = FALSE, header = TRUE)
 rownames(em) <- em$gene_name; em <- as.matrix(em[, -1])
-df <- fread(file.path(QROOT, "leafcutter_analyses/diff_splicing/unified_results/nkap/20v60/dpsi0.01_fc2.5/df_final.tsv"), data.table = FALSE)
+df <- fread(file.path(QROOT, "leafcutter_analyses/diff_splicing/unified_results/nkap/20v60/dpsi0.01_fc1/df_final.tsv"), data.table = FALSE)
 
 PSI <- c(0.01, 0.02, 0.05, 0.10); FC <- c(1, 2.5, 5)
 cells <- expand.grid(psi = PSI, fc = FC)
