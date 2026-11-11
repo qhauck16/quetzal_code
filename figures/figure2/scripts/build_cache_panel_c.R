@@ -182,11 +182,12 @@ colnames(corr_mat) <- colnames(all_covars)
 tissue_cols <- colnames(tissue_aligned)
 tech_cols   <- c(colnames(tech_aligned), "TMB")
 
-# Top1/top2 loading ratio -> "single sample GSP" flag
+# Top1/top3 loading ratio -> "single sample GSP" flag (top > 5x third-highest,
+# the same rule as both Fig. 2d tests)
 top_ratios <- data.frame(gsp = seq_len(n_gsps))
-top_ratios$ratio_1v2 <- sapply(seq_len(n_gsps), function(k) {
+top_ratios$ratio_1v3 <- sapply(seq_len(n_gsps), function(k) {
   sorted <- sort(L_aligned[, k], decreasing = TRUE)
-  sorted[1] / sorted[2]
+  sorted[1] / sorted[3]
 })
 rm(L_aligned, all_covars, tissue_aligned, tech_aligned); mem("post-correlation")
 
@@ -197,9 +198,9 @@ corr_df$max_tissue    <- apply(corr_mat[, tissue_cols, drop = FALSE], 1,
                                function(x) max(abs(x)))
 corr_df$max_technical <- apply(corr_mat[, tech_cols, drop = FALSE], 1,
                                function(x) max(abs(x)))
-corr_df$`top1/2>5`    <- as.numeric(top_ratios$ratio_1v2 > 5)
+corr_df$`top1/3>5`    <- as.numeric(top_ratios$ratio_1v3 > 5)
 
-summary_cols <- c("max_tissue", "max_technical", "top1/2>5", "max_expl")
+summary_cols <- c("max_tissue", "max_technical", "top1/3>5", "max_expl")
 # Verbatim from the Rmd: max_expl is taken over the tissue and technical
 # columns PLUS the other three summary columns, so it partly summarises
 # summaries. Preserved deliberately -- changing it would shift both the
@@ -277,7 +278,7 @@ pretty_col_label <- function(x) {
     TMB              = "TMB",
     max_tissue       = "Max tissue |r|",
     max_technical    = "Max technical |r|",
-    `top1/2>5`       = "Single sample GSP",
+    `top1/3>5`       = "Single sample GSP",
     max_expl         = "Max explained"
   )
   ifelse(x %in% names(lookup), lookup[x], x)

@@ -84,6 +84,9 @@ if (!have_cache("panel_g_both_tests.tsv", "panel_g_thresholds.tsv")) {
             legend.position   = "inside",
             legend.justification = c(0, 1),
             legend.direction  = "horizontal",
+            # title stacked ABOVE the bar so the legend stays narrow and the
+            # GSP #13-NKAP point (top of the y range) is not covered
+            legend.title.position = "top",
             legend.key.height = unit(2.2, "mm"),
             legend.key.width  = unit(5, "mm"),
             legend.title      = element_text(size = SIZE_BASE * 0.8),

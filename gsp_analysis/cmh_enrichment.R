@@ -50,10 +50,12 @@ covar_df <- tcga_metadata %>%
   mutate(rail_id_chr = as.character(rail_id))
 common <- Reduce(intersect, list(rownames(norm_L), covar_df$rail_id_chr, as.character(pre_model$rail_id)))
 L_aligned <- norm_L[common, ]
-ratio_1v2 <- sapply(seq_len(ncol(L_aligned)), function(k) {
-  sorted <- sort(L_aligned[, k], decreasing = TRUE); sorted[1] / sorted[2]
+# Single-sample GSP: top loading > 5x the THIRD-highest (same rule as the linear
+# model in figures/figure2/scripts/build_cache_panel_g.R and the Fig. 2b flag).
+ratio_1v3 <- sapply(seq_len(ncol(L_aligned)), function(k) {
+  sorted <- sort(L_aligned[, k], decreasing = TRUE); sorted[1] / sorted[3]
 })
-non_singleton_gsps <- seq_len(ncol(L_aligned))[as.numeric(ratio_1v2 > 5) == 0]
+non_singleton_gsps <- seq_len(ncol(L_aligned))[as.numeric(ratio_1v3 > 5) == 0]
 
 # ---- third pass, AM threshold 0.9 (CMH half) ----
 mut_status_am <- mut_status_am_09
