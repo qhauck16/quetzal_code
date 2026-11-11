@@ -1,11 +1,11 @@
 # Supplementary Note 1, Figure 4: how many junctions each LeafCutter
 # comparison changes at increasing effect-size thresholds.
-# Count = junctions in significant clusters (adj. P < 0.05) that go UP in the
+# Count = junctions in significant clusters (adj. P <= 0.05) that go UP in the
 # test group (mutant / GSP-high) with dPSI > {0.01, 0.05, 0.10} and PSI fold
-# change (test / control) > {1, 2.5, 5}. Bars per comparison, coloured by the
+# change (test / control) > {1, 2.5, 5}, counted exactly as Fig. S8
+# (cache/leafcutter_counts_lib.R: junctions in genes with a MANE transcript). Bars per comparison, coloured by the
 # GSP the comparison belongs to; the wild-type-vs-wild-type null runs (LGG,
-# PRAD), when present, are grey. dPSI is oriented test - control from the
-# phenotype file's group order (leafcutter_ds.R encodes by first appearance).
+# PRAD), when present, are grey. dPSI is test - control.
 # Run from supplementary/:  Rscript --vanilla note1/fig4.R
 source("common.R")
 source("note1/n1_common.R")
@@ -22,19 +22,11 @@ COMPS <- bind_rows(
          base = file.path(N1_MDS, "results", c("NULL_LGG", "NULL_PRAD")), gsp = "Null (wild-type vs wild-type)")) %>%
   filter(file.exists(file.path(base, "leafcutter_ds_cluster_significance.txt")))
 
-sig_up <- function(base) {
-  ds <- fread(file.path(base, "leafcutter_ds_effect_sizes.txt"), data.table = FALSE)
-  if (fread(file.path(base, "leaf_pheno_data.txt"), header = FALSE, nrows = 1)$V2 == "test")
-    ds$deltapsi <- -ds$deltapsi
-  sig <- fread(file.path(base, "leafcutter_ds_cluster_significance.txt"), data.table = FALSE) %>%
-    transmute(clu = sub(".*:", "", cluster), p.adjust)
-  ds %>% mutate(clu = sub(".*:", "", intron), fc = test / control) %>%
-    inner_join(sig, by = "clu") %>% filter(!is.na(p.adjust), p.adjust < 0.05, deltapsi > 0)
-}
+source("cache/leafcutter_counts_lib.R")   # same junction counting as Fig. S8
 TH <- expand_grid(dpsi = c(0.01, 0.05, 0.10), fc = c(1, 2.5, 5))
 counts <- bind_rows(lapply(seq_len(nrow(COMPS)), function(i) {
-  x <- sig_up(COMPS$base[i])
-  TH %>% mutate(n = mapply(function(a, b) sum(x$deltapsi > a & x$fc > b), dpsi, fc),
+  x <- load_full_leaf_sig(COMPS$base[i])
+  TH %>% mutate(n = mapply(function(a, b) nrow(assign_splice_types(x, a, b)), dpsi, fc),
                 comp = COMPS$comp[i], gsp = COMPS$gsp[i])
 }))
 fwrite(counts, file.path(N1_OUT, "SN1_Fig4_counts.tsv"), sep = "\t")
