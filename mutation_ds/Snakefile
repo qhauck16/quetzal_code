@@ -4,8 +4,8 @@
 # (../leafcutter_analyses/diff_splicing/Snakefile):
 #   regtools -a 8 -m 50 -M 500000 -s XS -> leafcutter_cluster_regtools.py
 #   -m 10 -l 500000 -p 0.0001 -> leafcutter_ds.R --num_threads 4.
-# Needs LEAFCUTTER_DIR (a clone of github.com/davidaknowles/leafcutter) and a conda env
-# named leafcutter_ds with leafcutter's R package. Run from this directory:
+# Needs LEAFCUTTER_DIR (a clone of github.com/davidaknowles/leafcutter); --use-conda builds
+# the envs (leafcutter_ds.post-deploy.sh installs the R package). Run from this directory:
 #   snakemake --use-conda --jobs N   (add your cluster executor)
 import csv, glob, os
 
