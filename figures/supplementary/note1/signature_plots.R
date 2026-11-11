@@ -5,7 +5,7 @@
 #        HELD-OUT tumours of the home cohort, i.e. those not in the LeafCutter
 #        comparison; one-sided Wilcoxon, mutant > wild-type.
 #   c/d: PC1 of a PCA of the same junctions' scaled logit(PSI) over every
-#        tumour of the cohort, as four violins: mutant / wild-type x in the
+#        tumour of the cohort, as four boxplots: mutant / wild-type x in the
 #        LeafCutter run / held out; two-sided Wilcoxon (PC1's sign is
 #        arbitrary) of held-out mutant vs held-out wild-type.
 # Run from supplementary/:  Rscript --vanilla note1/signature_plots.R
@@ -84,9 +84,8 @@ pca_panel <- function(s) {
                         c(s$mut_lab, paste(s$gene, "wild-type"), s$mut_lab, paste(s$gene, "wild-type")),
                         c("in LeafCutter run", "in LeafCutter run", "held out", "held out"), as.integer(n)))
   ggplot(d, aes(grp, PC1, colour = status)) +
-    geom_violin(fill = NA, linewidth = 0.4, scale = "width", width = 0.75) +
-    geom_boxplot(width = 0.12, outlier.shape = NA, linewidth = 0.35) +
-    geom_jitter(width = 0.12, height = 0, size = 0.6, alpha = 0.55) +
+    geom_boxplot(outlier.shape = NA, width = 0.55, linewidth = 0.4) +   # same style as the top row
+    geom_jitter(width = 0.15, height = 0, size = 0.6, alpha = 0.55) +
     annotate("segment", x = 3, xend = 4, y = top + 0.06 * rng, yend = top + 0.06 * rng, linewidth = 0.3) +
     annotate("text", x = 3.5, y = top + 0.09 * rng, label = sprintf("held out: P = %s", fmt_p(p)), vjust = 0,
              size = SIZE_BASE * 0.9 / .pt, family = FONT_FAMILY) +
