@@ -43,8 +43,8 @@ heat <- lapply(seq_along(COMP_LAB), function(k) {
 p_b <- wrap_plots(c(heat, list(guide_area())), ncol = 3) + plot_layout(guides = "collect")
 
 p_a <- (sig_panels$box_idh1 | sig_panels$box_spop) / (sig_panels$pc1_idh1 | sig_panels$pc1_spop)
-fig <- wrap_elements(full = p_a) / wrap_elements(full = p_b) + plot_layout(heights = c(2.1, 1.3)) +
+fig <- wrap_elements(full = p_a) / wrap_elements(full = p_b) + plot_layout(heights = c(2.1, 1.0)) +
   plot_annotation(tag_levels = "a") &
   theme(plot.tag = element_text(size = SIZE_PANEL_LABEL, face = "bold", family = FONT_FAMILY))
-ggsave_pub(file.path(N1_OUT, "SN1_Fig3.pdf"), fig, width = 10, height = 13)
+ggsave_pub(file.path(N1_OUT, "SN1_Fig3.pdf"), fig, width = 10, height = 9.5)
 cat("[fig3] wrote", file.path(N1_OUT, "SN1_Fig3.pdf"), "\n")

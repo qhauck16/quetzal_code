@@ -1,11 +1,9 @@
 # Supplementary Note 2, Figure 1: TCGA tumours carrying the NKAP neurodevelopmental-
 # syndrome substitutions (p.R330C, p.R330H) show the GSP #13 cryptic 3'ss
 # phenotype. Data: note2/cache/psi_long.tsv (note2/build_cache.R).
-#   a: per-sample ECDFs of PSI over the GSP #13 cryptic 3'ss events (alt 3'ss,
-#      -8..+20 nt; NKAP 20v60, dPSI > 0.05, FC > 2.5): every cohort sample in
-#      grey, the cohort's per-event median in black, the carrier in red.
-#   b: mean PSI over those events, one point per sample; carrier in red with
-#      its rank in the cohort.
+# Single panel (no tag): per-sample ECDFs of PSI over the GSP #13 cryptic 3'ss
+# events (alt 3'ss, -8..+20 nt; NKAP 20v60, dPSI > 0.05, FC > 2.5): every cohort
+# sample in grey, the cohort's per-event median in black, the carrier in red.
 # Tests (also in figure3/paper_stats.Rmd): empirical rank of the carrier's mean
 # PSI within its cohort (P = rank / (n + 1)), and a one-sided paired Wilcoxon
 # signed-rank test of carrier PSI vs the cohort median across events.
@@ -70,24 +68,5 @@ p_a <- ggplot() +
         legend.text = element_text(size = SIZE_LEGEND, family = FONT_FAMILY),
         legend.key.width = unit(14, "pt"), legend.key.height = unit(9, "pt"))
 
-# ---- b: per-sample mean PSI -----------------------------------------
-sm <- long %>% group_by(cohort, rail_id) %>% summarise(mean_psi = mean(psi), .groups = "drop") %>%
-  mutate(carrier = rail_id %in% car$rail_id)
-ann_b <- sm %>% filter(carrier) %>% left_join(car %>% select(cohort, plab), by = "cohort") %>%
-  mutate(lab = plab)                                       # just the substitution
-p_b <- ggplot(sm, aes(cohort, mean_psi)) +
-  geom_jitter(data = filter(sm, !carrier), width = 0.18, height = 0, size = 0.7,
-              colour = "grey55", alpha = 0.7) +
-  geom_point(data = filter(sm, carrier), colour = CAR_COL, size = 0.7) +   # same size as the others
-  geom_text(data = ann_b, aes(label = lab), hjust = -0.25, vjust = 0.5, colour = CAR_COL,
-            size = SIZE_BASE / .pt, family = FONT_FAMILY) +
-  scale_x_discrete(labels = function(x) sub("TCGA-", "TCGA-", x)) +
-  coord_cartesian(clip = "off") +
-  labs(x = NULL, y = "Mean PSI over cryptic 3'ss events", title = "Carrier rank within its cohort") +
-  theme_publication() +
-  theme(plot.title = element_text(size = SIZE_TITLE, face = "bold", hjust = 0.5),
-        plot.margin = margin(4, 70, 4, 4, "pt"))
-
-fig <- p_a / (p_b | plot_spacer()) + plot_layout(heights = c(1.15, 1)) + plot_annotation_publication() &
-  theme(plot.tag = element_text(size = SIZE_PANEL_LABEL, face = "bold", family = FONT_FAMILY))
-save_supp(fig, "note2/SN2_Fig1", 8.5, 6.4)
+fig <- p_a
+save_supp(fig, "note2/SN2_Fig1", 8.5, 3.6)
