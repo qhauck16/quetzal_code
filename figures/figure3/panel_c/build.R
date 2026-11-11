@@ -157,7 +157,9 @@ derive_offset <- function(hi, ct) {
   cryptic   <- cand[which.min(p)]
   list(canonical = canonical, cryptic = cryptic,
        offset = cryptic - canonical,
-       label  = sprintf("%+d nt", cryptic - canonical))
+       # every cryptic site here is downstream of the canonical 3'ss in the
+       # transcript, so label the size of the displacement, not its genomic sign
+       label  = sprintf("+%d nt", abs(cryptic - canonical)))
 }
 
 # ------------------------------------------------------------------
