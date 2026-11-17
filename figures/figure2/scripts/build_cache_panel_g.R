@@ -79,7 +79,7 @@ step("Loading flashier RDS (3.7 GB, slow) ...")
 out <- readRDS(RDS_FLASH)
 step("Computing ldf() ...")
 ldf <- flashier::ldf(out, type = 'i')
-norm_L <- ldf$L
+norm_L <- ldf$L[, 1:50]   # top 50 GSPs only (the GSPs analysed in the paper)
 rm(out, ldf); gc(verbose = FALSE)
 step(sprintf("norm_L: %d samples x %d GSPs. RDS freed.",
              nrow(norm_L), ncol(norm_L)))

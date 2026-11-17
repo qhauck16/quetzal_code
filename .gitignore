@@ -42,3 +42,5 @@ figures/logs/
 **/.snakemake/
 **/.Rproj.user/
 make_links.sh
+!figures/supplementary/tables/*_columns.tsv
+!figures/supplementary/out/tables/*.xlsx

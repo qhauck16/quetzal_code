@@ -12,7 +12,7 @@ args <- commandArgs(TRUE); OUT <- if (length(args)) args[1] else "."
 out <- readRDS('../quetzal_runs/genome_wide/softimpute_flash_300_qc_filtered.RDS')
 tcga_metadata <- fread('../inputs/tcga_v2_samples.tsv', data.table = F)
 ldf <- flashier::ldf(out, type = 'i')
-norm_L <- ldf$L
+norm_L <- ldf$L[, 1:50]   # top 50 GSPs only (the GSPs analysed in the paper)
 
 am_mut_data <- fread('../mutation_processing/merged_grch38_with_am.tsv', data.table = FALSE)
 tcga_metadata <- tcga_metadata %>%

@@ -1,0 +1,15 @@
+gene	Gene symbol
+chromosome	Chromosome
+junction_group	Gene-level Poisson NMF junction group (factor) of that gene
+tcga_cohort	TCGA cohort in which the junction group is elevated
+gtex_tissue	Matched GTEx tissue used for the junction-level test
+loading_coefficient	Cohort-indicator coefficient from the linear model of the junction-group loading (cohort vs rest of TCGA, adjusted for technical and demographic covariates)
+loading_p	Wald p-value of that coefficient (significant at 0.05 / (genes x 10 factors x 33 cohorts))
+n_significant_junctions	Number of unique junctions of the group with significantly higher PSI in the cohort than in matched GTEx tissue
+junctions	Those junctions (hg38, 1-based intron coordinates), comma-separated, most significant first
+junction_bb_beta	Beta-binomial GLM coefficient (TCGA cohort vs GTEx tissue) for each junction, same order
+junction_bb_p	Beta-binomial Wald p-value for each junction (0 = below the smallest representable double, ~1e-308)
+junction_bb_p_bonferroni	Bonferroni-adjusted p-value over all beta-binomial tests performed (all < 0.05)
+junction_median_psi_tcga	Median PSI of each junction in the TCGA cohort
+junction_median_psi_gtex	Median PSI of each junction in the matched GTEx tissue
+notes	COSMIC Cancer Gene Census v102 Tier 1 membership and its Role in Cancer

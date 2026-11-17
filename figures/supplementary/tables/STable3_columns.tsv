@@ -1,0 +1,20 @@
+gene	Gene symbol
+cosmic_role	COSMIC Cancer Gene Census (v102, Tier 1) Role in Cancer: oncogene, TSG (tumour suppressor), fusion
+gsp	GSP whose LeafCutter comparison the junction comes from
+comparison	LeafCutter comparison: top 20 samples on the GSP vs 60 matched controls
+junction	Upregulated junction (hg38, 1-based intron coordinates)
+strand	Strand
+splice_type	Splice type relative to MANE Select introns: alt 3′ ss (GSP #10, #13) or alt 3′ / alt 5′ ss (GSP #30)
+mane_intron	The MANE Select intron the junction shares a splice site with
+distance_to_cryptic_nt	For alt 3′ ss: distance of the cryptic 3′ ss from the MANE 3′ ss (negative = downstream in the transcript)
+psi_control	Mean PSI in the 60 control samples (LeafCutter)
+psi_test	Mean PSI in the 20 test samples (LeafCutter)
+delta_psi	psi_test - psi_control
+psi_fold_change	psi_test / psi_control
+log_effect_size	LeafCutter log effect size (logef)
+cluster_id	LeafCutter intron cluster
+cluster_loglr	LeafCutter cluster log-likelihood ratio
+cluster_df	LeafCutter cluster degrees of freedom
+cluster_p	LeafCutter cluster p-value
+cluster_p_adjusted	Benjamini-Hochberg adjusted cluster p-value (all junctions here have <= 0.05)
+in_text_count	TRUE for the GSP #13 alt 3′ ss 1-27 nt downstream of the MANE 3′ ss; their genes are the 80 COSMIC Tier 1 genes in the text

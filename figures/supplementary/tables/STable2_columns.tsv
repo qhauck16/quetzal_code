@@ -1,0 +1,10 @@
+gsp	GSP the re-calling was run for (GSP #10 / SF3B1, GSP #13 / NKAP-PRPF8-FAM50A-SLU7, GSP #30 / YLPM1)
+rail_id	Snaptron / recount3 sample identifier
+tcga_barcode	TCGA aliquot barcode of the RNA-seq sample
+tcga_cohort	TCGA project
+gsp_loading	Sample loading (L) on that GSP
+group	test: loading > 0.01 and no annotated driver of the GSP phenotype; control: loading < 1e-4, drawn at random within each TCGA cohort to match the cohort composition of the test samples
+wxs_tumor_normal_analysed	Paired tumour-normal WXS BAMs available and run through Mutect2 (yes/no)
+rnaseq_analysed	Tumour RNA-seq BAM available and run through bcftools mpileup (yes/no)
+mutations_wxs	Variants from WXS passing all filters (Mutect2 PASS or multiallelic; read depth > 10; alt allele fraction > 10%; VEP impact MODERATE/HIGH; AlphaMissense > 0.9 for missense; protein-truncating for YLPM1). GENE:protein change
+mutations_rnaseq	Variants from RNA-seq passing the same filters (except the Mutect2 FILTER flag). GENE:protein change
