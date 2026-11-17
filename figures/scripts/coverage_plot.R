@@ -350,6 +350,14 @@ sashimi_track_gg <- function(bw_path, chrom, start, end,
                               # and join each to its arc with a thin leader,
                               # e.g. list("4.9%" = c(0, 6)).
                               psi_nudge = list(),
+                              # Leader shape for nudged labels. Default: a
+                              # straight line from the arc point to the
+                              # label. "left" = horizontal, from the label's
+                              # left edge leftwards to where its own arc
+                              # crosses that height; c(down = f) = vertical,
+                              # from the label's baseline at fraction f of its
+                              # width straight down to its own arc.
+                              psi_leader = list(),
                               # Per-arc peak heights, overriding the span-
                               # ranked tiers: a named numeric vector of
                               # fractions of y_max, named by the PSI label
@@ -656,11 +664,33 @@ sashimi_track_gg <- function(bw_path, chrom, start, end,
         x0 <- label_df$x[k]; y0 <- label_df$y[k]
         label_df$x[k] <- x0 + psi_nudge[[nm]][1] * xpp
         label_df$y[k] <- y0 + psi_nudge[[nm]][2] * ypp
-        # leader from the arc point to just short of the number's edge
-        dyl <- label_df$y[k] - y0
-        p <- p + annotate("segment", x = x0, y = y0, xend = label_df$x[k],
-                          yend = label_df$y[k] - sign(dyl) * psi_pt * 0.45 * ypp,
-                          linewidth = 0.25, colour = "grey40")
+        lx <- label_df$x[k]; ly <- label_df$y[k]
+        # label ink extents in data units (measured string width, cap height)
+        w  <- if (exists("lab_w_pt")) lab_w_pt[k] * xpp else 2 * half_w_x(nm)
+        hh <- psi_pt * 0.36 * ypp
+        cv <- curves[[k]]
+        ld <- psi_leader[[nm]]
+        if (identical(ld, "left")) {
+          # where the label's own arc crosses y = ly, left of the label
+          xe <- lx - w / 2 - 1.2 * xpp
+          sgn <- sign(cv$ys - ly)
+          ix <- which(diff(sgn) != 0 & cv$xs[-1] <= xe)
+          xa <- if (length(ix)) { i2 <- max(ix)
+                  approx(cv$ys[i2:(i2 + 1)], cv$xs[i2:(i2 + 1)], xout = ly)$y } else x0
+          p <- p + annotate("segment", x = xa, y = ly, xend = xe, yend = ly,
+                            linewidth = 0.25, colour = "grey40")
+        } else if (is.numeric(ld) && !is.null(names(ld)) && names(ld)[1] == "down") {
+          xs0 <- lx - w / 2 + ld[[1]] * w
+          ya  <- approx(cv$xs, cv$ys, xout = xs0)$y
+          p <- p + annotate("segment", x = xs0, y = ly - hh - 1.2 * ypp, xend = xs0, yend = ya,
+                            linewidth = 0.25, colour = "grey40")
+        } else {
+          # leader from the arc point to just short of the number's edge
+          dyl <- ly - y0
+          p <- p + annotate("segment", x = x0, y = y0, xend = lx,
+                            yend = ly - sign(dyl) * psi_pt * 0.45 * ypp,
+                            linewidth = 0.25, colour = "grey40")
+        }
       }
     }
     # PSI labels: match figure font family, larger size, plain-face.
