@@ -147,7 +147,11 @@ panel_a <- wrap_elements(full =
               # Drop the light-gray backing boxes (fill level ~0.906
               # + its antialiased edge ~0.95). The exon rectangles
               # sit at ~0.796 and are left untouched.
-              whiten_gray = c(0.88, 0.96)) +
+              whiten_gray = c(0.88, 0.96),
+              # The art's own title ("Quetzal's gene-level workflow", PDF
+              # points 182-406 x 32-55) is in a different, regular-weight
+              # face; blank it and set the title in R like every other panel.
+              whiten_box_pt = list(c(178, 28, 410, 59))) +
     theme(plot.margin = margin(0, 0, 0, 0, "pt")))
 
 # ------------------------------------------------------------------
@@ -934,6 +938,24 @@ panel_e <- wrap_elements(full =
 # Row 2: 1c (full width, taller -- coverage tracks are the star)
 # Row 3: 1d (full width, arcs + violin + CDFs)
 # Row 4: 1e (full width, arcs + violin + sashimi + tx model)
+# Panel titles, in the house title style (theme.R md_title()).
+# Panel a: its art has an empty band where its own title was blanked, so the
+# title can sit on the wrapped panel. Panels b-e fill their whole cell, so each
+# gets its own title row (fixed height) above the content.
+panel_a <- panel_a + labs(title = "Quetzal's gene-level workflow") +
+  theme(plot.title = md_title(margin = margin(0, 0, 3, 0)))
+title_row <- function(txt)
+  ggplot() + theme_void() + labs(title = txt) +
+    theme(plot.title = md_title(margin = margin(0, 0, 0, 0)),
+          plot.margin = margin(0, 0, 0, 0))
+fig1_titled <- function(p, txt)
+  wrap_elements(full = (title_row(txt) / p) +
+                  plot_layout(heights = unit(c(SIZE_TITLE + 4, 1), c("pt", "null"))))
+panel_b <- fig1_titled(panel_b, "Quetzal captures differentially spliced junctions")
+panel_c <- fig1_titled(panel_c, "Quetzal results capture cohort variation")
+panel_d <- fig1_titled(panel_d, "*EZH2* mis-splicing is captured by Quetzal")
+panel_e <- fig1_titled(panel_e, "*NF1* is mis-spliced in LUSC")
+
 figure1 <- ((panel_a | panel_b) + plot_layout(widths = c(1.63, 1.37))) /
            panel_c /
            panel_d /

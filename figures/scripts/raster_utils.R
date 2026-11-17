@@ -66,9 +66,18 @@ gg_from_pdf <- function(pdf_path, dpi = 300, crop = TRUE,
                         drop_top_frac = 0, drop_bottom_frac = 0,
                         drop_left_frac = 0, drop_right_frac = 0,
                         preserve_aspect = TRUE,
-                        whiten_gray = NULL) {
+                        whiten_gray = NULL, whiten_box_pt = NULL) {
   png_path <- rasterize_pdf(pdf_path, dpi)
   img <- png::readPNG(png_path)
+  # Blank rectangles given in PDF points from the top-left (x0, y0, x1, y1),
+  # e.g. a title baked into a schematic that R re-sets in the house font.
+  # Applied before autocrop.
+  for (bx in whiten_box_pt) {
+    px <- round(bx * dpi / 72)
+    r1 <- max(1, px[2]); r2 <- min(nrow(img), px[4])
+    c1 <- max(1, px[1]); c2 <- min(ncol(img), px[3])
+    if (length(dim(img)) == 3) img[r1:r2, c1:c2, 1:3] <- 1 else img[r1:r2, c1:c2] <- 1
+  }
   # Knock out a narrow band of NEUTRAL gray levels (set to white).
   # Used to drop the panel-a schematic's light-gray backing boxes
   # without touching its darker gray exon rectangles / arcs. Band is
