@@ -144,7 +144,11 @@ if (!have_cache("panel_b_running_psi.tsv")) {
                       "7.5%" = 0.60),
     psi_size = B_LAB_PT / .pt, label_family = FONT_FAMILY,
     track_height_in = B_TRACK_H[1], track_width_in = unname(B_INS_W_IN),
-    lw_scale = 0.45)
+    lw_scale = 0.45,
+    # Exception for this small inset: the gaps cut behind each number ate
+    # most of the arcs, so arcs are drawn whole, and 4.9% (crowded by its
+    # 1.3% / 71% twins) is lifted clear with a leader to its arc.
+    psi_cut_arcs = FALSE, psi_nudge = list("4.9%" = c(-4, 20)))
   # PSI numbers use the shared helper's inline style (each on its own arc,
   # in a gap cut out of it), as in every sashimi plot in the paper.
   b_sash_top <- b_sash_top + b_track_theme

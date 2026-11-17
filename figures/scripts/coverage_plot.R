@@ -342,6 +342,14 @@ sashimi_track_gg <- function(bw_path, chrom, start, end,
                               # (e.g. a zoom source box, a "-11 nt" note, a
                               # dashed zoom leader's corridor).
                               psi_obstacles = list(),
+                              # FALSE draws every arc whole: no gap is cut
+                              # behind its inline PSI number (for very small
+                              # insets, where the gaps eat most of the arcs).
+                              psi_cut_arcs = TRUE,
+                              # Move named inline labels by c(dx_pt, dy_pt)
+                              # and join each to its arc with a thin leader,
+                              # e.g. list("4.9%" = c(0, 6)).
+                              psi_nudge = list(),
                               # Per-arc peak heights, overriding the span-
                               # ranked tiers: a named numeric vector of
                               # fractions of y_max, named by the PSI label
@@ -595,7 +603,8 @@ sashimi_track_gg <- function(bw_path, chrom, start, end,
         label_ys[i] <- best[2]
         curves[[i]]$mid <- best[1]
       }
-      for (i in seq_len(n_arc)) p <- draw_arc(p, curves[[i]], cuts[[i]])
+      for (i in seq_len(n_arc))
+        p <- draw_arc(p, curves[[i]], if (psi_cut_arcs) cuts[[i]] else list())
     } else {
       for (i in seq_len(n_arc)) p <- draw_arc(p, curves[[i]], list())
     }
@@ -639,6 +648,21 @@ sashimi_track_gg <- function(bw_path, chrom, start, end,
     label_df <- data.frame(x = vapply(curves, `[[`, numeric(1), "mid"),
                             y = label_ys,
                             label = labels)
+    if (length(psi_nudge)) {
+      xpp <- (end - start) / (track_width_in * 72)
+      ypp <- y_max / (track_height_in * 72)
+      for (nm in intersect(names(psi_nudge), label_df$label)) {
+        k  <- which(label_df$label == nm)[1]
+        x0 <- label_df$x[k]; y0 <- label_df$y[k]
+        label_df$x[k] <- x0 + psi_nudge[[nm]][1] * xpp
+        label_df$y[k] <- y0 + psi_nudge[[nm]][2] * ypp
+        # leader from the arc point to just short of the number's edge
+        dyl <- label_df$y[k] - y0
+        p <- p + annotate("segment", x = x0, y = y0, xend = label_df$x[k],
+                          yend = label_df$y[k] - sign(dyl) * psi_pt * 0.45 * ypp,
+                          linewidth = 0.25, colour = "grey40")
+      }
+    }
     # PSI labels: match figure font family, larger size, plain-face.
     if (show_psi)
       p <- p + geom_text(data = label_df, aes(x = x, y = y, label = label),
