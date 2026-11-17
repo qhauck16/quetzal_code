@@ -356,7 +356,8 @@ sashimi_track_gg <- function(bw_path, chrom, start, end,
                               # left edge leftwards to where its own arc
                               # crosses that height; c(down = f) = vertical,
                               # from the label's baseline at fraction f of its
-                              # width straight down to its own arc.
+                              # width straight down to its own arc. "none" =
+                              # no leader.
                               psi_leader = list(),
                               # Per-arc peak heights, overriding the span-
                               # ranked tiers: a named numeric vector of
@@ -670,7 +671,9 @@ sashimi_track_gg <- function(bw_path, chrom, start, end,
         hh <- psi_pt * 0.36 * ypp
         cv <- curves[[k]]
         ld <- psi_leader[[nm]]
-        if (identical(ld, "left")) {
+        if (identical(ld, "none")) {
+          # moved, but no leader (the label still sits right over its arc)
+        } else if (identical(ld, "left")) {
           # where the label's own arc crosses y = ly, left of the label
           xe <- lx - w / 2 - 1.2 * xpp
           sgn <- sign(cv$ys - ly)
