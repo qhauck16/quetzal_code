@@ -1,15 +1,20 @@
 # Supplementary figure: GSP #10 comparison to Alsafadi et al. (2016).
 #   a  exact-coordinate overlap of the GSP #10 alt 3'ss driving junctions with
 #      Alsafadi's SF3B1-MUT vs WT uveal-melanoma junctions, up vs down; exact
-#      binomial test of up vs down among the hits (p0 = 0.5).
+#      binomial test of up vs down among the hits (p0 = 0.5); control row = the
+#      near-zero-weight junction groups of GSP #10 (cache/null_junction_set.R).
 #   b  Venn: Alsafadi significant upregulated alt 3'ss vs the same set
 # Inputs from cache/build_overlap_cache.R.
 source("common.R")
 cells <- fread(file.path("cache", "s6_alsafadi_cells.tsv"), data.table = FALSE) %>%
-  filter(set == "gsp")
-n_up <- cells$n_overlap[cells$direction == "upregulated"]
-n_dn <- cells$n_overlap[cells$direction == "downregulated"]
-binom_p <- binom.test(n_up, n_up + n_dn, p = 0.5)$p.value
+  filter(set %in% c("gsp", "null"))
+bp <- function(st) {   # two-sided exact binomial, up vs down, within one row
+  u <- cells$n_overlap[cells$set == st & cells$direction == "upregulated"]
+  d <- cells$n_overlap[cells$set == st & cells$direction == "downregulated"]
+  if (u + d == 0) NA_real_ else binom.test(u, u + d, p = 0.5)$p.value
+}
+binom_p <- bp("gsp"); ctrl_p <- bp("null")
+fmt <- function(p) if (is.na(p)) "NA" else if (p < 0.01) sprintf("%.1e", p) else sprintf("%.2f", p)
 cells$fisher_p <- binom_p   # read only by overlap_heatmap()'s caption, nulled below
 vn    <- fread(file.path("cache", "s6_venn.tsv"), data.table = FALSE)
 
@@ -19,8 +24,8 @@ p_a <- overlap_heatmap(cells, "GSP #10 alt 3'ss in top 250\ndriving unannotated 
   # coord_fixed: square tiles are too narrow for "upregulated" /
   # "downregulated" at this height.
   labs(caption = NULL,
-       x = sprintf("Alsafadi et al. (2016) direction\nBinomial test, up vs down: p = %.1e",
-                   binom_p)) +
+       x = sprintf("Alsafadi et al. (2016) direction\nBinomial test, up vs down: driving p = %s; control p = %s",
+                   fmt(binom_p), fmt(ctrl_p))) +
   theme(legend.key.height = unit(4, "mm"),
         axis.title.x = element_text(lineheight = 1.1))
 

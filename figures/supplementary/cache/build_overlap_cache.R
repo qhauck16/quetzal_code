@@ -63,6 +63,17 @@ als <- fread(file.path(QROOT, "gsp_analysis/Alsafadi2016_supp1_hg38.tsv"), data.
 s10 <- build_sets(10, "alt 3'ss")
 s6 <- cells_for(s10, als %>% filter(log2fc > 0) %>% select(chr, strand, start, end),
                 als %>% filter(log2fc < 0) %>% select(chr, strand, start, end), "alsafadi")
+# Control row for S6a: the near-zero-weight junction groups of GSP #10
+# (alt 3'ss, none in the top-250 set), as in S9.
+source(file.path(QROOT, "figures/supplementary/cache/null_junction_set.R"))
+nul10 <- null_junction_set(10, "alt 3'ss",
+                           fread(file.path(QROOT, "gsp_analysis/fact_10_top_junctions.tsv"), data.table = FALSE))
+als_up <- als %>% filter(log2fc > 0) %>% select(chr, strand, start, end)
+als_dn <- als %>% filter(log2fc < 0) %>% select(chr, strand, start, end)
+s6 <- bind_rows(s6, data.frame(panel = "alsafadi", set = "null",
+                               direction = c("upregulated", "downregulated"),
+                               n_overlap = c(count_exact(nul10, als_up), count_exact(nul10, als_dn)),
+                               n_set = nrow(nul10), fisher_p = NA_real_))
 fwrite(s6, file.path(OUT, "s6_alsafadi_cells.tsv"), sep = "\t")
 up_key  <- als %>% filter(log2fc > 0, padj < 0.05) %>% transmute(k = paste(chr, strand, start, end)) %>% distinct() %>% pull(k)
 gsp_key <- s10$gsp %>% transmute(k = paste(chr, strand, start, end)) %>% pull(k)
