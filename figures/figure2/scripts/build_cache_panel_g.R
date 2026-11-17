@@ -216,14 +216,15 @@ meqtl_res_09 <- Matrix_eQTL_main(
   errorCovariance = numeric(),
   verbose = TRUE, pvalue.hist = "qqplot"
 )
+n_gsps_tested  <- ncol(filt_phenos)   # non-single-sample GSPs among the top 50
+n_genes_tested <- ncol(filt_geno)     # mutated genes tested
 rm(snps, gene, covar_sliced, filt_geno, filt_phenos, geno, phenos); gc(verbose = FALSE)
 step("MatrixEQTL done.")
 
 # ---- 8. join to the cached CMH table --------------------------------
-# Rmd parity: ncol(mut_status_am) here INCLUDES the trailing
-# project_id meta column, so the Bonferroni denominator is
-# 50 * (n_genes + 1). Kept as-is to match the published panel.
-bonf_thresh_09 <- 0.05 / (50 * ncol(mut_status_am))
+# Bonferroni over the tests actually run: (non-single-sample GSPs among the
+# top 50) x (mutated genes tested).
+bonf_thresh_09 <- 0.05 / (n_gsps_tested * n_genes_tested)
 neg_log10_bonf_09 <- -log10(bonf_thresh_09)
 step(sprintf("Bonferroni threshold = %.3g  (-log10 = %.3f)",
              bonf_thresh_09, neg_log10_bonf_09))
@@ -269,9 +270,9 @@ both_tests_09 <- both_tests_09 %>%
 write_tsv(both_tests_09, OUT_TESTS)
 write_tsv(data.frame(
   quantity  = c("bonf_thresh_09", "neg_log10_bonf_09",
-                "n_gsps", "n_mut_cols_incl_meta"),
+                "n_gsps_tested", "n_genes_tested"),
   value     = c(bonf_thresh_09, neg_log10_bonf_09,
-                50, ncol(mut_status_am))
+                n_gsps_tested, n_genes_tested)
 ), OUT_THRESH)
 
 step(sprintf("Wrote %s (%d rows)", OUT_TESTS, nrow(both_tests_09)))
