@@ -1,7 +1,9 @@
 # Supplementary figure: overlap of splice-factor GSPs and LeafCutter
 # results. Rows GSP #10 / #13 / #30, columns LeafCutter top-N vs 3N matched-control
-# runs 10v30 / 20v60 / 30v90. One tile row per panel: the GSP driving junctions'
-# up/down LeafCutter overlap; p = binomial test of up vs down (p0 = 0.5).
+# runs 10v30 / 20v60 / 30v90. Two tile rows per panel: the GSP driving junctions'
+# up/down LeafCutter overlap, and a baseline from the 250 junction groups with weight
+# closest to zero on the GSP (cache/null_junction_set.R); p = binomial test of up vs down
+# (p0 = 0.5) within each row.
 # Inputs from cache/build_overlap_cache.R.
 source("common.R")
 cells <- fread(file.path("cache", "s7_leafcutter_cells.tsv"), data.table = FALSE)
@@ -13,6 +15,8 @@ pn_all <- unique(cells$panel)
 # p as markdown with a real superscript exponent, replacing
 # overlap_heatmap()'s plain caption.
 p_md <- function(p) {
+  if (is.na(p)) return("<i>p</i> = NA")
+  if (p >= 0.01) return(sprintf("<i>p</i> = %.2f", p))
   e <- floor(log10(p)); m <- p / 10^e
   if (sprintf("%.1f", m) == "10.0") { m <- 1; e <- e + 1 }
   sprintf("<i>p</i> = %.1f &times; 10<sup>&minus;%d</sup>", m, -e)
@@ -29,8 +33,9 @@ panels <- lapply(seq_along(pn_all), function(k) {
   # are LeafCutter hits. overlap_heatmap() reads `fisher_p` only for its own
   # caption, which is nulled below.
   overlap_heatmap(d %>% mutate(fisher_p = binom_p), lab[[as.character(d$fact[1])]],
-                  title = paste0("<b>", gene_md(pn), "</b>\u2003",
-                                 p_md(d$binom_p[1])),
+                  title = paste0("<b>", gene_md(pn), "</b><br>driving ",
+                                 p_md(d$binom_p[d$set == "gsp"][1]), "; control ",
+                                 p_md(d$binom_p[d$set == "null"][1])),
                   xlab = "LeafCutter direction") +
     labs(caption = NULL) +
     scale_x_discrete(expand = c(0, 0),

@@ -3,13 +3,18 @@
 # junctions + splice types" (build_gsp_top + assign_types), parameterised by
 # GSP. Writes gsp_top/fact_<N>_top_junctions.tsv.
 # Usage: Rscript build_gsp_top.R 1 12 10      (10 = check vs the published set)
+#        Rscript build_gsp_top.R --null 1 10 12 13 30
+#   --null: the baseline set for Fig. S9 / Supplementary Note 1 Fig. 3b -- the 250
+#   gene-level junction groups whose GSP weight is CLOSEST TO ZERO (smallest
+#   |F|), processed identically; writes fact_<N>_null_junctions.tsv.
 if (!exists("QROOT")) QROOT <- local({ d <- normalizePath(getwd())   # quetzal_code root
   while (!file.exists(file.path(d, ".quetzal_root"))) { if (dirname(d) == d) stop("run from inside quetzal_code/"); d <- dirname(d) }
   d })
 suppressPackageStartupMessages({
   library(data.table); library(tidyverse); library(fastTopics); library(flashier)
 })
-FACTS <- as.integer(commandArgs(TRUE)); N_TOP <- 250L
+args <- commandArgs(TRUE); NULL_SET <- "--null" %in% args
+FACTS <- as.integer(setdiff(args, "--null")); N_TOP <- 250L
 OUT <- file.path(QROOT, "mutation_ds/gsp_top")
 first <- dplyr::first; rename <- dplyr::rename
 
@@ -30,7 +35,8 @@ snaptron_cols <- c("gene_name", colnames(fread(file.path(AG, "chr1/snaptron_outp
 
 for (fact in FACTS) {
   message(">>> fact = ", fact)
-  top_features <- rownames(norm_F)[order(norm_F[, fact], decreasing = TRUE)][seq_len(N_TOP)]
+  ord <- if (NULL_SET) order(abs(norm_F[, fact])) else order(norm_F[, fact], decreasing = TRUE)
+  top_features <- rownames(norm_F)[ord][seq_len(N_TOP)]
   parts <- str_split_fixed(top_features, "\\.", 2)
   top_junc_list <- vector("list", length(top_features))
   for (j in seq_along(top_features)) {
@@ -81,5 +87,5 @@ for (fact in FACTS) {
   df_final$distance_to_cryptic <- NA_integer_
   df_final$distance_to_cryptic[a3] <- with(df_final[a3, ], if_else(strand == "+", mane_intron_end - end, start - mane_intron_start))
   print(table(df_final$type))
-  write_tsv(df_final, file.path(OUT, sprintf("fact_%d_top_junctions.tsv", fact)))
+  write_tsv(df_final, file.path(OUT, sprintf(if (NULL_SET) "fact_%d_null_junctions.tsv" else "fact_%d_top_junctions.tsv", fact)))
 }

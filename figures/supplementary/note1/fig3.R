@@ -5,7 +5,8 @@
 #      PSI in four groups (mutant / wild-type x in LeafCutter run / held out;
 #      two-sided Wilcoxon on the held-out pair) -- built by signature_plots.R.
 #   b: S9-style overlap tiles: GSP driving alt 3'/5'ss junctions (from the top 250
-#      unannotated, mutation_ds/gsp_top) against the LeafCutter up / down junctions
+#      unannotated, mutation_ds/gsp_top), and the top junctions of the 250 junction
+#      groups with weight closest to zero (null_junction_set.R), against the LeafCutter up / down junctions
 #      (cluster adj. P < 0.05, no effect-size floor); exact binomial test of up vs
 #      down among the hits (p0 = 0.5) in each title. IDH1 R132 vs GSP #1 and
 #      each SPOP residue vs GSP #12 (mutation_ds/out/overlap_cells.tsv).
@@ -22,18 +23,26 @@ COMP_LAB <- c(IDH1_R132 = "IDH1 R132 (20 v 60)", SPOP_F133 = "SPOP F133 (20 v 60
               SPOP_W131 = "SPOP W131 (14 v 42)", SPOP_F102 = "SPOP F102 (8 v 24)",
               SPOP_Y87 = "SPOP Y87 (7 v 21)")
 p_md <- function(p) {
+  if (is.na(p)) return("<i>p</i> = NA")
+  if (p >= 0.01) return(sprintf("<i>p</i> = %.2f", p))
   e <- floor(log10(p)); m <- p / 10^e
   if (sprintf("%.1f", m) == "10.0") { m <- 1; e <- e + 1 }
   sprintf("<i>p</i> = %.1f &times; 10<sup>&minus;%d</sup>", m, -e)
 }
 heat <- lapply(seq_along(COMP_LAB), function(k) {
-  d <- cells[cells$panel == names(COMP_LAB)[k] & cells$set == "gsp", ]
-  up <- d$n_overlap[d$direction == "upregulated"]; dn <- d$n_overlap[d$direction == "downregulated"]
-  d$fisher_p <- binom.test(up, up + dn, p = 0.5)$p.value   # binomial p (overlap_heatmap reads fisher_p)
+  d <- cells[cells$panel == names(COMP_LAB)[k] & cells$set %in% c("gsp", "null"), ]
+  bp <- function(st) {   # binomial test of up vs down within one row
+    up <- d$n_overlap[d$set == st & d$direction == "upregulated"]
+    dn <- d$n_overlap[d$set == st & d$direction == "downregulated"]
+    if (up + dn == 0) NA_real_ else binom.test(up, up + dn, p = 0.5)$p.value
+  }
+  p_gsp <- bp("gsp"); p_rnd <- bp("null")
+  d$fisher_p <- p_gsp   # overlap_heatmap reads fisher_p only for its caption (nulled below)
   # short row labels on EVERY panel: IDH1 (GSP #1) and SPOP (GSP #12) panels
   # share rows of the layout, so one shared label would mislabel the others
   overlap_heatmap(d, sprintf("GSP #%d driving\njunctions", d$gsp[1]),
-                  title = paste0("<b>", gene_md(COMP_LAB[[k]]), "</b><br>", p_md(d$fisher_p[1])),
+                  title = paste0("<b>", gene_md(COMP_LAB[[k]]), "</b><br>driving ", p_md(p_gsp),
+                                 "; control ", p_md(p_rnd)),
                   xlab = "LeafCutter direction") +
     labs(caption = NULL) +
     scale_x_discrete(expand = c(0, 0), labels = c(upregulated = "Up", downregulated = "Down")) +

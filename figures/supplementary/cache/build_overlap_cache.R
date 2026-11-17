@@ -89,26 +89,36 @@ load_leaf <- function(gene, comp) {
 }
 specs <- list(list(10, "sf3b1", "alt 3'ss"), list(13, "nkap", "alt 3'ss"),
               list(30, "ylpm1", c("alt 3'ss", "alt 5'ss")))
-# S9: no matched baseline -- RPM/PSI-matched MANE introns are not
-# like-for-like with unannotated driving junctions. Each panel reports the
-# driving junctions that are LeafCutter up- and down-regulated hits, and tests
-# direction among the hits: binom.test(up, up + down, p = 0.5).
+# S9: RPM/PSI-matched MANE introns are not like-for-like with unannotated
+# driving junctions, so the baseline is the near-zero-weight junction groups
+# of the same GSP (below). Each panel reports the up- and down-regulated LeafCutter
+# hits in each set and tests direction among the hits:
+# binom.test(up, up + down, p = 0.5), separately per set.
+source(file.path(QROOT, "figures/supplementary/cache/null_junction_set.R"))
+top_tbl <- function(fact)
+  fread(file.path(QROOT, "gsp_analysis", sprintf("fact_%d_top_junctions.tsv", fact)), data.table = FALSE)
 gsp_set <- function(fact, types) {
-  fread(file.path(QROOT, "gsp_analysis", sprintf("fact_%d_top_junctions.tsv", fact)), data.table = FALSE) %>%
+  top_tbl(fact) %>%
     filter(type %in% types) %>%
     transmute(chr = chromosome, strand, start = as.integer(start), end = as.integer(end)) %>%
     distinct()
 }
-s7 <- bind_rows(lapply(specs, function(sp) {
-  g <- gsp_set(sp[[1]], sp[[3]])
+# Baseline: top unannotated junctions of the 250 junction groups with weight
+# closest to zero on the GSP, same splice types, none in the GSP's top set
+# (null_junction_set.R).
+rnd_sets <- lapply(specs, function(sp) null_junction_set(sp[[1]], sp[[3]], top_tbl(sp[[1]])))
+s7 <- bind_rows(lapply(seq_along(specs), function(i) {
+  sp <- specs[[i]]
+  g <- gsp_set(sp[[1]], sp[[3]]); r <- rnd_sets[[i]]
   bind_rows(lapply(c("10v30", "20v60", "30v90"), function(cmp) {
     lf <- load_leaf(sp[[2]], cmp)
-    up <- count_exact(g, lf$up); dn <- count_exact(g, lf$down)
-    data.frame(panel = paste(toupper(sp[[2]]), cmp), set = "gsp",
-               direction = c("upregulated", "downregulated"), n_overlap = c(up, dn),
-               n_set = nrow(g), binom_p = binom.test(up, up + dn, p = 0.5)$p.value,
-               fact = sp[[1]])
+    bind_rows(lapply(list(gsp = g, null = r), function(q) {
+      up <- count_exact(q, lf$up); dn <- count_exact(q, lf$down)
+      data.frame(direction = c("upregulated", "downregulated"), n_overlap = c(up, dn),
+                 n_set = nrow(q), binom_p = if (up + dn > 0) binom.test(up, up + dn, p = 0.5)$p.value else NA_real_)
+    }), .id = "set") %>%
+      mutate(panel = paste(toupper(sp[[2]]), cmp), fact = sp[[1]], .before = 1)
   }))
 }))
 fwrite(s7, file.path(OUT, "s7_leafcutter_cells.tsv"), sep = "\t")
-print(s7 %>% select(panel, direction, n_overlap, n_set, binom_p))
+print(s7 %>% select(panel, set, direction, n_overlap, n_set, binom_p))

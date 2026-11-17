@@ -46,10 +46,11 @@ save_supp <- function(p, name, width, height) {
 # has set (gsp | matched), direction, n_overlap, n_set, fisher_p.
 overlap_heatmap <- function(cells, gsp_label, title = NULL, xlab = NULL,
                             pct_digits = 0) {
-  rows <- c(gsp = gsp_label, matched = "RPM/PSI matched\njunctions")
+  rows <- c(gsp = gsp_label, matched = "RPM/PSI matched\njunctions",
+            null = "Near-zero-weight\njunction groups")
   cells <- cells %>%
     mutate(frac = n_overlap / pmax(n_set, 1),
-           row  = factor(rows[set], levels = rev(rows)),
+           row  = factor(rows[set], levels = rev(rows[unique(set)])),
            direction = factor(direction, levels = c("upregulated", "downregulated")),
            lab = sprintf(paste0("%d\n(%.", pct_digits, "f%%)"), n_overlap, 100 * frac))
   p <- cells$fisher_p[1]
