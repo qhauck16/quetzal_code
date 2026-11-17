@@ -499,8 +499,10 @@ panel_c_overlay <- {
   ncol_img <- ncol(img_c); nrow_img <- nrow(img_c)
   ggplot() +
     annotation_raster(img_c, 0, ncol_img, 0, nrow_img) +
-    coord_cartesian(xlim = c(0, ncol_img), ylim = c(0, nrow_img),
-                     expand = FALSE, clip = "off") +
+    # coord_fixed: keep the raster's own aspect so its text can never be
+    # squashed when the row height changes (it letterboxes instead).
+    coord_fixed(ratio = 1, xlim = c(0, ncol_img), ylim = c(0, nrow_img),
+                expand = FALSE, clip = "off") +
     theme_void() +
     theme(plot.margin = margin(0, 0, 0, 0, "pt"))
 }
@@ -956,13 +958,22 @@ panel_c <- fig1_titled(panel_c, "Quetzal results capture cohort variation")
 panel_d <- fig1_titled(panel_d, "*EZH2* mis-splicing is captured by Quetzal")
 panel_e <- fig1_titled(panel_e, "*NF1* is mis-spliced in LUSC")
 
+FIG1_H_IN     <- 11                                   # page height before the title rows
+FIG1_TITLE_IN <- (SIZE_TITLE + 4) / 72                 # one title row, inches
+FIG1_TITLE_U  <- FIG1_TITLE_IN * 5.485 / FIG1_H_IN     # the same, in row-height units
+FIG1_ROW_C    <- 1.40   # panel c row: tall enough that its fixed-aspect raster fills the width (measured)
 figure1 <- ((panel_a | panel_b) + plot_layout(widths = c(1.63, 1.37))) /
            panel_c /
            panel_d /
            panel_e +
   # Row 1 height + the (1.63, 1.37) widths above are tuned together so
   # panel b's 2x2 of square plots fills its cell.
-  plot_layout(heights = c(1.95, 1.085, 1.30, 1.15)) +
+  # Rows c-e each gained a fixed title row (FIG1_TITLE_IN). Their relative
+  # heights grow by the matching share and the page grows by 3 x FIG1_TITLE_IN,
+  # so their content (panel c is a raster) keeps its exact size; row 1 is
+  # unchanged (panel b's ggplots absorb its title row; panel a's title sits in
+  # the art's blanked title band).
+  plot_layout(heights = c(1.95, FIG1_ROW_C, 1.30 + FIG1_TITLE_U, 1.15 + FIG1_TITLE_U)) +
   plot_annotation_publication()
 
 # ------------------------------------------------------------------
@@ -972,7 +983,9 @@ out_pdf <- file.path("out", "figure1.pdf")
 cat("[compose] writing", out_pdf, "\n")
 ggsave_pub(out_pdf, figure1,
            width  = 8.5,   # ~ nature/paper column set
-           height = 11,
+           # page grows with the rows so one height unit stays 11 / 5.485 in
+           # (the original scale): no other panel changes size.
+           height = FIG1_H_IN * (1.95 + FIG1_ROW_C + 1.30 + 1.15 + 2 * FIG1_TITLE_U) / 5.485,
            limitsize = FALSE)
 
 cat("[compose] done.\n")
