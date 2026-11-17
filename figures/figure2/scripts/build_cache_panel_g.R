@@ -234,7 +234,6 @@ cmh_enrich_09 <- fread(CMH_TSV, data.table = FALSE)
 both_tests_09 <- meqtl_res_09$all$eqtls %>%
   filter(statistic > 0) %>%
   filter(as.numeric(gene) < 51) %>%
-  filter(pvalue < bonf_thresh_09) %>%
   mutate(linear_pval = pvalue, id = paste0(gene, '-', snps)) %>%
   dplyr::select(id, linear_pval) %>%
   left_join(cmh_enrich_09 %>%
@@ -244,25 +243,28 @@ both_tests_09$cmh_pval[is.na(both_tests_09$cmh_pval)] <- 1
 # Rmd parity: the 0.9 pass has NO `filter(!grepl(44, id))` -- that MSI
 # GSP drop appears only in the 0.34 pass.
 
-step(sprintf("both_tests_09: %d GSP-gene pairs past Bonferroni.",
-             nrow(both_tests_09)))
+step(sprintf("both_tests_09: %d positively associated GSP-gene pairs (%d past Bonferroni).",
+             nrow(both_tests_09), sum(both_tests_09$linear_pval < bonf_thresh_09)))
 
 # ---- 9. n_mut_top25 --------------------------------------------------
 step("Computing n_mut_top25 ...")
+# Mutated samples among each GSP's top 25 (of the samples with mutation calls),
+# per gene; vectorised over genes because every positively associated pair is
+# kept (the plot shows all pairs with >= 3 mutants, significant or not; the
+# Bonferroni threshold is drawn as the dotted lines).
 both_tests_09 <- both_tests_09 %>%
   mutate(gsp_num = as.numeric(str_split_i(id, '-', 1)),
-         gene_name = str_split_i(id, '-', 2)) %>%
-  rowwise() %>%
-  mutate(
-    n_mut_top25 = {
-      top25_ids <- rownames(norm_L)[order(norm_L[, gsp_num], decreasing = TRUE)[1:25]]
-      top25_ids <- top25_ids[top25_ids %in% rownames(mut_status_am)]
-      if (gene_name %in% colnames(mut_status_am))
-        sum(mut_status_am[top25_ids, gene_name])
-      else 0L
-    }
-  ) %>%
-  ungroup()
+         gene_name = str_split_i(id, '-', 2))
+gene_cols <- setdiff(colnames(mut_status_am), "gdc_cases.project.project_id")
+n_mut <- bind_rows(lapply(unique(both_tests_09$gsp_num), function(k) {
+  top25_ids <- rownames(norm_L)[order(norm_L[, k], decreasing = TRUE)[1:25]]
+  top25_ids <- top25_ids[top25_ids %in% rownames(mut_status_am)]
+  data.frame(gsp_num = k, gene_name = gene_cols,
+             n_mut_top25 = as.numeric(colSums(as.matrix(mut_status_am[top25_ids, gene_cols, drop = FALSE]))))
+}))
+both_tests_09 <- both_tests_09 %>%
+  left_join(n_mut, by = c("gsp_num", "gene_name")) %>%
+  mutate(n_mut_top25 = coalesce(n_mut_top25, 0))
 
 # ---- 10. persist -----------------------------------------------------
 # The plot draws `both_tests_09 %>% filter(n_mut_top25 > 2)`; that
